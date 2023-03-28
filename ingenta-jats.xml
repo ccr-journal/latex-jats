@@ -45,17 +45,17 @@ $endfor$
                 <copyright-statement>$copyright.statement$</copyright-statement>
                 <copyright-year>$copyright.year$</copyright-year>
                 <copyright-holder>$copyright.holder$</copyright-holder>
-                <license license-type="open-access" xlink:href="http://creativecommons.org/licenses/by/4.0/">
-                </permissions>
-                <abstract>
-                    <p content-type="AUP_AL_NoInd">$abstract$</p>
-                </abstract>
-                <kwd-group>
-                    <title>Keywords:</title>
+                <license license-type="open-access" xlink:href="http://creativecommons.org/licenses/by/4.0/" />
+            </permissions>
+            <abstract>
+                <p content-type="AUP_AL_NoInd">$abstract$</p>
+            </abstract>
+            <kwd-group>
+                <title>Keywords:</title>
 $for(tags)$
-                    <kwd>$tags$</kwd>
+                <kwd>$tags$</kwd>
 $endfor$
-                </kwd-group>
-            </article-meta>
-        </front>
-    </article>
+            </kwd-group>
+        </article-meta>
+    </front>
+</article>
