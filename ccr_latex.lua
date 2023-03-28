@@ -42,6 +42,7 @@ function Reader(input)
                        publisher_id=tt.get_tex_value(tex, "doi"):sub(9),
                        volume=tt.get_tex_value(tex, "volume"),
                        pubnumber=tt.get_tex_value(tex, "pubnumber"),
+                       fpage=tt.get_tex_value(tex, "firstpage"),
                     }
 
     local year = tt.get_tex_value(tex, "pubyear")

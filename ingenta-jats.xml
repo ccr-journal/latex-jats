@@ -29,7 +29,7 @@
 $for(author)$
                 <contrib contrib-type="author">
                     <name>
-                        <string-name>$author.surname$</string-name>
+                        <surname>$author.surname$</name>
                     </name>
                     <aff>$author.affiliation.name$</aff>
                 </contrib>
@@ -40,6 +40,7 @@ $endfor$
             </pub-date>
             <volume>$article.volume$</volume>
             <issue>$article.pubnumber$</issue>
+            <fpage>$article.fpage$</fpage>
             <permissions>
                 <copyright-statement>$copyright.statement$</copyright-statement>
                 <copyright-year>$copyright.year$</copyright-year>
@@ -57,7 +58,4 @@ $endfor$
                 </kwd-group>
             </article-meta>
         </front>
-        <body>
-        $body$
-        </body>
     </article>
