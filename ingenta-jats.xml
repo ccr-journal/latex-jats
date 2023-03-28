@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Publishing DTD v1.1 20151215//EN" "https://jats.nlm.nih.gov/publishing/1.1/JATS-journalpublishing1.dtd">
-<article article-type="research-article">
+<article article-type="research-article"
+    xmlns:xlink="http://www.w3.org/1999/xlink">
     <front>
         <journal-meta>
             <journal-id journal-id-type="publisher-id">CCR</journal-id>
@@ -29,7 +30,7 @@
 $for(author)$
                 <contrib contrib-type="author">
                     <name>
-                        <surname>$author.surname$</name>
+                        <surname>$author.surname$</surname>
                     </name>
                     <aff>$author.affiliation.name$</aff>
                 </contrib>
@@ -45,7 +46,12 @@ $endfor$
                 <copyright-statement>$copyright.statement$</copyright-statement>
                 <copyright-year>$copyright.year$</copyright-year>
                 <copyright-holder>$copyright.holder$</copyright-holder>
-                <license license-type="open-access" xlink:href="http://creativecommons.org/licenses/by/4.0/" />
+                <license license-type="open-access" xlink:href="https://creativecommons.org/licenses/by/2.0/">
+                    <license-p>This is an open-access article distributed under the terms of the
+Creative Commons Attribution License, which permits unrestricted use,
+distribution, and reproduction in any medium, provided the original
+work is properly cited.</license-p>
+                </license>
             </permissions>
             <abstract>
                 <p content-type="AUP_AL_NoInd">$abstract$</p>
