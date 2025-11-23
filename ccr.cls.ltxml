@@ -1,0 +1,56 @@
+# LaTeXML binding for ccr.cls
+
+package LaTeXML::Package;
+use strict;
+use LaTeXML::Util::Pathname;
+use LaTeXML::Global;
+
+# Loading document class (ccr.cls is based on article)
+LoadClass('article');
+
+# Loading Geometry package
+RequirePackage('geometry');
+DefMacro('\geometry', '');
+
+# Loading other packages
+PassOptions('babel', 'sty', 'english');
+RequirePackage('babel');
+
+RequirePackage('fancyhdr');
+RequirePackage('graphicx');
+RequirePackage('etoolbox');
+RequirePackage('csquotes');
+RequirePackage('biblatex');
+
+# Define macros from ccr.cls
+DefMacro('\shorttitle', '');
+DefMacro('\show@shorttitle', '\textbf{Short Title Placeholder}');
+DefMacro('\abstract', '');
+DefMacro('\show@abstract', '\textbf{Abstract Placeholder}');
+DefMacro('\keywords', '');
+DefMacro('\show@keywords', '\textbf{Keywords Placeholder}');
+DefMacro('\authorsnames', '');
+DefMacro('\show@authorsnames', '\textbf{Authors Names Placeholder}');
+DefMacro('\shortauthors', '');
+DefMacro('\show@shortauthors', '\textbf{Short Author Placeholder}');
+DefMacro('\authorsaffiliations', '');
+DefMacro('\show@authorsaffiliations', '\textbf{Authors Affiliations Placeholder}');
+DefMacro('\volume', '');
+DefMacro('\show@volume', 'X');
+DefMacro('\pubnumber', '');
+DefMacro('\show@pubnumber', 'Y');
+DefMacro('\pubyear', '');
+DefMacro('\show@pubyear', '20XX');
+DefMacro('\firstpage', '');
+DefMacro('\show@firstpage', '\textbf{First Page Placeholder}');
+DefMacro('\doi', '');
+DefMacro('\show@doi', '10.5117/ccr20xx.xxx.xxxx');
+
+# some other stuff
+DefMacro('\IE', '\hspace{1em}');  
+
+# Dummy headers en footers om fouten te voorkomen
+DefMacro('\fancypagestyle', '');
+DefMacro('\pagestyle', '');
+
+1; 
