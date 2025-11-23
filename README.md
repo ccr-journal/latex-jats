@@ -16,6 +16,9 @@ python convert.py inputfile.tex outputfile.xml
 
 We can validate the JATS file online with [J4R Validator](https://j4r.nlm.nih.gov/) or [PubMed Central Validator](https://pmc.ncbi.nlm.nih.gov/tools/stylechecker/). Currently there are still a lot of errors, so we're not done yet.
 
+It might be best to use the [latest LateXML version](https://math.nist.gov/~BMiller/LaTeXML/get.html).
+There might be some interesting links at the [latexml docker hub](https://hub.docker.com/u/latexml) as well, especially the link to [ar5ivist](https://github.com/dginev/ar5ivist).
+
 ###  check input
 
 However, **before you do this**, check the input. Check the `.tex` files (these tend to be of the type `main.tex` containing a `body.tex`, sometime with appendices and such). Also check the `.bib` files (`bibliography.bib`). These files can contain mistakes that will trip up the conversion. Run `fixbib.py` to clean up the bibliography.
