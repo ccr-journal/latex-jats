@@ -322,6 +322,102 @@ def fix_journal_references(jats_file):
     tree.write(jats_file, encoding="unicode")
 
 
+_JOURNAL_META_XML = """\
+<journal-meta>
+  <journal-id journal-id-type="publisher-id">CCR</journal-id>
+  <journal-title-group>
+    <journal-title>Computational Communication Research</journal-title>
+  </journal-title-group>
+  <issn pub-type="print">2665-9085</issn>
+  <issn pub-type="electronic">2665-9085</issn>
+  <publisher>
+    <publisher-name>Amsterdam University Press</publisher-name>
+    <publisher-loc>Amsterdam</publisher-loc>
+  </publisher>
+</journal-meta>"""
+
+
+def fix_metadata(jats_file, tex_file):
+    """Replaces journal-meta with a constant CCR block and injects article metadata
+    (doi, publisher-id, volume, issue, fpage, pub-date) extracted from the LaTeX preamble."""
+    ET.register_namespace("xlink", "http://www.w3.org/1999/xlink")
+    tree = ET.parse(jats_file)
+    root = tree.getroot()
+
+    # --- journal-meta: replace entirely with constant block ---
+    front = root.find(".//front")
+    if front is not None:
+        old_jm = front.find("journal-meta")
+        new_jm = ET.fromstring(_JOURNAL_META_XML)
+        if old_jm is not None:
+            idx = list(front).index(old_jm)
+            front.remove(old_jm)
+            front.insert(idx, new_jm)
+        else:
+            front.insert(0, new_jm)
+
+    # --- article-meta: parse preamble and inject fields ---
+    preamble = Path(tex_file).read_text(encoding="utf-8").split(r"\begin{document}")[0]
+
+    def _get(name):
+        m = re.search(r'\\' + name + r'\{([^}]*)\}', preamble)
+        return m.group(1).strip() if m else None
+
+    doi_val      = _get("doi")
+    volume_val   = _get("volume")
+    pubnumber_val = _get("pubnumber")
+    pubyear_val  = _get("pubyear")
+    firstpage_val = _get("firstpage")
+
+    am = root.find(".//article-meta")
+    if am is None:
+        tree.write(jats_file, encoding="unicode")
+        return
+
+    # Replace old <article-id> placeholder with two typed elements
+    for old_id in am.findall("article-id"):
+        am.remove(old_id)
+
+    insert_pos = 0
+    if doi_val:
+        pub_id = doi_val.split("/", 1)[1] if "/" in doi_val else doi_val
+        elem_pubid = ET.Element("article-id", {"pub-id-type": "publisher-id"})
+        elem_pubid.text = pub_id
+        elem_doi = ET.Element("article-id", {"pub-id-type": "doi"})
+        elem_doi.text = doi_val
+        am.insert(insert_pos, elem_doi)
+        am.insert(insert_pos, elem_pubid)
+        insert_pos += 2
+
+    # Find insertion point: just before <permissions>
+    children = list(am)
+    perm_idx = next((i for i, e in enumerate(children) if e.tag == "permissions"), len(children))
+
+    new_elems = []
+    if pubyear_val:
+        pub_date = ET.Element("pub-date", {"pub-type": "electronic"})
+        year_elem = ET.SubElement(pub_date, "year")
+        year_elem.text = pubyear_val
+        new_elems.append(pub_date)
+    if volume_val:
+        vol = ET.Element("volume")
+        vol.text = volume_val
+        new_elems.append(vol)
+    if pubnumber_val:
+        issue = ET.Element("issue")
+        issue.text = pubnumber_val
+        new_elems.append(issue)
+    if firstpage_val:
+        fpage = ET.Element("fpage")
+        fpage.text = firstpage_val
+        new_elems.append(fpage)
+
+    for i, elem in enumerate(new_elems):
+        am.insert(perm_idx + i, elem)
+
+    tree.write(jats_file, encoding="unicode")
+
+
 # here it all comes together
 def main():
     import argparse
@@ -347,6 +443,7 @@ def main():
 
     # step 2: JATS XML post processing
     print(" - Step 2: Post-processing JATS XML...")
+    fix_metadata(str(output_path), str(input_path))
     fix_table_notes(str(output_path))
     clean_body(str(output_path))
     fix_footnotes(str(output_path))
