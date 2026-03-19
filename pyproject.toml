@@ -1,15 +1,23 @@
 [build-system]
 requires = ["setuptools>=61"]
-build-backend = "setuptools.backends.legacy:build"
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "latex-jats"
 version = "0.1.0"
 description = "Convert CCR journal LaTeX manuscripts to JATS XML"
 requires-python = ">=3.10"
+dependencies = ["lxml"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["integration: requires latexmlc installed (deselect with -m 'not integration')"]
 
 [project.scripts]
 latex-jats = "latex_jats.convert:main"

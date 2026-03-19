@@ -29,11 +29,66 @@ DefMacro('\abstract', '');
 DefMacro('\show@abstract', '\textbf{Abstract Placeholder}');
 DefMacro('\keywords', '');
 DefMacro('\show@keywords', '\textbf{Keywords Placeholder}');
-DefMacro('\authorsnames', '');
+# Helper macros for a single author+affiliation entry (mirrors \lx@author pattern)
+DefMacro('\ccr@oneauthor{}',
+    '\lx@count@author\@add@frontmatter{ltx:creator}[role=author]{\@personname{#1}}');
+
+DefConstructor('\ccr@oneaffil{}',
+    "^ <ltx:contact role='affiliation'>#1</ltx:contact>");
+
+DefMacro('\ccr@authoraffil{}{}',
+    '\ccr@oneauthor{#1}\@add@to@frontmatter{ltx:creator}{\ccr@oneaffil{#2}}');
+
+# Brace-aware comma splitter for affiliation list like "{A, B}, {C}"
+sub _ccr_split_brace_comma {
+    my ($s) = @_;
+    my @result = ();
+    my ($current, $depth) = ('', 0);
+    for my $ch (split //, $s) {
+        if    ($ch eq '{') { $depth++; $current .= $ch }
+        elsif ($ch eq '}') { $depth--; $current .= $ch }
+        elsif ($ch eq ',' && $depth == 0) {
+            my $item = $current; $item =~ s/^\s+|\s+$//g;
+            push @result, $item if $item ne '';
+            $current = '';
+        } else { $current .= $ch }
+    }
+    my $item = $current; $item =~ s/^\s+|\s+$//g;
+    push @result, $item if $item ne '';
+    return @result;
+}
+
+# Store author names; combined with affiliations when \authorsaffiliations is processed
+DefMacro('\authorsnames{}', sub {
+    my ($gullet, $names) = @_;
+    AssignValue('CCR_authornames' => ToString($names), 'global');
+    (); });
+
 DefMacro('\show@authorsnames', '\textbf{Authors Names Placeholder}');
 DefMacro('\shortauthors', '');
 DefMacro('\show@shortauthors', '\textbf{Short Author Placeholder}');
-DefMacro('\authorsaffiliations', '');
+
+# Parse stored names + given affiliations; generate one \ccr@authoraffil per author
+DefMacro('\authorsaffiliations{}', sub {
+    my ($gullet, $affs) = @_;
+    my $names_str = LookupValue('CCR_authornames') || '';
+    my $affs_str  = ToString($affs);
+
+    my @names = map { s/^\s+|\s+$//gr } split(/,/, $names_str);
+    my @affs  = _ccr_split_brace_comma($affs_str);
+
+    my @tokens = ();
+    for my $i (0 .. $#names) {
+        my $name = $names[$i] // '';
+        my $aff  = $affs[$i]  // '';
+        $aff =~ s/^\s*\{|\}\s*$//g;  # strip outer {}
+        $aff =~ s/,\s*$//;            # strip trailing comma
+        $aff =~ s/^\s+|\s+$//g;       # trim
+        push @tokens, Invocation(T_CS('\ccr@authoraffil'),
+            Tokenize($name), Tokenize($aff));
+    }
+    return @tokens; });
+
 DefMacro('\show@authorsaffiliations', '\textbf{Authors Affiliations Placeholder}');
 DefMacro('\volume', '');
 DefMacro('\show@volume', 'X');

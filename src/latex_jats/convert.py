@@ -2,17 +2,87 @@ import re
 import subprocess
 import xml.etree.ElementTree as ET
 from pathlib import Path
+from lxml import etree
 
 LATEXML_DIR = Path(__file__).parent.parent / "latexml"
+JATS_XSL = Path(__file__).parent.parent / "xslt" / "main" / "jats-html.xsl"
+
+
+def convert_to_html(xml_file, html_file):
+    """Applies the NCBI JATS preview stylesheet to produce an HTML preview."""
+    transform = etree.XSLT(etree.parse(str(JATS_XSL)))
+    result = transform(etree.parse(str(xml_file)))
+    with open(html_file, "wb") as f:
+        f.write(etree.tostring(result, pretty_print=True))
+
+
+def _find_latexml_jats_xsl():
+    """Find the system LaTeXML JATS XSLT file via the LaTeXML Perl module location."""
+    result = subprocess.run(
+        ["perl", "-e", r'use LaTeXML; use File::Basename; print dirname($INC{"LaTeXML.pm"})'],
+        capture_output=True, text=True)
+    if result.returncode == 0 and result.stdout.strip():
+        candidate = Path(result.stdout.strip()) / "LaTeXML" / "resources" / "XSLT" / "LaTeXML-jats.xsl"
+        if candidate.exists():
+            return candidate
+    raise FileNotFoundError("Cannot find LaTeXML-jats.xsl; is LaTeXML installed?")
+
+
+# Wrapper XSLT that imports the system LaTeXML JATS stylesheet and fixes the
+# ltx:personname template, which concatenates given-name tokens without spaces.
+_JATS_XSLT_WRAPPER = """\
+<?xml version="1.0" encoding="utf-8"?>
+<xsl:stylesheet version="1.0"
+    xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+    xmlns:ltx="http://dlmf.nist.gov/LaTeXML"
+    xmlns:str="http://exslt.org/strings"
+    extension-element-prefixes="str">
+  <xsl:import href="{system_jats_xsl_uri}"/>
+  <!-- Fix: system XSLT joins given-name tokens without separator -->
+  <xsl:template match="ltx:personname">
+    <name>
+      <surname>
+        <xsl:for-each select="str:tokenize(normalize-space(./text()),' ')">
+          <xsl:if test="position()=last()"><xsl:value-of select="."/></xsl:if>
+        </xsl:for-each>
+      </surname>
+      <given-names>
+        <xsl:for-each select="str:tokenize(normalize-space(./text()),' ')">
+          <xsl:if test="position()!=last()">
+            <xsl:if test="position()!=1"><xsl:text> </xsl:text></xsl:if>
+            <xsl:value-of select="."/>
+          </xsl:if>
+        </xsl:for-each>
+      </given-names>
+    </name>
+  </xsl:template>
+</xsl:stylesheet>"""
 
 
 def run_latexmlc(input_tex, output_xml):
-    """Runs latexmlc to convert a LaTeX file to JATS XML."""
+    """Runs latexmlc to convert a LaTeX file to JATS XML.
+
+    Two-step process: first produce the LaTeXML intermediate XML, then apply a
+    patched JATS XSLT (fixing the missing-spaces bug in ltx:personname).
+    """
     # Note [ES]: Adding "--preload=ccr.cls",  throws an error"""
     # Note [ES]: Adding "--preload=biblatex.sty",  does not in any way change the output"""
     # WvA: but removing/renaing biblatex.sty does change the output
-    command = ["latexmlc", f"--path={LATEXML_DIR}", "--destination", output_xml, "--format=jats", input_tex]
-    subprocess.run(command, check=True)
+    import tempfile
+    system_jats_xsl = _find_latexml_jats_xsl()
+    wrapper_xml = _JATS_XSLT_WRAPPER.format(system_jats_xsl_uri=system_jats_xsl.as_uri())
+
+    with tempfile.NamedTemporaryFile(suffix=".xml", delete=False) as tmp:
+        tmp_path = Path(tmp.name)
+    try:
+        command = ["latexmlc", f"--path={LATEXML_DIR}", "--destination", str(tmp_path), "--format=xml", input_tex]
+        subprocess.run(command, check=True)
+        transform = etree.XSLT(etree.fromstring(wrapper_xml.encode()))
+        result = transform(etree.parse(str(tmp_path)))
+        with open(output_xml, "wb") as f:
+            f.write(etree.tostring(result, pretty_print=True))
+    finally:
+        tmp_path.unlink(missing_ok=True)
 
 
 def fix_table_notes(jats_file):
@@ -259,6 +329,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("input", help="Input LaTeX file")
     parser.add_argument("output", nargs="?", help="Output JATS XML file (default: <article>/output/main.xml)")
+    parser.add_argument("--html", action="store_true", help="Also generate an HTML preview via the NCBI JATS stylesheet")
     args = parser.parse_args()
 
     input_path = Path(args.input)
@@ -281,7 +352,14 @@ def main():
     fix_footnotes(str(output_path))
     # fix_journal_references(output_xml) #We can remove this; replaced with XSLT
 
-    print(f"saved corrected JATS XML in {output_path} 😎.")
+    print(f"Saved corrected JATS XML in {output_path} 😎.")
+
+    # step 3 (optional): generate HTML preview
+    if args.html:
+        html_path = output_path.with_suffix(".html")
+        print(" - Step 3: Generating HTML preview...")
+        convert_to_html(str(output_path), str(html_path))
+        print(f"Saved HTML preview in {html_path} 😎.")
 
 
 if __name__ == "__main__":

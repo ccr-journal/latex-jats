@@ -50,6 +50,25 @@ Another file that is likely to grow is the biblatex binding `src/latexml/biblate
 ### on the whole
 Latex is a slippery beast, very different from XML. Authors do as they please. Expect continuous variety and surprises. Expect constant updating of the scripts. Do _not_ expect automatic conversion and a smooth workflow. Expect manual labor, the hallmark of a good editor.
 
+### testing
+
+Unit tests cover the Python post-processing functions and require no external tools:
+
+```sh
+uv sync --extra test
+uv run pytest -m "not integration"
+```
+
+Integration tests run the full LaTeX → JATS pipeline and require `latexmlc`:
+
+```sh
+uv run pytest -m integration
+# or run everything at once:
+uv run pytest
+```
+
+Integration tests are automatically skipped if `latexmlc` is not installed. The CI workflow (`.github/workflows/tests.yml`) runs both.
+
 ### repository structure
 - `src/latex_jats/` | Python package: main converter (`convert.py`) and bibliography cleaner (`fixbib.py`)
 - `src/latexml/` | LaTeXML bindings: `ccr.cls.ltxml` and `biblatex.sty.ltxml`

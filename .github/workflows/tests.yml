@@ -1,0 +1,45 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  unit-tests:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --extra test
+      - run: uv run pytest -m "not integration" -v
+
+  integration-tests:
+    name: Integration tests (with LaTeXML)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system build dependencies for LaTeXML
+        run: sudo apt-get install -y cpanminus libxml2-dev libxslt1-dev libdb-dev libexpat1-dev
+
+      - name: Cache LaTeXML Perl installation
+        uses: actions/cache@v4
+        id: latexml-cache
+        with:
+          path: ~/perl5
+          key: latexml-${{ runner.os }}-v1
+
+      - name: Install LaTeXML
+        if: steps.latexml-cache.outputs.cache-hit != 'true'
+        run: cpanm --local-lib=~/perl5 --notest LaTeXML
+
+      - name: Add local Perl lib to environment
+        run: |
+          echo "PERL5LIB=$HOME/perl5/lib/perl5" >> $GITHUB_ENV
+          echo "$HOME/perl5/bin" >> $GITHUB_PATH
+
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --extra test
+      - run: uv run pytest -v
