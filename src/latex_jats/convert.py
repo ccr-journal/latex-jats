@@ -258,23 +258,30 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument("input", help="Input LaTeX file")
-    parser.add_argument("output", help="Output JATS XML file")
+    parser.add_argument("output", nargs="?", help="Output JATS XML file (default: <article>/output/main.xml)")
     args = parser.parse_args()
 
-    print(f"Will convert {args.input} -> {args.output} 😎.")
+    input_path = Path(args.input)
+    if args.output:
+        output_path = Path(args.output)
+    else:
+        output_path = input_path.parent.parent / "output" / input_path.with_suffix(".xml").name
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    print(f"Will convert {input_path} -> {output_path} 😎.")
 
     # step 1: LaTeX to JATS conversion
     print(" - Step 1: Converting LaTeX to JATS XML...")
-    run_latexmlc(args.input, args.output)
+    run_latexmlc(str(input_path), str(output_path))
 
     # step 2: JATS XML post processing
     print(" - Step 2: Post-processing JATS XML...")
-    fix_table_notes(args.output)
-    clean_body(args.output)
-    fix_footnotes(args.output)
+    fix_table_notes(str(output_path))
+    clean_body(str(output_path))
+    fix_footnotes(str(output_path))
     # fix_journal_references(output_xml) #We can remove this; replaced with XSLT
 
-    print(f"saved corrected JATS XML in {args.output} 😎.")
+    print(f"saved corrected JATS XML in {output_path} 😎.")
 
 
 if __name__ == "__main__":

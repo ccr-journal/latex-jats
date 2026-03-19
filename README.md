@@ -7,16 +7,32 @@ This is a tool to convert CCR journal articles in _latex_ format into _JATS XML_
 - it uses the [LaTeXML package](https://math.nist.gov/~BMiller/LaTeXML/) with custom bindings for `ccr.cls` and `biblatex`
 - it does some post-processing of the JATS output
 
-Run the converter with:
+### installation
+
+**1. Install LaTeXML 0.8.8** (the apt package is outdated — install via cpanm):
 
 ```sh
-python -m latex_jats.convert inputfile.tex outputfile.xml
+sudo apt install cpanminus libxml2-dev libxslt1-dev libdb-dev
+sudo cpanm --notest LaTeXML
+```
+
+**2. Install the Python package** using [uv](https://docs.astral.sh/uv/):
+
+```sh
+uv sync
+```
+
+### usage
+
+```sh
+# output goes automatically to <article>/output/main.xml
+uv run latex-jats examples/CCR2023.1.004.KATH/latex/main.tex
+
+# or specify an output path explicitly
+uv run latex-jats examples/CCR2023.1.004.KATH/latex/main.tex path/to/output.xml
 ```
 
 We can validate the JATS file online with [J4R Validator](https://j4r.nlm.nih.gov/) or [PubMed Central Validator](https://pmc.ncbi.nlm.nih.gov/tools/stylechecker/). Currently there are still a lot of errors, so we're not done yet.
-
-It might be best to use the [latest LaTeXML version](https://math.nist.gov/~BMiller/LaTeXML/get.html).
-There might be some interesting links at the [latexml docker hub](https://hub.docker.com/u/latexml) as well, especially the link to [ar5ivist](https://github.com/dginev/ar5ivist).
 
 ### check input
 
