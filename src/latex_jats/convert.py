@@ -1,6 +1,9 @@
-cimport subprocess
-import xml.etree.ElementTree as ET
 import re
+import subprocess
+import xml.etree.ElementTree as ET
+from pathlib import Path
+
+LATEXML_DIR = Path(__file__).parent.parent / "latexml"
 
 
 def run_latexmlc(input_tex, output_xml):
@@ -8,7 +11,7 @@ def run_latexmlc(input_tex, output_xml):
     # Note [ES]: Adding "--preload=ccr.cls",  throws an error"""
     # Note [ES]: Adding "--preload=biblatex.sty",  does not in any way change the output"""
     # WvA: but removing/renaing biblatex.sty does change the output
-    command = ["latexmlc", "--destination", output_xml, "--format=jats", input_tex]
+    command = ["latexmlc", f"--path={LATEXML_DIR}", "--destination", output_xml, "--format=jats", input_tex]
     subprocess.run(command, check=True)
 
 
@@ -250,7 +253,7 @@ def fix_journal_references(jats_file):
 
 
 # here it all comes together
-if __name__ == "__main__":
+def main():
     import argparse
 
     parser = argparse.ArgumentParser()
@@ -272,3 +275,7 @@ if __name__ == "__main__":
     # fix_journal_references(output_xml) #We can remove this; replaced with XSLT
 
     print(f"saved corrected JATS XML in {args.output} 😎.")
+
+
+if __name__ == "__main__":
+    main()

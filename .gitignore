@@ -1,3 +1,16 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+.mypy_cache/
+
+# Log files from latexml
+*.latexml.log
+*.latexmlpost.log
+
 # Compiled Lua sources
 luac.out
 

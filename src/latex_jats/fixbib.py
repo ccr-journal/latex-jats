@@ -56,5 +56,9 @@ def validate_and_fix_bibtex(input_file, output_file):
     else:
         print("✅ No errors found!")
 
-# run the script
-validate_and_fix_bibtex("bibliography.bib", "bibliography_fixed.bib")
+def main():
+    validate_and_fix_bibtex("bibliography.bib", "bibliography_fixed.bib")
+
+
+if __name__ == "__main__":
+    main()
