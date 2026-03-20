@@ -11,7 +11,7 @@ uv run latex-jats examples/CCR2023.1.004.KATH/latex/main.tex
 uv run latex-jats path/to/main.tex path/to/output.xml --html
 ```
 
-Output defaults to `<article-dir>/output/main.xml`. Pass `--html` to also generate `main.html` alongside a copy of `jats-preview.css`.
+Output defaults to `<article-dir>/output/<doi-suffix>.xml` (derived from the `\doi{}` macro in the LaTeX preamble). Pass `--html` to also generate `<doi-suffix>.html` alongside a copy of `jats-preview.css`.
 
 ## Pipeline
 
@@ -43,7 +43,7 @@ src/
     citations-prep/     citation formatting stylesheets
     post/, prep/        other XSLT helpers
   css/
-    jats-preview.css  HTML proof preview stylesheet (copied to output alongside main.html)
+    jats-preview.css  HTML proof preview stylesheet (copied to output alongside <doi-suffix>.html)
     LaTeXML.css, ltx-article.css  (used by LaTeXML's own HTML output, not the proof preview)
 tests/
   conftest.py

@@ -4,11 +4,11 @@
    ============================================================ */
 
 /* --- Google Fonts import ---------------------------------- */
-@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Libre+Franklin:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,400;0,700;1,400&family=Libre+Franklin:wght@400;600;700&display=swap');
 
 /* --- CSS Variables ---------------------------------------- */
 :root {
-  --font-body: 'EB Garamond', Georgia, 'Times New Roman', serif;
+  --font-body: 'Merriweather', Georgia, 'Times New Roman', serif;
   --font-sans: 'Libre Franklin', 'Franklin Gothic Medium', Calibri, sans-serif;
   --font-size: 11.5pt;
   --line-height: 1.55;
@@ -133,12 +133,6 @@ div#article-front .metadata.two-column.table:first-of-type .cell:first-child p.m
   display: none;
 }
 
-/* Article info right cell — show Volume, Issue, Page, DOI */
-div#article-front .metadata.two-column.table:first-of-type .cell:last-child p.metadata-entry:nth-child(1) {
-  display: none;
-  /* copyright unknown */
-}
-
 /* --- Top rule after header -------------------------------- */
 hr.part-rule {
   border: none;
@@ -157,7 +151,7 @@ div.metadata.centered {
 }
 
 h1.document-title {
-  font-family: var(--font-sans);
+  font-family: var(--font-body);
   font-size: 20pt;
   font-weight: 700;
   line-height: 1.2;
@@ -178,30 +172,25 @@ div#article-front .metadata.two-column.table:not(:first-of-type):not(:has(h4.cal
 
 div#article-front .metadata.two-column.table:not(:first-of-type):not(:has(h4.callout-title)) .row {
   display: flex;
-  flex-direction: row;
-  align-items: baseline;
+  flex-direction: column;
   gap: 0;
   margin: 0.5rem 0 0;
 }
 
 div#article-front .metadata.two-column.table:not(:first-of-type):not(:has(h4.callout-title)) .cell {
-  flex: 1;
+  width: 100%;
   padding: 0;
   margin: 0;
 }
 
 div#article-front .metadata.two-column.table:not(:first-of-type):not(:has(h4.callout-title)) .cell:first-child {
-  /* Author name column */
-  flex: none;
-  width: 45%;
-  text-align: right;
-  padding-right: 0;
+  /* Author name */
+  text-align: left !important;
 }
 
 div#article-front .metadata.two-column.table:not(:first-of-type):not(:has(h4.callout-title)) .cell:last-child {
-  /* Affiliation column */
-  flex: 1;
-  padding-left: 0;
+  /* Affiliation */
+  margin-top: 0.1rem;
 }
 
 div#article-front .metadata.two-column.table:not(:first-of-type):not(:has(h4.callout-title)) p.metadata-entry {
@@ -219,6 +208,18 @@ div#article-front .metadata.two-column.table:not(:first-of-type):not(:has(h4.cal
 div#article-front .metadata.two-column.table:not(:first-of-type):not(:has(h4.callout-title)) .cell:last-child p.metadata-entry {
   font-style: italic;
   font-size: 11.5pt;
+}
+
+/* Keywords inline block in front matter (moved from footer by post-processing) */
+div#article-front .kwd-group-inline {
+  margin: 0.4rem 0 0;
+  padding: 0 3em;
+  font-family: var(--font-body);
+  font-size: 10.5pt;
+}
+
+div#article-front .kwd-group-inline .kwd-label {
+  font-weight: 700;
 }
 
 /* Separator between author+affiliation and body */
@@ -239,22 +240,21 @@ hr.section-rule {
   margin: 0.8rem 0;
 }
 
-/* Abstract label in left cell */
+/* Abstract label above content */
 h4.callout-title {
-  font-family: var(--font-sans);
-  font-size: var(--font-size);
+  font-family: var(--font-body);
+  font-size: 10.5pt;
   font-weight: 700;
-  text-align: right;
-  margin: 0;
-  padding-right: 1.5rem;
-  white-space: nowrap;
+  text-align: left;
+  margin: 0 0 0.25em;
 }
 
-/* Abstract content in right cell */
+/* Abstract block — stacked label + content, indented */
 div#article-front .metadata.two-column.table:has(h4.callout-title) {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   margin: 0.5rem 0;
+  padding: 0 3em;
 }
 
 div#article-front .metadata.two-column.table:has(h4.callout-title) .row {
@@ -262,21 +262,17 @@ div#article-front .metadata.two-column.table:has(h4.callout-title) .row {
 }
 
 div#article-front .metadata.two-column.table:has(h4.callout-title) .cell:first-child {
-  flex: none;
-  width: 45%;
-  display: flex;
-  align-items: flex-start;
-  padding-top: 0.05em;
+  width: 100%;
 }
 
 div#article-front .metadata.two-column.table:has(h4.callout-title) .cell:last-child {
-  flex: 1;
+  width: 100%;
 }
 
 div#article-front .metadata.two-column.table:has(h4.callout-title) .cell:last-child p {
   margin: 0 0 0.6em;
   text-align: justify;
-  font-size: var(--font-size);
+  font-size: 10.5pt;
   line-height: var(--line-height);
 }
 
@@ -313,7 +309,7 @@ h3+p {
 
 /* --- Section headings h2 ---------------------------------- */
 h2.main-title {
-  font-family: var(--font-sans);
+  font-family: var(--font-body);
   font-size: 13.5pt;
   font-weight: 700;
   line-height: 1.2;
@@ -330,7 +326,7 @@ div.back-section h2.main-title {
 
 /* --- Subsection headings h3 ------------------------------- */
 h3.section-title {
-  font-family: var(--font-sans);
+  font-family: var(--font-body);
   font-size: 11.5pt;
   font-weight: 700;
   font-style: italic;

@@ -16,7 +16,143 @@ def convert_to_html(xml_file, html_file):
     result = transform(etree.parse(str(xml_file)))
     with open(html_file, "wb") as f:
         f.write(etree.tostring(result, pretty_print=True))
+    _move_keywords_to_front(html_file)
+    _reformat_article_info_cell(html_file)
     shutil.copy2(CSS_SRC, Path(html_file).parent / "jats-preview.css")
+
+
+def _move_keywords_to_front(html_file):
+    """Move the keywords block from article-footer into article-front, below the abstract."""
+    from lxml import html as lxml_html
+
+    tree = lxml_html.parse(html_file)
+    root = tree.getroot()
+
+    footer = next(iter(root.xpath('//*[@id="article-footer"]')), None)
+    if footer is None:
+        return
+
+    chunk_list = footer.xpath('.//div[contains(@class,"metadata-chunk")]')
+    if not chunk_list:
+        return
+    chunk = chunk_list[0]
+
+    kwd_texts = []
+    for p in chunk.xpath('.//p[contains(@class,"metadata-entry")]'):
+        spans = p.xpath('.//span[@class="generated"]')
+        if spans and spans[0].tail:
+            kwd_texts.append(spans[0].tail.strip())
+
+    if not kwd_texts:
+        return
+
+    front = next(iter(root.xpath('//*[@id="article-front"]')), None)
+    if front is None:
+        return
+
+    abstract_table_list = front.xpath(
+        './/div[contains(@class,"two-column") and contains(@class,"table")'
+        ' and .//h4[contains(@class,"callout-title")]]'
+    )
+    if not abstract_table_list:
+        return
+    abstract_table = abstract_table_list[0]
+
+    kwd_div = lxml_html.fragment_fromstring(
+        '<div class="kwd-group-inline"><span class="kwd-label">Keywords: </span>'
+        + ", ".join(kwd_texts) + "</div>"
+    )
+
+    parent = abstract_table.getparent()
+    idx = list(parent).index(abstract_table)
+    parent.insert(idx + 1, kwd_div)
+
+    # Remove the metadata-area containing keywords from the footer
+    area_list = chunk.xpath('ancestor::div[contains(@class,"metadata-area")]')
+    if area_list:
+        area = area_list[-1]
+        area_parent = area.getparent()
+        if area_parent is not None:
+            area_parent.remove(area)
+
+    doctype = (
+        b'<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"'
+        b' "http://www.w3.org/TR/html4/loose.dtd">\n'
+    )
+    with open(html_file, "wb") as f:
+        f.write(doctype)
+        f.write(lxml_html.tostring(root, pretty_print=True))
+
+
+def _reformat_article_info_cell(html_file):
+    """Replace the 6-row article-info cell in the header with two compact lines:
+    'CCR {vol}.{issue} ({year}) {page} – ?' and a DOI link."""
+    from lxml import html as lxml_html
+
+    tree = lxml_html.parse(html_file)
+    root = tree.getroot()
+
+    front = next(iter(root.xpath('//*[@id="article-front"]')), None)
+    if front is None:
+        return
+
+    # First metadata table, second cell (article info)
+    first_table = next(iter(front.xpath(
+        './/div[contains(@class,"two-column") and contains(@class,"table")]'
+    )), None)
+    if first_table is None:
+        return
+
+    cells = first_table.xpath('.//div[contains(@class,"cell")]')
+    if len(cells) < 2:
+        return
+    art_cell = cells[1]
+
+    # Extract field values from p.metadata-entry spans
+    fields = {}
+    for p in art_cell.xpath('.//p[contains(@class,"metadata-entry")]'):
+        spans = p.xpath('span')
+        if not spans:
+            continue
+        label = spans[0].text_content().strip().rstrip(": ")
+        value = (spans[0].tail or "").strip()
+        fields[label] = value
+
+    year = fields.get("Publication date (electronic)", "")
+    vol = fields.get("Volume", "")
+    issue = fields.get("Issue", "")
+    page = fields.get("Page", "")
+    doi = fields.get("DOI", "")
+
+    mg = art_cell.find('.//div[@class="metadata-group"]')
+    if mg is None:
+        return
+    mg.clear()
+
+    if vol and issue and year and page:
+        cite_line = lxml_html.fragment_fromstring(
+            f'<p class="metadata-entry">'
+            f'CCR {vol}.{issue} ({year}) {page}\u2013?'
+            f'</p>'
+        )
+        mg.append(cite_line)
+
+    if doi:
+        doi_url = f"https://doi.org/{doi}"
+        doi_line = lxml_html.fragment_fromstring(
+            f'<p class="metadata-entry">'
+            f'<a href="{doi_url}">{doi_url}</a>'
+            f'</p>'
+        )
+        mg.append(doi_line)
+
+    doctype = (
+        b'<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"'
+        b' "http://www.w3.org/TR/html4/loose.dtd">\n'
+    )
+    with open(html_file, "wb") as f:
+        f.write(doctype)
+        f.write(lxml_html.tostring(root, pretty_print=True))
 
 
 def _find_latexml_jats_xsl():
@@ -62,11 +198,12 @@ _JATS_XSLT_WRAPPER = """\
 </xsl:stylesheet>"""
 
 
-def run_latexmlc(input_tex, output_xml):
+def run_latexmlc(input_tex, output_xml, log_dir=None):
     """Runs latexmlc to convert a LaTeX file to JATS XML.
 
     Two-step process: LaTeXML intermediate XML → latexmlpost --format=jats with
     a patched JATS XSLT (fixes ltx:personname spaces; runs CrossRef internally).
+    If log_dir is given, LaTeXML log files are written there instead of the cwd.
     """
     # Note [ES]: Adding "--preload=ccr.cls",  throws an error"""
     # Note [ES]: Adding "--preload=biblatex.sty",  does not in any way change the output"""
@@ -75,19 +212,30 @@ def run_latexmlc(input_tex, output_xml):
     system_jats_xsl = _find_latexml_jats_xsl()
     wrapper_xml = _JATS_XSLT_WRAPPER.format(system_jats_xsl_uri=system_jats_xsl.as_uri())
 
+    if log_dir is not None:
+        Path(log_dir).mkdir(parents=True, exist_ok=True)
+        stem = Path(output_xml).stem
+        latexml_log = Path(log_dir) / f"{stem}.latexml.log"
+        post_log = Path(log_dir) / f"{stem}.latexmlpost.log"
+    else:
+        latexml_log = post_log = None
+
     with tempfile.NamedTemporaryFile(suffix=".xml", delete=False) as tmp_latexml, \
          tempfile.NamedTemporaryFile(suffix=".xsl", delete=False) as tmp_xsl:
         latexml_path = Path(tmp_latexml.name)
         xsl_path = Path(tmp_xsl.name)
         tmp_xsl.write(wrapper_xml.encode())
     try:
-        subprocess.run(
-            ["latexmlc", f"--path={LATEXML_DIR}", "--destination", str(latexml_path), "--format=xml", input_tex],
-            check=True)
-        subprocess.run(
-            ["latexmlpost", f"--stylesheet={xsl_path}", "--format=jats",
-             "--destination", str(output_xml), str(latexml_path)],
-            check=True)
+        latexmlc_cmd = ["latexmlc", f"--path={LATEXML_DIR}", "--destination", str(latexml_path), "--format=xml", input_tex]
+        if latexml_log:
+            latexmlc_cmd.append(f"--log={latexml_log}")
+        subprocess.run(latexmlc_cmd, check=True)
+
+        post_cmd = ["latexmlpost", f"--stylesheet={xsl_path}", "--format=jats",
+                    "--destination", str(output_xml), str(latexml_path)]
+        if post_log:
+            post_cmd.append(f"--log={post_log}")
+        subprocess.run(post_cmd, check=True)
     finally:
         latexml_path.unlink(missing_ok=True)
         xsl_path.unlink(missing_ok=True)
@@ -453,7 +601,7 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument("input", help="Input LaTeX file")
-    parser.add_argument("output", nargs="?", help="Output JATS XML file (default: <article>/output/main.xml)")
+    parser.add_argument("output", nargs="?", help="Output JATS XML file (default: <article>/output/<doi-suffix>.xml)")
     parser.add_argument("--html", action="store_true", help="Also generate an HTML preview via the NCBI JATS stylesheet")
     args = parser.parse_args()
 
@@ -461,14 +609,18 @@ def main():
     if args.output:
         output_path = Path(args.output)
     else:
-        output_path = input_path.parent.parent / "output" / input_path.with_suffix(".xml").name
+        preamble = input_path.read_text(encoding="utf-8").split(r"\begin{document}")[0]
+        m = re.search(r'\\doi\{([^}]*)\}', preamble)
+        doi_suffix = m.group(1).split("/", 1)[1] if m and "/" in m.group(1) else input_path.stem
+        output_path = input_path.parent.parent / "output" / f"{doi_suffix}.xml"
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    log_dir = output_path.parent / "logs"
 
     print(f"Will convert {input_path} -> {output_path} 😎.")
 
     # step 1: LaTeX to JATS conversion
     print(" - Step 1: Converting LaTeX to JATS XML...")
-    run_latexmlc(str(input_path), str(output_path))
+    run_latexmlc(str(input_path), str(output_path), log_dir=log_dir)
 
     # step 2: JATS XML post processing
     print(" - Step 2: Post-processing JATS XML...")
