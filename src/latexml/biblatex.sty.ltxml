@@ -452,7 +452,8 @@ Let('\bibliography',                '\addbibresource');
 DefMacro('\printbibliography',
     '\let\verb\biblatex@verb\let\endverb\biblatex@endverb'
     . '\catcode`\&=12\relax'
-    . '\InputIfFileExists{\jobname.bbl}{}{}');
+    . '\InputIfFileExists{\jobname.bbl}{}{}'
+    . '\catcode`\&=4\relax');
 DefMacro('\biblatex@printbibliography[]', sub {
     my @resources = ();
     while (my $res = PopValue('biblatex_resources')) {

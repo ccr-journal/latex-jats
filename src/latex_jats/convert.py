@@ -633,6 +633,19 @@ def main():
 
     print(f"Saved corrected JATS XML in {output_path} 😎.")
 
+    # step 2b: copy graphics from the latex source directory to the output directory
+    image_exts = {".png", ".jpg", ".jpeg", ".gif", ".svg", ".tif", ".tiff"}
+    latex_dir = input_path.parent
+    copied = []
+    for img in latex_dir.iterdir():
+        if img.suffix.lower() in image_exts:
+            dest = output_path.parent / img.name
+            if not dest.exists() or img.stat().st_mtime > dest.stat().st_mtime:
+                shutil.copy2(img, dest)
+                copied.append(img.name)
+    if copied:
+        print(f" - Copied {len(copied)} image(s) to output: {', '.join(copied)}")
+
     # step 3 (optional): generate HTML preview
     if args.html:
         html_path = output_path.with_suffix(".html")
