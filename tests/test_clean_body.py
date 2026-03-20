@@ -12,6 +12,7 @@ def test_empty_p_removed(xml_file):
     clean_body(path)
     root = ET.parse(path).getroot()
     body = root.find(".//body")
+    assert body is not None
     # empty <p> at body level should be gone
     assert body.find("p") is None
 
@@ -30,6 +31,8 @@ def test_title_directly_in_body_removed(xml_file):
     clean_body(path)
     root = ET.parse(path).getroot()
     body = root.find(".//body")
+    assert body is not None
+
     # direct <title> child of <body> should be removed
     assert body.find("title") is None
     # but <title> inside <sec> should remain

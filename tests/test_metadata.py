@@ -1,4 +1,5 @@
 """Unit tests for fix_metadata: journal-meta and article-meta injection."""
+
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -21,7 +22,9 @@ def _write_tex(tmp_path, content):
 
 def test_journal_meta(tmp_path):
     """fix_metadata replaces journal-meta with the constant CCR block."""
-    xml_file = _write_xml(tmp_path, """\
+    xml_file = _write_xml(
+        tmp_path,
+        """\
 <article xmlns:xlink="http://www.w3.org/1999/xlink">
   <front>
     <journal-meta>
@@ -32,7 +35,8 @@ def test_journal_meta(tmp_path):
       <article-id>not-yet-known</article-id>
     </article-meta>
   </front>
-</article>""")
+</article>""",
+    )
     tex_file = _write_tex(tmp_path, r"\begin{document}")
 
     fix_metadata(xml_file, tex_file)
@@ -62,7 +66,9 @@ def test_journal_meta(tmp_path):
 
 def test_article_meta(tmp_path):
     """fix_metadata injects doi, publisher-id, volume, issue, fpage, pub-date."""
-    xml_file = _write_xml(tmp_path, """\
+    xml_file = _write_xml(
+        tmp_path,
+        """\
 <article xmlns:xlink="http://www.w3.org/1999/xlink">
   <front>
     <journal-meta>
@@ -80,15 +86,19 @@ def test_article_meta(tmp_path):
       </permissions>
     </article-meta>
   </front>
-</article>""")
-    tex_file = _write_tex(tmp_path, r"""\
+</article>""",
+    )
+    tex_file = _write_tex(
+        tmp_path,
+        r"""\
 \volume{5}
 \pubnumber{1}
 \pubyear{2023}
 \firstpage{85}
 \doi{10.5117/CCR2023.1.004.KATH}
 \begin{document}
-""")
+""",
+    )
 
     fix_metadata(xml_file, tex_file)
 
