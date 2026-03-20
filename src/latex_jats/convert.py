@@ -62,8 +62,8 @@ _JATS_XSLT_WRAPPER = """\
 def run_latexmlc(input_tex, output_xml):
     """Runs latexmlc to convert a LaTeX file to JATS XML.
 
-    Three-step process: LaTeXML intermediate XML → latexmlpost (runs CrossRef
-    to resolve citation links) → patched JATS XSLT (fixes ltx:personname spaces).
+    Two-step process: LaTeXML intermediate XML → latexmlpost --format=jats with
+    a patched JATS XSLT (fixes ltx:personname spaces; runs CrossRef internally).
     """
     # Note [ES]: Adding "--preload=ccr.cls",  throws an error"""
     # Note [ES]: Adding "--preload=biblatex.sty",  does not in any way change the output"""
@@ -72,24 +72,22 @@ def run_latexmlc(input_tex, output_xml):
     system_jats_xsl = _find_latexml_jats_xsl()
     wrapper_xml = _JATS_XSLT_WRAPPER.format(system_jats_xsl_uri=system_jats_xsl.as_uri())
 
-    with tempfile.NamedTemporaryFile(suffix=".xml", delete=False) as tmp1, \
-         tempfile.NamedTemporaryFile(suffix=".xml", delete=False) as tmp2:
-        latexml_path = Path(tmp1.name)
-        post_path = Path(tmp2.name)
+    with tempfile.NamedTemporaryFile(suffix=".xml", delete=False) as tmp_latexml, \
+         tempfile.NamedTemporaryFile(suffix=".xsl", delete=False) as tmp_xsl:
+        latexml_path = Path(tmp_latexml.name)
+        xsl_path = Path(tmp_xsl.name)
+        tmp_xsl.write(wrapper_xml.encode())
     try:
         subprocess.run(
             ["latexmlc", f"--path={LATEXML_DIR}", "--destination", str(latexml_path), "--format=xml", input_tex],
             check=True)
         subprocess.run(
-            ["latexmlpost", "--destination", str(post_path), "--format=xml", str(latexml_path)],
+            ["latexmlpost", f"--stylesheet={xsl_path}", "--format=jats",
+             "--destination", str(output_xml), str(latexml_path)],
             check=True)
-        transform = etree.XSLT(etree.fromstring(wrapper_xml.encode()))
-        result = transform(etree.parse(str(post_path)))
-        with open(output_xml, "wb") as f:
-            f.write(etree.tostring(result, pretty_print=True))
     finally:
         latexml_path.unlink(missing_ok=True)
-        post_path.unlink(missing_ok=True)
+        xsl_path.unlink(missing_ok=True)
 
 
 def fix_table_notes(jats_file):
