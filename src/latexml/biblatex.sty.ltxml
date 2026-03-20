@@ -294,10 +294,18 @@ DefMacro('\endentry', sub {
     return ();
 }, locked => 1);
 
-DefKeyVal('BiblatexAuthor', 'given',   '');
-DefKeyVal('BiblatexAuthor', 'giveni',  '');
-DefKeyVal('BiblatexAuthor', 'family',  '');
-DefKeyVal('BiblatexAuthor', 'familyi', '');
+DefKeyVal('BiblatexAuthor', 'given',     '');
+DefKeyVal('BiblatexAuthor', 'giveni',   '');
+DefKeyVal('BiblatexAuthor', 'givenun',  '');
+DefKeyVal('BiblatexAuthor', 'family',   '');
+DefKeyVal('BiblatexAuthor', 'familyi',  '');
+DefKeyVal('BiblatexAuthor', 'familyun', '');
+DefKeyVal('BiblatexAuthor', 'prefix',   '');
+DefKeyVal('BiblatexAuthor', 'prefixi',  '');
+DefKeyVal('BiblatexAuthor', 'prefixun', '');
+DefKeyVal('BiblatexAuthor', 'suffix',   '');
+DefKeyVal('BiblatexAuthor', 'suffixi',  '');
+DefKeyVal('BiblatexAuthor', 'nameun',   '');
 
 DefMacro('\name{}{}{}', sub {
     my ($gullet, $type, $count, $maybe_content) = @_;
@@ -333,9 +341,11 @@ DefMacro('\name{}{}{}', sub {
       if ($keyvals_flag) {
         my $keyvals = LaTeXML::Core::KeyVals->new(undef, 'BiblatexAuthor', setInternals => 1);
         $keyvals->readFrom($gullet, T_END);
-        $fullname = ToString(Digest(Expand($keyvals->getValue('given') || $keyvals->getValue('giveni'))))
-          . ' '
-          . (ToString(Digest(Expand($keyvals->getValue('family') || $keyvals->getValue('familyi'))))); }
+        my $kv_given  = ToString(Digest(Expand($keyvals->getValue('given')  || $keyvals->getValue('giveni'))));
+        my $kv_prefix = ToString(Digest(Expand($keyvals->getValue('prefix') || $keyvals->getValue('prefixi'))));
+        my $kv_family = ToString(Digest(Expand($keyvals->getValue('family') || $keyvals->getValue('familyi'))));
+        $kv_prefix =~ s/\\\w+|[}{]//g;
+        $fullname = join(' ', grep { $_ ne '' } ($kv_given, $kv_prefix, $kv_family)); }
       # if $author_hash is empty, expect pre-laid out arguments
       else {
         my $family   = $gullet->readArg();
