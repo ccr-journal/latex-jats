@@ -1,13 +1,32 @@
-## short explanation
-
-### overview
+## Overview
 
 This is a tool to convert CCR journal articles in _latex_ format into _JATS XML_.
 
 - it uses the [LaTeXML package](https://math.nist.gov/~BMiller/LaTeXML/) with custom bindings for `ccr.cls` and `biblatex`
 - it does some post-processing of the JATS output
 
-### installation
+
+### Processing pipeline
+
+Running `latex-jats` automatically performs three steps:
+
+1. **`latexmlc`** — processes the `.tex` file using the custom bindings in `src/latexml/` and produces LaTeXML intermediate XML (the `ltx:` namespace). The `biblatex.sty.ltxml` binding loads the `.bbl` file and builds author-year citation labels.
+2. **`latexmlpost`** — runs LaTeXML's post-processors on the intermediate XML: scans the document, builds the bibliography, and runs CrossRef to resolve in-text citations to their bibliography entries (filling in `idref` attributes).
+3. **XSLT + Python** — applies the LaTeXML JATS stylesheet (with a fix for given-name spacing in `ltx:personname`) to produce JATS XML, then runs Python post-processing steps to inject journal/article metadata from the LaTeX preamble and fix minor structural issues.
+
+Optionally, the JATS output can be converted to HTML for checking proofs. This uses the NLM/JATS XSLT stylesheets and can be run separately with `latexmlpost --format=html`.
+
+### Repository structure
+- `src/latex_jats/` | Python package: main converter (`convert.py`) and bibliography cleaner (`fixbib.py`)
+- `src/latexml/` | LaTeXML bindings: `ccr.cls.ltxml` and `biblatex.sty.ltxml`
+- `src/lua/` | Pandoc Lua filter for metadata extraction (`ccr_latex.lua`)
+- `src/css/` | Stylesheets for LaTeXML HTML preview output
+- `examples/` | Reference JATS XML examples
+
+
+## Installation and usage
+
+### Installation
 
 **1. Install LaTeXML 0.8.8** (the apt package is outdated — install via cpanm):
 
@@ -22,7 +41,7 @@ sudo cpanm --notest LaTeXML
 uv sync
 ```
 
-### usage
+### Usage
 
 ```sh
 # output goes automatically to <article>/output/main.xml
@@ -33,6 +52,9 @@ uv run latex-jats examples/CCR2023.1.004.KATH/latex/main.tex path/to/output.xml
 ```
 
 We can validate the JATS file online with [J4R Validator](https://j4r.nlm.nih.gov/) or [PubMed Central Validator](https://pmc.ncbi.nlm.nih.gov/tools/stylechecker/). Currently there are still a lot of errors, so we're not done yet.
+
+<!--
+These are words of wisdom, but I don't think they belong in the README
 
 ### check input
 
@@ -49,8 +71,9 @@ Another file that is likely to grow is the biblatex binding `src/latexml/biblate
 
 ### on the whole
 Latex is a slippery beast, very different from XML. Authors do as they please. Expect continuous variety and surprises. Expect constant updating of the scripts. Do _not_ expect automatic conversion and a smooth workflow. Expect manual labor, the hallmark of a good editor.
+-->
 
-### testing
+## Unit and Integration Tests
 
 Unit tests cover the Python post-processing functions and require no external tools:
 
@@ -68,10 +91,3 @@ uv run pytest
 ```
 
 Integration tests are automatically skipped if `latexmlc` is not installed. The CI workflow (`.github/workflows/tests.yml`) runs both.
-
-### repository structure
-- `src/latex_jats/` | Python package: main converter (`convert.py`) and bibliography cleaner (`fixbib.py`)
-- `src/latexml/` | LaTeXML bindings: `ccr.cls.ltxml` and `biblatex.sty.ltxml`
-- `src/lua/` | Pandoc Lua filter for metadata extraction (`ccr_latex.lua`)
-- `src/css/` | Stylesheets for LaTeXML HTML preview output
-- `examples/` | Reference JATS XML examples
