@@ -62,8 +62,8 @@ _JATS_XSLT_WRAPPER = """\
 def run_latexmlc(input_tex, output_xml):
     """Runs latexmlc to convert a LaTeX file to JATS XML.
 
-    Two-step process: first produce the LaTeXML intermediate XML, then apply a
-    patched JATS XSLT (fixing the missing-spaces bug in ltx:personname).
+    Three-step process: LaTeXML intermediate XML → latexmlpost (runs CrossRef
+    to resolve citation links) → patched JATS XSLT (fixes ltx:personname spaces).
     """
     # Note [ES]: Adding "--preload=ccr.cls",  throws an error"""
     # Note [ES]: Adding "--preload=biblatex.sty",  does not in any way change the output"""
@@ -72,17 +72,24 @@ def run_latexmlc(input_tex, output_xml):
     system_jats_xsl = _find_latexml_jats_xsl()
     wrapper_xml = _JATS_XSLT_WRAPPER.format(system_jats_xsl_uri=system_jats_xsl.as_uri())
 
-    with tempfile.NamedTemporaryFile(suffix=".xml", delete=False) as tmp:
-        tmp_path = Path(tmp.name)
+    with tempfile.NamedTemporaryFile(suffix=".xml", delete=False) as tmp1, \
+         tempfile.NamedTemporaryFile(suffix=".xml", delete=False) as tmp2:
+        latexml_path = Path(tmp1.name)
+        post_path = Path(tmp2.name)
     try:
-        command = ["latexmlc", f"--path={LATEXML_DIR}", "--destination", str(tmp_path), "--format=xml", input_tex]
-        subprocess.run(command, check=True)
+        subprocess.run(
+            ["latexmlc", f"--path={LATEXML_DIR}", "--destination", str(latexml_path), "--format=xml", input_tex],
+            check=True)
+        subprocess.run(
+            ["latexmlpost", "--destination", str(post_path), "--format=xml", str(latexml_path)],
+            check=True)
         transform = etree.XSLT(etree.fromstring(wrapper_xml.encode()))
-        result = transform(etree.parse(str(tmp_path)))
+        result = transform(etree.parse(str(post_path)))
         with open(output_xml, "wb") as f:
             f.write(etree.tostring(result, pretty_print=True))
     finally:
-        tmp_path.unlink(missing_ok=True)
+        latexml_path.unlink(missing_ok=True)
+        post_path.unlink(missing_ok=True)
 
 
 def fix_table_notes(jats_file):
@@ -337,6 +344,23 @@ _JOURNAL_META_XML = """\
 </journal-meta>"""
 
 
+def fix_citation_ref_types(jats_file):
+    """Add ref-type="bibr" to xref elements that point to bibliography ref entries.
+
+    latexmlpost converts ltx:bibref → ltx:ref before the JATS XSLT runs, so the
+    XSLT's ltx:bibref template (which adds ref-type="bibr") never fires.  We restore
+    the attribute here by checking whether the xref's rid matches a <ref> in <ref-list>.
+    """
+    ET.register_namespace("xlink", "http://www.w3.org/1999/xlink")
+    tree = ET.parse(jats_file)
+    root = tree.getroot()
+    ref_ids = {ref.get("id") for ref in root.findall(".//ref-list//ref") if ref.get("id")}
+    for xref in root.findall(".//xref"):
+        if not xref.get("ref-type") and xref.get("rid") in ref_ids:
+            xref.set("ref-type", "bibr")
+    tree.write(jats_file, encoding="unicode")
+
+
 def fix_metadata(jats_file, tex_file):
     """Replaces journal-meta with a constant CCR block and injects article metadata
     (doi, publisher-id, volume, issue, fpage, pub-date) extracted from the LaTeX preamble."""
@@ -443,6 +467,7 @@ def main():
 
     # step 2: JATS XML post processing
     print(" - Step 2: Post-processing JATS XML...")
+    fix_citation_ref_types(str(output_path))
     fix_metadata(str(output_path), str(input_path))
     fix_table_notes(str(output_path))
     clean_body(str(output_path))

@@ -148,7 +148,7 @@ DefMacro('\endrefsection', \&biblatex_as_thebibliography, locked => 1);
 
 DefMacro('\entry{}{}{}', sub {
     AssignValue('biblatex_entry', {
-        key => $_[1], type => $_[2] }, 'global');
+        key => ToString($_[1]), type => ToString($_[2]) }, 'global');
     return; }, locked => 1);
 
 DefMacro('\endentry', sub {
@@ -160,9 +160,19 @@ DefMacro('\endentry', sub {
     # TODO: what should we do with constructors leftover here? e.g.
     # \field{labelalpha}{AAP\textsuperscript {+}96} from arXiv:1512.08147
     $label =~ s/\\\w+|[}{]//g;
-    # let's say we can not yet find the right label,
-    # as the biblatex support here is minimal.
-    # Rather than failing loudly, let's make a simple default one.
+    # For author-year styles (e.g. nyt), labelalpha/label are absent.
+    # Construct a "Surname, Year" label from available author and year data.
+    if (!$label) {
+      my $authors_data = $$entry{authors} || {};
+      my @names = @{ $authors_data->{names} || [] };
+      my $year_tok = $$entry{year};
+      my $year = $year_tok ? ToString(Digest(Expand($year_tok))) : '';
+      if (@names && $year) {
+        my $surname = (split /\s+/, $names[0])[-1];
+        $surname =~ s/\\\w+|[}{]//g;
+        my $et_al = (@names > 1) ? ' et al.' : '';
+        $label = "${surname}${et_al}, ${year}"; } }
+    # Fallback to sequential numbering when no author/year data is available.
     if (!$label) {
       my $label_int = 1 + (LookupValue('biblatex_auto_label') || 0);
       AssignValue('biblatex_auto_label', $label_int, 'global');
@@ -187,7 +197,7 @@ DefMacro('\endentry', sub {
 
     my $variant = LookupValue('rebuilt_bibtex_variant') || [];
     push @$variant, (
-      T_CS('\bibitem'), T_OTHER('['), T_OTHER($label), T_OTHER(']'), T_BEGIN, $$entry{key}, T_END);
+      T_CS('\bibitem'), T_OTHER('['), ExplodeText($label), T_OTHER(']'), T_BEGIN, ExplodeText($$entry{key}), T_END);
     my $authors = $$entry{authors};
     # Two cases: either we have a DB-like hash,
     # or they were pre-typeset in "names"
@@ -429,8 +439,10 @@ DefPrimitive('\addbibresource{}', sub {
 Let('\biblatex@saved@bibliography', '\bibliography');
 Let('\bibliography',                '\addbibresource');
 
-DefMacro('\printbibliography', '\let\verb\biblatex@verb\let\endverb\biblatex@endverb'
-    . '\biblatex@printbibliography');
+DefMacro('\printbibliography',
+    '\let\verb\biblatex@verb\let\endverb\biblatex@endverb'
+    . '\catcode`\&=12\relax'
+    . '\InputIfFileExists{\jobname.bbl}{}{}');
 DefMacro('\biblatex@printbibliography[]', sub {
     my @resources = ();
     while (my $res = PopValue('biblatex_resources')) {
