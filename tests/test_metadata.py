@@ -126,3 +126,31 @@ def test_article_meta(tmp_path):
     perm_idx = next(i for i, e in enumerate(children) if e.tag == "permissions")
     fpage_idx = next(i for i, e in enumerate(children) if e.tag == "fpage")
     assert fpage_idx < perm_idx
+
+
+def test_kwd_whitespace_trimmed(tmp_path):
+    """fix_metadata strips leading/trailing whitespace from <kwd> text (LaTeXML
+    comma-tokenisation leaves a leading space on all but the first keyword)."""
+    xml_file = _write_xml(
+        tmp_path,
+        """\
+<article xmlns:xlink="http://www.w3.org/1999/xlink">
+  <front>
+    <journal-meta><journal-id>x</journal-id><issn>x</issn></journal-meta>
+    <article-meta>
+      <kwd-group>
+        <kwd>first keyword</kwd>
+        <kwd> second keyword</kwd>
+        <kwd>  third keyword  </kwd>
+      </kwd-group>
+    </article-meta>
+  </front>
+</article>""",
+    )
+    tex_file = _write_tex(tmp_path, r"\begin{document}")
+
+    fix_metadata(xml_file, tex_file)
+
+    root = ET.parse(xml_file).getroot()
+    kwds = [kwd.text for kwd in root.findall(".//kwd")]
+    assert kwds == ["first keyword", "second keyword", "third keyword"]

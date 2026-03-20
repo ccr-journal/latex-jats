@@ -1,4 +1,5 @@
 import re
+import shutil
 import subprocess
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -6,6 +7,7 @@ from lxml import etree
 
 LATEXML_DIR = Path(__file__).parent.parent / "latexml"
 JATS_XSL = Path(__file__).parent.parent / "xslt" / "main" / "jats-html.xsl"
+CSS_SRC = Path(__file__).parent.parent / "css" / "jats-preview.css"
 
 
 def convert_to_html(xml_file, html_file):
@@ -14,6 +16,7 @@ def convert_to_html(xml_file, html_file):
     result = transform(etree.parse(str(xml_file)))
     with open(html_file, "wb") as f:
         f.write(etree.tostring(result, pretty_print=True))
+    shutil.copy2(CSS_SRC, Path(html_file).parent / "jats-preview.css")
 
 
 def _find_latexml_jats_xsl():
@@ -436,6 +439,10 @@ def fix_metadata(jats_file, tex_file):
 
     for i, elem in enumerate(new_elems):
         am.insert(perm_idx + i, elem)
+
+    for kwd in root.findall(".//kwd"):
+        if kwd.text:
+            kwd.text = kwd.text.strip()
 
     tree.write(jats_file, encoding="unicode")
 

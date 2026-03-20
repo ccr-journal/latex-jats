@@ -38,6 +38,26 @@ def test_citations_linked(tmp_path):
 
 
 @pytest.mark.integration
+def test_abstract_and_keywords(tmp_path):
+    """\\abstract{} and \\keywords{} produce <abstract> and <kwd-group> in JATS."""
+    output = tmp_path / "output.xml"
+    run_latexmlc(str(FIXTURES / "authors.tex"), str(output))
+
+    root = ET.parse(output).getroot()
+
+    abstract = root.find(".//abstract")
+    assert abstract is not None, "No <abstract> element in output"
+    abstract_text = " ".join(abstract.itertext())
+    assert "test abstract" in abstract_text.lower()
+
+    kwd_group = root.find(".//kwd-group")
+    assert kwd_group is not None, "No <kwd-group> element in output"
+    kwds = [kwd.text for kwd in kwd_group.findall("kwd")]
+    assert kwds, "No <kwd> elements in <kwd-group>"
+    assert all(kwd == kwd.strip() for kwd in kwds), f"Keywords have surrounding whitespace: {kwds}"
+
+
+@pytest.mark.integration
 def test_authors_names_and_affiliations(tmp_path):
     """Authors are split into surname/given-names with spaces preserved."""
     output = tmp_path / "output.xml"

@@ -25,9 +25,11 @@ RequirePackage('biblatex');
 # Define macros from ccr.cls
 DefMacro('\shorttitle', '');
 DefMacro('\show@shorttitle', '\textbf{Short Title Placeholder}');
-DefMacro('\abstract', '');
+DefConstructor('\abstract{}',
+    "^ <ltx:abstract>#1</ltx:abstract>");
 DefMacro('\show@abstract', '\textbf{Abstract Placeholder}');
-DefMacro('\keywords', '');
+DefConstructor('\keywords{}',
+    "^ <ltx:keywords>#1</ltx:keywords>");
 DefMacro('\show@keywords', '\textbf{Keywords Placeholder}');
 # Helper macros for a single author+affiliation entry (mirrors \lx@author pattern)
 DefMacro('\ccr@oneauthor{}',
