@@ -24,11 +24,11 @@ References are excluded (checked separately; only minor issues).
 
 ## Body Structure
 
-- [ ] (14) Figure and table elements missing `<label>` (e.g. `<label>Figure 1:</label>`)
-- [ ] (15) Captions use `<caption><p>` instead of `<caption><title>`
+- [x] (14) Figure and table elements missing `<label>` (e.g. `<label>Figure 1:</label>`)
+- [x] (15) Captions use `<caption><p>` instead of `<caption><title>`
 - [ ] (16) Hypotheses/RQs marked up as `<list list-type="bullet">` instead of `<disp-quote>`
 - [ ] (17) Spurious `<p>.</p>` inside many `<fig>` elements
-- [ ] (18) Section title includes number (`1 Introduction` instead of `Introduction`)
+- [x] (18) Section title includes number (`1 Introduction` instead of `Introduction`)
 - [ ] (19) Sub-figures (Figure 3): ours nests two `<fig>` elements; gold has a single merged image
 
 ## Tables

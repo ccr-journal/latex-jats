@@ -215,53 +215,7 @@ def _find_latexml_jats_xsl():
     raise FileNotFoundError("Cannot find LaTeXML-jats.xsl; is LaTeXML installed?")
 
 
-# Wrapper XSLT that imports the system LaTeXML JATS stylesheet and fixes the
-# ltx:personname template, which concatenates given-name tokens without spaces.
-_JATS_XSLT_WRAPPER = """\
-<?xml version="1.0" encoding="utf-8"?>
-<xsl:stylesheet version="1.0"
-    xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
-    xmlns:ltx="http://dlmf.nist.gov/LaTeXML"
-    xmlns:str="http://exslt.org/strings"
-    extension-element-prefixes="str">
-  <xsl:import href="{system_jats_xsl_uri}"/>
-  <!-- Fix: \citeyear should show only the year (e.g. "2011"), not the full author-year label.
-       After CrossRef, ltx:cite[@class='ltx_citemacro_citeyear'] wraps an ltx:ref whose text
-       content is the full bibitem label ("Author, Year"); we extract the part after the last ", ". -->
-  <xsl:template match="ltx:cite[contains(@class,'ltx_citemacro_citeyear')]">
-    <xsl:for-each select=".//ltx:ref[@idref]">
-      <xref rid="{{@idref}}">
-        <xsl:variable name="full" select="normalize-space(string(.))"/>
-        <xsl:choose>
-          <xsl:when test="contains($full, ', ')">
-            <xsl:value-of select="substring-after($full, ', ')"/>
-          </xsl:when>
-          <xsl:otherwise>
-            <xsl:value-of select="$full"/>
-          </xsl:otherwise>
-        </xsl:choose>
-      </xref>
-    </xsl:for-each>
-  </xsl:template>
-  <!-- Fix: system XSLT joins given-name tokens without separator -->
-  <xsl:template match="ltx:personname">
-    <name>
-      <surname>
-        <xsl:for-each select="str:tokenize(normalize-space(./text()),' ')">
-          <xsl:if test="position()=last()"><xsl:value-of select="."/></xsl:if>
-        </xsl:for-each>
-      </surname>
-      <given-names>
-        <xsl:for-each select="str:tokenize(normalize-space(./text()),' ')">
-          <xsl:if test="position()!=last()">
-            <xsl:if test="position()!=1"><xsl:text> </xsl:text></xsl:if>
-            <xsl:value-of select="."/>
-          </xsl:if>
-        </xsl:for-each>
-      </given-names>
-    </name>
-  </xsl:template>
-</xsl:stylesheet>"""
+_JATS_XSLT_WRAPPER = Path(__file__).parent.parent / "xslt" / "latexml-jats-wrapper.xsl"
 
 
 def run_latexmlc(input_tex, output_xml, log_dir=None):
@@ -276,7 +230,7 @@ def run_latexmlc(input_tex, output_xml, log_dir=None):
     # WvA: but removing/renaing biblatex.sty does change the output
     import tempfile
     system_jats_xsl = _find_latexml_jats_xsl()
-    wrapper_xml = _JATS_XSLT_WRAPPER.format(system_jats_xsl_uri=system_jats_xsl.as_uri())
+    wrapper_xml = _JATS_XSLT_WRAPPER.read_text().replace("SYSTEM_JATS_XSL_URI", system_jats_xsl.as_uri())
 
     if log_dir is not None:
         Path(log_dir).mkdir(parents=True, exist_ok=True)
