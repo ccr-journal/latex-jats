@@ -48,6 +48,9 @@ def test_fn_moved_to_fn_group_in_back(xml_file):
     root = ET.parse(path).getroot()
     fn_group = root.find(".//back/fn-group")
     assert fn_group is not None
+    title = fn_group.find("title")
+    assert title is not None
+    assert title.text == "Notes"
     fn = fn_group.find("fn")
     assert fn is not None
     assert fn.get("id") == "fn1"

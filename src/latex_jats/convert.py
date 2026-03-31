@@ -474,6 +474,10 @@ def fix_footnotes(jats_file):
                 p.append(xref)
             # removed_fns.append(fn)
 
+    if not removed_fns:
+        tree.write(jats_file, encoding="unicode")
+        return
+
     # find (or make) <back>
     back = root.find(".//back")
     if back is None:
@@ -483,6 +487,8 @@ def fix_footnotes(jats_file):
     fn_group = back.find("fn-group")
     if fn_group is None:
         fn_group = ET.Element("fn-group")
+        title = ET.SubElement(fn_group, "title")
+        title.text = "Notes"
         # Place before <ref-list> if present, otherwise at the end
         reflist = back.find("ref-list")
         if reflist is not None:
