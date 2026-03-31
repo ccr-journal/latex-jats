@@ -361,6 +361,11 @@ def clean_body(jats_file):
 
 
 def fix_footnotes(jats_file):
+    # LaTeXML's JATS XSLT (LaTeXML-jats.xsl) converts \footnote to inline <fn>
+    # elements inside <p>, which is valid JATS. The publisher expects the other
+    # valid pattern: <xref> in the body pointing to <fn> in a <fn-group> in <back>.
+    # This can't be fixed in the LaTeXML bindings (they control ltx:* mapping, not
+    # the JATS output), so we restructure here.
     ET.register_namespace("xlink", "http://www.w3.org/1999/xlink")
     tree = ET.parse(jats_file)
     root = tree.getroot()
@@ -393,7 +398,8 @@ def fix_footnotes(jats_file):
             xref.text = num
             # replace <fn> with <xref>
             children = list(p)
-            # remove tail
+            # transfer tail text to xref so it isn't lost
+            xref.tail = fn.tail
             fn.tail = ""
             removed_fns.append(fn)
 

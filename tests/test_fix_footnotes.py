@@ -28,6 +28,8 @@ def test_inline_fn_replaced_with_xref(xml_file):
     assert xref.get("rid") == "fn1"
     assert xref.get("ref-type") == "fn"
     assert xref.text == "1"
+    # tail text after the footnote marker must be preserved
+    assert xref.tail == " more text."
 
 
 def test_fn_moved_to_fn_group_in_back(xml_file):

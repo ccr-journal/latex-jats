@@ -8,7 +8,7 @@ References are excluded (checked separately; only minor issues).
 - [x] (1) Missing XML declaration, DOCTYPE, and root `<article>` attributes (`dtd-version="1.2"`, `xml:lang="en"`, `xmlns:xsi`)
 - [x] (2) MathML namespace prefix is `ns1:` instead of `mml:`
 - [x] (3) Display equations rendered as `<inline-formula>` instead of `<disp-formula>` — source LaTeX uses `$...$` inside `\begin{center}`, so inline is technically correct; revisit if publisher rejects
-- [ ] (4) Text loss around footnote markers (paragraphs truncated after footnote xref in several places)
+- [x] (4) Text loss around footnote markers (paragraphs truncated after footnote xref in several places) — `fn.tail` was discarded instead of transferred to the replacement `<xref>`
 - [x] (5) Corrupted character in footnote 7: `¿=` instead of `>=` — LaTeXML OT1 encoding issue; added pre-conversion warning for bare `>` / `<` in text mode
 
 ## Metadata
