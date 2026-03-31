@@ -4,6 +4,8 @@
 
 This tool converts CCR (Computational Communication Research) journal articles from LaTeX to JATS XML for submission to the AUP Online publishing platform. It uses LaTeXML with custom bindings and a Python post-processing pipeline, and can optionally produce an HTML proof preview.
 
+The end goal is to turn this into a web service where authors can upload their LaTeX source and check the conversion status themselves.
+
 ## Running the tool
 
 ```sh
@@ -27,6 +29,12 @@ Three sequential steps in `src/latex_jats/convert.py`:
    - `fix_footnotes` — moves inline footnotes into an `<fn-group>` in back matter
 
 **HTML preview** (`convert_to_html`) — applies `src/xslt/main/jats-html.xsl` (NLM JATS-to-HTML stylesheet) and copies `src/css/jats-preview.css` to the output directory.
+
+## Design principles
+
+- **Fix issues at the source, not post-hoc.** Prefer fixing conversion problems in the LaTeXML bindings (`ccr.cls.ltxml`, `biblatex.sty.ltxml`) or the XSLT wrapper over adding Python post-processing fixups. Post-processing should be reserved for things that genuinely cannot be handled earlier in the pipeline.
+- **Warn, don't silently fix, bad LaTeX.** If the source `.tex` is incorrect or ambiguous (e.g. bare `>` in text mode, missing `\label`), do not try to guess the author's intent during conversion. Instead, emit a warning via `logging` so the author can fix the source. This is important because the tool will be author-facing.
+- **Use `logging`, not `print`.** All messages that are relevant to the article author (warnings about source issues, conversion notes) must use `logging.warning` or `logging.info` so a future web frontend can collect and display them. The `logging.basicConfig` call in `main()` ensures CLI output still works.
 
 ## Repository structure
 
@@ -55,7 +63,10 @@ tests/
   fixtures/latex/         minimal .tex files used by integration tests
 examples/
   CCR2023.1.004.KATH/     reference article with latex/ input and output/ JATS+HTML
+  CCR2025.1.2.YAO/        article with gold/ JATS XML from the typesetting company for comparison
 ```
+
+The `gold/` directory under CCR2025.1.2.YAO contains the JATS XML produced by the professional typesetting company. Use it as a reference when evaluating output quality. It may contain minor imperfections, so it does not need to be matched exactly. See `todo.md` in the project root for a tracked list of discrepancies.
 
 ## Tests
 

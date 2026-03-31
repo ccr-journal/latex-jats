@@ -1,3 +1,4 @@
+import logging
 import re
 import shutil
 import subprocess
@@ -5,7 +6,52 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from lxml import etree
 
+logger = logging.getLogger(__name__)
+
 ET.register_namespace("mml", "http://www.w3.org/1998/Math/MathML")
+
+def _warn_bare_greater_than(tex_path):
+    """Warn about bare > or < in text mode across the main .tex and \\input files.
+
+    LaTeXML maps these to ¿ and ¡ (OT1 encoding); authors should use
+    $\\ge$, $\\le$, $>$, $<$, \\textgreater, or \\textless instead.
+    """
+    tex_dir = tex_path.parent
+    files = [tex_path]
+    # collect \\input / \\include targets
+    try:
+        main_text = tex_path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        main_text = tex_path.read_text(encoding="latin-1")
+    for m in re.finditer(r'\\(?:input|include)\{([^}]+)\}', main_text):
+        child = tex_dir / m.group(1)
+        if not child.suffix:
+            child = child.with_suffix('.tex')
+        if child.exists() and child not in files:
+            files.append(child)
+
+    for fpath in files:
+        try:
+            lines = fpath.read_text(encoding="utf-8").splitlines()
+        except UnicodeDecodeError:
+            lines = fpath.read_text(encoding="latin-1").splitlines()
+        in_math_env = False
+        for lineno, line in enumerate(lines, 1):
+            stripped = re.sub(r'(?<!\\)%.*', '', line)  # remove comments (but not \%)
+            # track math environments (simple heuristic)
+            if re.search(r'\\begin\{(equation|align|math|displaymath|eqnarray)', stripped):
+                in_math_env = True
+            if re.search(r'\\end\{(equation|align|math|displaymath|eqnarray)', stripped):
+                in_math_env = False
+            if in_math_env:
+                continue
+            # strip inline math ($...$) before checking
+            text_only = re.sub(r'\$[^$]*\$', '', stripped)
+            if re.search(r'[<>]', text_only):
+                logger.warning(f'bare > or < in text mode ({fpath.name}:{lineno}): '
+                               f'LaTeXML will render this as ¿ or ¡. '
+                               f'Use $\\ge$, $\\le$, $>$, or $<$ instead.')
+
 
 LATEXML_DIR = Path(__file__).parent.parent / "latexml"
 JATS_XSL = Path(__file__).parent.parent / "xslt" / "main" / "jats-html.xsl"
@@ -837,8 +883,8 @@ def fix_references(jats_file, bbl_file):
     root = tree.getroot()
     refs = root.findall('.//ref')
     if len(refs) != len(entries):
-        print(f'Warning: {len(refs)} refs in JATS but {len(entries)} entries in .bbl; '
-              'some may be skipped')
+        logger.warning(f'{len(refs)} refs in JATS but {len(entries)} entries in .bbl; '
+                       'some may be skipped')
     for ref, entry in zip(refs, entries):
         mc = ref.find('mixed-citation')
         if mc is None:
@@ -848,13 +894,13 @@ def fix_references(jats_file, bbl_file):
         authors = entry.get('authors', [])
         first_family = authors[0]['family'] if authors else ''
         if first_family and first_family not in flat_text:
-            print(f"Warning: bbl key {entry['key']!r}: "
-                  f"family name {first_family!r} not in ref text; skipping")
+            logger.warning(f"bbl key {entry['key']!r}: "
+                          f"family name {first_family!r} not in ref text; skipping")
             continue
         ref_warnings = []
         new_mc = _build_mixed_citation(entry, warnings=ref_warnings)
         for w in ref_warnings:
-            print(f'Note: {w}')
+            logger.info(w)
         attrib = dict(mc.attrib)
         mc.clear()
         mc.attrib.update(attrib)
@@ -1016,6 +1062,8 @@ def finalize_xml(jats_file):
 def main():
     import argparse
 
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+
     parser = argparse.ArgumentParser()
     parser.add_argument("input", help="Input LaTeX file")
     parser.add_argument("output", nargs="?", help="Output JATS XML file (default: <article>/output/<doi-suffix>.xml)")
@@ -1033,14 +1081,17 @@ def main():
     output_path.parent.mkdir(parents=True, exist_ok=True)
     log_dir = output_path.parent / "logs"
 
-    print(f"Will convert {input_path} -> {output_path} 😎.")
+    logger.info(f"Will convert {input_path} -> {output_path}")
+
+    # step 0: warn about known LaTeX pitfalls
+    _warn_bare_greater_than(input_path)
 
     # step 1: LaTeX to JATS conversion
-    print(" - Step 1: Converting LaTeX to JATS XML...")
+    logger.info("Step 1: Converting LaTeX to JATS XML...")
     run_latexmlc(str(input_path), str(output_path), log_dir=log_dir)
 
     # step 2: JATS XML post processing
-    print(" - Step 2: Post-processing JATS XML...")
+    logger.info("Step 2: Post-processing JATS XML...")
     fix_citation_ref_types(str(output_path))
     fix_metadata(str(output_path), str(input_path))
     fix_table_notes(str(output_path))
@@ -1051,10 +1102,10 @@ def main():
     if bbl_file.exists():
         fix_references(str(output_path), str(bbl_file))
     else:
-        print(f' - Warning: no .bbl file at {bbl_file}; references will be plain text')
+        logger.warning(f'no .bbl file at {bbl_file}; references will be plain text')
     finalize_xml(str(output_path))
 
-    print(f"Saved corrected JATS XML in {output_path} 😎.")
+    logger.info(f"Saved corrected JATS XML in {output_path}")
 
     # step 2b: copy graphics from the latex source directory to the output directory
     image_exts = {".png", ".jpg", ".jpeg", ".gif", ".svg", ".tif", ".tiff"}
@@ -1067,14 +1118,14 @@ def main():
                 shutil.copy2(img, dest)
                 copied.append(img.name)
     if copied:
-        print(f" - Copied {len(copied)} image(s) to output: {', '.join(copied)}")
+        logger.info(f"Copied {len(copied)} image(s) to output: {', '.join(copied)}")
 
     # step 3 (optional): generate HTML preview
     if args.html:
         html_path = output_path.with_suffix(".html")
-        print(" - Step 3: Generating HTML preview...")
+        logger.info("Step 3: Generating HTML preview...")
         convert_to_html(str(output_path), str(html_path))
-        print(f"Saved HTML preview in {html_path} 😎.")
+        logger.info(f"Saved HTML preview in {html_path}")
         _write_netlify_files(output_path.parent, output_path.stem)
 
 
