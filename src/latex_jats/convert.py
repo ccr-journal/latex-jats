@@ -385,7 +385,7 @@ def fix_appendix_labels(jats_file):
 
 
 def clean_body(jats_file):
-    """Removes empty <p> elements and misplaced <title> inside <body>."""
+    """Removes empty <p> elements, misplaced <title> inside <body>, and empty <app-group> from <back>."""
     ET.register_namespace("xlink", "http://www.w3.org/1999/xlink")
     tree = ET.parse(jats_file)
     root = tree.getroot()
@@ -415,6 +415,13 @@ def clean_body(jats_file):
 
             if comment_text:
                 body.insert(0, ET.Comment("".join(comment_text)))
+
+    # remove empty <app-group> from back matter
+    back = root.find(".//back")
+    if back is not None:
+        for ag in back.findall("app-group"):
+            if len(ag) == 0 and (ag.text or "").strip() == "":
+                back.remove(ag)
 
     tree.write(jats_file, encoding="unicode")
 
@@ -1196,6 +1203,17 @@ _ROOT_ATTRS = {
 }
 
 
+def fix_ext_links(jats_file):
+    """Add ext-link-type="uri" to <ext-link> elements that lack an ext-link-type attribute."""
+    ET.register_namespace("xlink", "http://www.w3.org/1999/xlink")
+    tree = ET.parse(jats_file)
+    root = tree.getroot()
+    for el in root.iter("ext-link"):
+        if el.get("ext-link-type") is None:
+            el.set("ext-link-type", "uri")
+    tree.write(jats_file, encoding="unicode")
+
+
 def finalize_xml(jats_file):
     """Add XML declaration, DOCTYPE, and required root <article> attributes."""
     ET.register_namespace("xlink", "http://www.w3.org/1999/xlink")
@@ -1262,6 +1280,7 @@ def main():
         fix_references(str(output_path), str(bbl_file))
     else:
         logger.warning(f'no .bbl file at {bbl_file}; references will be plain text')
+    fix_ext_links(str(output_path))
     finalize_xml(str(output_path))
 
     logger.info(f"Saved corrected JATS XML in {output_path}")

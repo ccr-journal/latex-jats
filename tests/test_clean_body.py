@@ -3,8 +3,9 @@ import xml.etree.ElementTree as ET
 from latex_jats.convert import clean_body
 
 
-def _make_doc(body_content):
-    return f"<article><body>{body_content}</body></article>"
+def _make_doc(body_content, back_content=""):
+    back = f"<back>{back_content}</back>" if back_content else ""
+    return f"<article><body>{body_content}</body>{back}</article>"
 
 
 def test_empty_p_removed(xml_file):
@@ -37,3 +38,26 @@ def test_title_directly_in_body_removed(xml_file):
     assert body.find("title") is None
     # but <title> inside <sec> should remain
     assert root.find(".//sec/title") is not None
+
+
+def test_empty_app_group_removed(xml_file):
+    path = xml_file(_make_doc(
+        "<sec><title>Intro</title><p>Content.</p></sec>",
+        "<app-group /><ref-list />"
+    ))
+    clean_body(path)
+    root = ET.parse(path).getroot()
+    back = root.find(".//back")
+    assert back.find("app-group") is None
+    assert back.find("ref-list") is not None
+
+
+def test_nonempty_app_group_kept(xml_file):
+    path = xml_file(_make_doc(
+        "<sec><title>Intro</title><p>Content.</p></sec>",
+        "<app-group><app><title>Appendix A</title></app></app-group>"
+    ))
+    clean_body(path)
+    root = ET.parse(path).getroot()
+    back = root.find(".//back")
+    assert back.find("app-group") is not None
