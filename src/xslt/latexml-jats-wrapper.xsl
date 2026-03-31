@@ -97,6 +97,22 @@
     </fig-group>
   </xsl:template>
 
+  <!-- Fix (21): LaTeXML marks first-column cells with @thead heuristically.
+       LaTeX has no semantic header-column concept (l/c/r are purely alignment),
+       so render all tbody cells as <td> regardless of @thead. -->
+  <xsl:template match="ltx:tbody//ltx:td[@thead]">
+    <td>
+      <xsl:apply-templates select="@xml:id" mode="copy-attribute"/>
+      <xsl:if test="@colspan">
+        <xsl:attribute name="colspan"><xsl:value-of select="@colspan"/></xsl:attribute>
+      </xsl:if>
+      <xsl:if test="@rowspan">
+        <xsl:attribute name="rowspan"><xsl:value-of select="@rowspan"/></xsl:attribute>
+      </xsl:if>
+      <xsl:apply-templates/>
+    </td>
+  </xsl:template>
+
   <!-- Fix (14): Same for tables (<table-wrap>). -->
   <xsl:template match="ltx:table">
     <table-wrap>

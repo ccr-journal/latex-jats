@@ -279,6 +279,28 @@ def fix_table_notes(jats_file):
     tree.write(jats_file, encoding="unicode")
 
 
+def warn_tfoot_notes(jats_file):
+    """Warns about <tfoot> elements inside <table-wrap>.
+
+    A <tfoot> means the author placed notes (e.g. significance stars, "standard
+    errors in parentheses") inside the tabular environment after \\bottomrule.
+    These should be moved outside the tabular but inside the table environment
+    so the converter can place them in <table-wrap-foot>.
+    """
+    tree = ET.parse(jats_file)
+    root = tree.getroot()
+    for table_wrap in root.findall(".//table-wrap"):
+        table_id = table_wrap.get("id", "<unknown>")
+        for table in table_wrap.findall("table"):
+            tfoot = table.find("tfoot")
+            if tfoot is not None:
+                logging.warning(
+                    f"Table {table_id!r} has notes inside the tabular (rendered as <tfoot>). "
+                    "Move them outside \\begin{tabular}...\\end{tabular} but inside "
+                    "\\begin{table}...\\end{table} so they appear as proper table notes."
+                )
+
+
 def warn_fig_paragraphs(jats_file):
     """Warns about stray <p> elements inside <fig> that contain only punctuation/whitespace.
 
@@ -1157,6 +1179,7 @@ def main():
     fix_citation_ref_types(str(output_path))
     fix_metadata(str(output_path), str(input_path))
     fix_table_notes(str(output_path))
+    warn_tfoot_notes(str(output_path))
     warn_fig_paragraphs(str(output_path))
     clean_body(str(output_path))
     fix_footnotes(str(output_path))

@@ -33,30 +33,30 @@ References are excluded (checked separately; only minor issues).
 
 ## Tables
 
-- [ ] (20) Table header rows: ours splits number and label into two rows; gold combines them
-- [ ] (21) Row label cells use `<th>` instead of `<td>`
-- [ ] (22) Table footnotes use `<tfoot>` rows instead of `<table-wrap-foot>/<fn-group>/<fn>` with `symbol` attributes
-- [ ] (23) Missing `<colgroup>/<col>` elements and `width` attribute on `<table>`
-- [ ] (24) Multiplication sign in "Woman x Republican" wrapped in `<inline-formula>`+MathML instead of plain `&#x00D7;`
-- [ ] (25) URLs in table cells are plain text instead of `<ext-link ext-link-type="uri">`
+- [x] (20) Table header rows: ours splits number and label into two rows; gold combines them — **don't fix, typesetter decision; LaTeX source genuinely has two rows**
+- [x] (21) Row label cells use `<th>` instead of `<td>` — XSLT override for `@thead` cells in `<tbody>`
+- [x] (22) Table footnotes use `<tfoot>` rows instead of `<table-wrap-foot>/<fn-group>/<fn>` with `symbol` attributes — **warn only**; author should move notes outside `\begin{tabular}` but inside `\begin{table}`
+- [x] (23) Missing `<colgroup>/<col>` elements and `width` attribute on `<table>` — **skip for now**; gold widths are typesetter-invented, empty `<col>` elements serve no purpose
+- [x] (24) Multiplication sign in "Woman x Republican" wrapped in `<inline-formula>`+MathML instead of plain `&#x00D7;` — **don't fix**; author wrote `$\times$`, MathML is faithful
+- [x] (25) URLs in table cells are plain text instead of `<ext-link ext-link-type="uri">` — **don't fix**; no `\url{}` in source, can't reliably detect bare URLs
 
 ## IDs and Cross-references
 
-- [x] (26) Section IDs differ (`s1` vs `S1`/`Sx1`) don't care, don't fix
-- [x] (27) Figure IDs differ (`fig1` vs `S1.F1`) don't care, don't fix
-- [x] (28) Table IDs differ (`tab1` vs `Sx4.T1`) don't care, don't fix
-- [x] (29) Footnote IDs differ (`fn1` vs `id1`) don't care, don't fix
-- [x] (30) Citation xref `rid` values differ (`CIT0042` vs `bib.bibx42`) don't care, don't fix
+- [x] (26) Section IDs differ (`s1` vs `S1`/`Sx1`) **don't care, don't fix**
+- [x] (27) Figure IDs differ (`fig1` vs `S1.F1`) **don't care, don't fix**
+- [x] (28) Table IDs differ (`tab1` vs `Sx4.T1`) **don't care, don't fix**
+- [x] (29) Footnote IDs differ (`fn1` vs `id1`) **don't care, don't fix**
+- [x] (30) Citation xref `rid` values differ (`CIT0042` vs `bib.bibx42`) **don't care, don't fix**
 - [x] (31) Missing `ref-type` attribute on many figure/table/appendix xrefs
 - [x] (32) Footnote xrefs missing `specific-use="fn"` attribute and `<sup>` wrapper
-- [ ] (33) Cross-references to appendix tables/sections lost (rendered as plain text)
-- [x] (34) Every `<p>` has an `id` attribute; gold has none; don't care, don't fix
+- [x] (33) Cross-references to appendix tables/sections lost (rendered as plain text) **Latex source issue, don't fix**
+- [x] (34) Every `<p>` has an `id` attribute; gold has none; **don't care, don't fix**
 
 ## Back Matter
 
 - [ ] (35) `<fn-group>` placed after `<app-group>`; gold puts it before `<ref-list>` with `<title>Notes</title>`
 - [ ] (36) Footnotes missing `symbol` attribute
-- [ ] (37) Appendix IDs use `A1` instead of `apx1`
+- [x] (37) Appendix IDs use `A1` instead of `apx1` **don't care, don't fix**
 - [ ] (38) Figures 4-7 inline in body; gold moves them to a separate back-matter section
 - [ ] (39) Appendix table/figure labels missing
 
