@@ -13,14 +13,14 @@ References are excluded (checked separately; only minor issues).
 
 ## Metadata
 
-- [ ] (6) DOI / publisher-id missing leading zero (`CCR2025.1.2.YAO` vs gold `CCR2025.1.002.YAO`)
-- [ ] (7) ISSN `pub-type` values wrong (`print`/`electronic` vs gold `ppub`/`epub`); print ISSN should be empty
-- [ ] (8) `<pub-date>` uses `pub-type="electronic"` instead of `"epub"`; missing `<month>` element
-- [ ] (9) Missing `<lpage>` element
-- [ ] (10) Missing `<article-categories>` with `<subject>Article</subject>`
-- [ ] (11) Permissions incomplete: only `<copyright-statement>unknown</copyright-statement>`; gold has copyright-year, copyright-holder, and CC BY 4.0 license block
-- [ ] (12) Abstract missing `<title>Abstract</title>` child
-- [ ] (13) Keywords group missing `<title>Keywords:</title>` child
+- [x] (6) DOI / publisher-id missing leading zero (`CCR2025.1.2.YAO` vs gold `CCR2025.1.002.YAO`) — LaTeX source issue, not converter
+- [x] (7) ISSN `pub-type` values wrong (`print`/`electronic` vs gold `ppub`/`epub`); print ISSN should be empty
+- [x] (8) `<pub-date>` uses `pub-type="electronic"` instead of `"epub"`; ~~missing `<month>` element~~ (month deferred)
+- [x] (9) Missing `<lpage>` element — emits warning when `\lastpage` not in preamble
+- [x] (10) Missing `<article-categories>` with `<subject>Article</subject>`
+- [x] (11) Permissions incomplete: only `<copyright-statement>unknown</copyright-statement>`; gold has copyright-year, copyright-holder, and CC BY 4.0 license block
+- [x] (12) Abstract missing `<title>Abstract</title>` child
+- [x] (13) Keywords group missing `<title>Keywords:</title>` child
 
 ## Body Structure
 

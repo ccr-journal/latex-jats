@@ -923,8 +923,8 @@ _JOURNAL_META_XML = """\
   <journal-title-group>
     <journal-title>Computational Communication Research</journal-title>
   </journal-title-group>
-  <issn pub-type="print">2665-9085</issn>
-  <issn pub-type="electronic">2665-9085</issn>
+  <issn pub-type="ppub"/>
+  <issn pub-type="epub">2665-9085</issn>
   <publisher>
     <publisher-name>Amsterdam University Press</publisher-name>
     <publisher-loc>Amsterdam</publisher-loc>
@@ -1001,13 +1001,20 @@ def fix_metadata(jats_file, tex_file):
         am.insert(insert_pos, elem_pubid)
         insert_pos += 2
 
+    # (10) Insert <article-categories> after article-id elements
+    art_cat = ET.fromstring(
+        '<article-categories><subj-group subj-group-type="heading">'
+        '<subject>Article</subject></subj-group></article-categories>'
+    )
+    am.insert(insert_pos, art_cat)
+
     # Find insertion point: just before <permissions>
     children = list(am)
     perm_idx = next((i for i, e in enumerate(children) if e.tag == "permissions"), len(children))
 
     new_elems = []
     if pubyear_val:
-        pub_date = ET.Element("pub-date", {"pub-type": "electronic"})
+        pub_date = ET.Element("pub-date", {"pub-type": "epub"})
         year_elem = ET.SubElement(pub_date, "year")
         year_elem.text = pubyear_val
         new_elems.append(pub_date)
@@ -1023,9 +1030,51 @@ def fix_metadata(jats_file, tex_file):
         fpage = ET.Element("fpage")
         fpage.text = firstpage_val
         new_elems.append(fpage)
+    lastpage_val = _get("lastpage")
+    if lastpage_val:
+        lpage = ET.Element("lpage")
+        lpage.text = lastpage_val
+        new_elems.append(lpage)
+    else:
+        logger.warning("No \\lastpage in LaTeX preamble; <lpage> will be missing from JATS output")
 
     for i, elem in enumerate(new_elems):
         am.insert(perm_idx + i, elem)
+
+    # (11) Replace permissions with full copyright + CC BY 4.0 license block
+    old_perm = am.find("permissions")
+    if old_perm is not None:
+        perm_idx_now = list(am).index(old_perm)
+        am.remove(old_perm)
+        copyright_year = pubyear_val or "unknown"
+        perm_xml = (
+            '<permissions>'
+            '<copyright-statement>\u00a9 The authors</copyright-statement>'
+            f'<copyright-year>{copyright_year}</copyright-year>'
+            '<copyright-holder>The authors</copyright-holder>'
+            '<license license-type="open-access">'
+            '<license-p>This is an open access article distributed under the CC BY 4.0 license '
+            '<ext-link xmlns:xlink="http://www.w3.org/1999/xlink" ext-link-type="uri" '
+            'xlink:href="https://creativecommons.org/licenses/by/4.0/">'
+            'https://creativecommons.org/licenses/by/4.0/</ext-link></license-p>'
+            '</license>'
+            '</permissions>'
+        )
+        am.insert(perm_idx_now, ET.fromstring(perm_xml))
+
+    # (12) Add <title>Abstract</title> to <abstract> if missing
+    abstract = root.find(".//abstract")
+    if abstract is not None and abstract.find("title") is None:
+        title_elem = ET.Element("title")
+        title_elem.text = "Abstract"
+        abstract.insert(0, title_elem)
+
+    # (13) Add <title>Keywords:</title> to <kwd-group> if missing
+    kwd_group = root.find(".//kwd-group")
+    if kwd_group is not None and kwd_group.find("title") is None:
+        title_elem = ET.Element("title")
+        title_elem.text = "Keywords:"
+        kwd_group.insert(0, title_elem)
 
     for kwd in root.findall(".//kwd"):
         if kwd.text:

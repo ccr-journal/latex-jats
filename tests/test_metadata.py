@@ -55,8 +55,8 @@ def test_journal_meta(tmp_path):
     assert jtg.findtext("journal-title") == "Computational Communication Research"
 
     issns = {e.get("pub-type"): e.text for e in jm.findall("issn")}
-    assert issns.get("print") == "2665-9085"
-    assert issns.get("electronic") == "2665-9085"
+    assert issns.get("ppub") is None
+    assert issns.get("epub") == "2665-9085"
 
     pub = jm.find("publisher")
     assert pub is not None
@@ -81,6 +81,12 @@ def test_article_meta(tmp_path):
         <article-title>Test</article-title>
       </title-group>
       <contrib-group/>
+      <abstract>
+        <p>Some abstract text.</p>
+      </abstract>
+      <kwd-group>
+        <kwd>test</kwd>
+      </kwd-group>
       <permissions>
         <copyright-statement>unknown</copyright-statement>
       </permissions>
@@ -114,12 +120,35 @@ def test_article_meta(tmp_path):
     # pub-date / year
     pub_date = am.find("pub-date")
     assert pub_date is not None
-    assert pub_date.get("pub-type") == "electronic"
+    assert pub_date.get("pub-type") == "epub"
     assert pub_date.findtext("year") == "2023"
 
     assert am.findtext("volume") == "5"
     assert am.findtext("issue") == "1"
     assert am.findtext("fpage") == "85"
+
+    # article-categories with subject "Article"
+    art_cat = am.find("article-categories")
+    assert art_cat is not None
+    assert art_cat.findtext("subj-group/subject") == "Article"
+
+    # permissions: full copyright + license block
+    perm = am.find("permissions")
+    assert perm is not None
+    assert perm.findtext("copyright-year") == "2023"
+    assert perm.findtext("copyright-holder") == "The authors"
+    assert perm.find("license") is not None
+    assert perm.find("license").get("license-type") == "open-access"
+
+    # abstract gets <title>Abstract</title>
+    abstract = root.find(".//abstract")
+    assert abstract is not None
+    assert abstract.findtext("title") == "Abstract"
+
+    # kwd-group gets <title>Keywords:</title>
+    kwd_group = root.find(".//kwd-group")
+    assert kwd_group is not None
+    assert kwd_group.findtext("title") == "Keywords:"
 
     # New elements should appear before <permissions>
     children = list(am)
