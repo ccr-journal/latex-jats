@@ -5,8 +5,8 @@ References are excluded (checked separately; only minor issues).
 
 ## Critical / Structural
 
-- [ ] Missing XML declaration, DOCTYPE, and root `<article>` attributes (`dtd-version="1.2"`, `xml:lang="en"`, `xmlns:xsi`)
-- [ ] MathML namespace prefix is `ns1:` instead of `mml:`
+- [x] Missing XML declaration, DOCTYPE, and root `<article>` attributes (`dtd-version="1.2"`, `xml:lang="en"`, `xmlns:xsi`)
+- [x] MathML namespace prefix is `ns1:` instead of `mml:`
 - [ ] Display equations rendered as `<inline-formula>` instead of `<disp-formula>`
 - [ ] Text loss around footnote markers (paragraphs truncated after footnote xref in several places)
 - [ ] Corrupted character in footnote 7: `¿=` instead of `>=`

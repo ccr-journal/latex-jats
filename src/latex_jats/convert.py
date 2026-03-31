@@ -5,6 +5,8 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from lxml import etree
 
+ET.register_namespace("mml", "http://www.w3.org/1998/Math/MathML")
+
 LATEXML_DIR = Path(__file__).parent.parent / "latexml"
 JATS_XSL = Path(__file__).parent.parent / "xslt" / "main" / "jats-html.xsl"
 CSS_SRC = Path(__file__).parent.parent / "css" / "jats-preview.css"
@@ -980,6 +982,36 @@ def fix_metadata(jats_file, tex_file):
     tree.write(jats_file, encoding="unicode")
 
 
+_XML_DECL = '<?xml version="1.0" encoding="UTF-8"?>\n'
+_DOCTYPE = (
+    '<!DOCTYPE article PUBLIC '
+    '"-//NLM//DTD JATS (NISO Z39.96-2019) Journal Publishing DTD v1.2 20190208//EN" '
+    '"https://jats.nlm.nih.gov/publishing/1.2/JATS-journalpublishing1-mathml3.dtd">\n'
+)
+_ROOT_ATTRS = {
+    "dtd-version": "1.2",
+    "xml:lang": "en",
+    "xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
+}
+
+
+def finalize_xml(jats_file):
+    """Add XML declaration, DOCTYPE, and required root <article> attributes."""
+    ET.register_namespace("xlink", "http://www.w3.org/1999/xlink")
+    tree = ET.parse(jats_file)
+    root = tree.getroot()
+
+    for attr, value in _ROOT_ATTRS.items():
+        if attr not in root.attrib:
+            root.set(attr, value)
+
+    xml_body = ET.tostring(root, encoding="unicode")
+    with open(jats_file, "w", encoding="utf-8") as f:
+        f.write(_XML_DECL)
+        f.write(_DOCTYPE)
+        f.write(xml_body)
+
+
 # here it all comes together
 def main():
     import argparse
@@ -1020,6 +1052,7 @@ def main():
         fix_references(str(output_path), str(bbl_file))
     else:
         print(f' - Warning: no .bbl file at {bbl_file}; references will be plain text')
+    finalize_xml(str(output_path))
 
     print(f"Saved corrected JATS XML in {output_path} 😎.")
 
