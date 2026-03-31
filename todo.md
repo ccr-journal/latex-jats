@@ -27,9 +27,9 @@ References are excluded (checked separately; only minor issues).
 - [x] (14) Figure and table elements missing `<label>` (e.g. `<label>Figure 1:</label>`)
 - [x] (15) Captions use `<caption><p>` instead of `<caption><title>`
 - [ ] (16) Hypotheses/RQs marked up as `<list list-type="bullet">` instead of `<disp-quote>`
-- [ ] (17) Spurious `<p>.</p>` inside many `<fig>` elements
+- [x] (17) Spurious `<p>.</p>` inside many `<fig>` elements — warn only (author must remove stray period after `\includegraphics` in source)
 - [x] (18) Section title includes number (`1 Introduction` instead of `Introduction`)
-- [ ] (19) Sub-figures (Figure 3): ours nests two `<fig>` elements; gold has a single merged image
+- [x] (19) Sub-figures (Figure 3): ours nests two `<fig>` elements; gold has a single merged image — XSLT now emits `<fig-group>` for figures containing subfigures
 
 ## Tables
 
@@ -42,15 +42,15 @@ References are excluded (checked separately; only minor issues).
 
 ## IDs and Cross-references
 
-- [ ] (26) Section IDs differ (`s1` vs `S1`/`Sx1`)
-- [ ] (27) Figure IDs differ (`fig1` vs `S1.F1`)
-- [ ] (28) Table IDs differ (`tab1` vs `Sx4.T1`)
-- [ ] (29) Footnote IDs differ (`fn1` vs `id1`)
-- [ ] (30) Citation xref `rid` values differ (`CIT0042` vs `bib.bibx42`)
-- [ ] (31) Missing `ref-type` attribute on many figure/table/appendix xrefs
-- [ ] (32) Footnote xrefs missing `specific-use="fn"` attribute and `<sup>` wrapper
+- [x] (26) Section IDs differ (`s1` vs `S1`/`Sx1`) don't care, don't fix
+- [x] (27) Figure IDs differ (`fig1` vs `S1.F1`) don't care, don't fix
+- [x] (28) Table IDs differ (`tab1` vs `Sx4.T1`) don't care, don't fix
+- [x] (29) Footnote IDs differ (`fn1` vs `id1`) don't care, don't fix
+- [x] (30) Citation xref `rid` values differ (`CIT0042` vs `bib.bibx42`) don't care, don't fix
+- [x] (31) Missing `ref-type` attribute on many figure/table/appendix xrefs
+- [x] (32) Footnote xrefs missing `specific-use="fn"` attribute and `<sup>` wrapper
 - [ ] (33) Cross-references to appendix tables/sections lost (rendered as plain text)
-- [ ] (34) Every `<p>` has an `id` attribute; gold has none
+- [x] (34) Every `<p>` has an `id` attribute; gold has none; don't care, don't fix
 
 ## Back Matter
 

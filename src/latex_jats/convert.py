@@ -279,6 +279,26 @@ def fix_table_notes(jats_file):
     tree.write(jats_file, encoding="unicode")
 
 
+def warn_fig_paragraphs(jats_file):
+    """Warns about stray <p> elements inside <fig> that contain only punctuation/whitespace.
+
+    These typically originate from a period placed after \\includegraphics in the LaTeX
+    source (e.g. \\includegraphics{img.png}.). The stray text is preserved in the JATS
+    output; the author should remove it from the source.
+    """
+    tree = ET.parse(jats_file)
+    root = tree.getroot()
+    for fig in root.findall(".//fig"):
+        fig_id = fig.get("id", "<unknown>")
+        for p in fig.findall("p"):
+            text = (p.text or "").strip()
+            if text and not any(c.isalnum() for c in text):
+                logging.warning(
+                    f"Stray text in figure {fig_id!r}: {text!r} — "
+                    "remove the trailing punctuation after \\includegraphics in the LaTeX source"
+                )
+
+
 def clean_body(jats_file):
     """Removes empty <p> elements and misplaced <title> inside <body>."""
     ET.register_namespace("xlink", "http://www.w3.org/1999/xlink")
@@ -348,8 +368,9 @@ def fix_footnotes(jats_file):
                 if m:
                     num = m.group(1)
             # create <xref> and attributes
-            xref = ET.Element("xref", {"rid": fn_id, "ref-type": "fn"})
-            xref.text = num
+            xref = ET.Element("xref", {"rid": fn_id, "ref-type": "fn", "specific-use": "fn"})
+            sup = ET.SubElement(xref, "sup")
+            sup.text = num
             # replace <fn> with <xref>
             children = list(p)
             # transfer tail text to xref so it isn't lost
@@ -903,6 +924,38 @@ def fix_citation_ref_types(jats_file):
     tree.write(jats_file, encoding="unicode")
 
 
+def fix_xref_ref_types(jats_file):
+    """Add ref-type to xref elements pointing to figures, tables, and sections.
+
+    The system LaTeXML JATS XSLT does not set ref-type for structural xrefs.
+    We resolve it here by checking each xref's rid against the IDs of fig,
+    table-wrap, sec, and app elements in the document.
+    """
+    ET.register_namespace("xlink", "http://www.w3.org/1999/xlink")
+    tree = ET.parse(jats_file)
+    root = tree.getroot()
+
+    fig_ids   = {e.get("id") for e in root.findall(".//fig")        if e.get("id")}
+    table_ids = {e.get("id") for e in root.findall(".//table-wrap") if e.get("id")}
+    sec_ids   = {e.get("id") for e in root.findall(".//sec")        if e.get("id")}
+    app_ids   = {e.get("id") for e in root.findall(".//app")        if e.get("id")}
+
+    for xref in root.findall(".//xref"):
+        if xref.get("ref-type"):
+            continue
+        rid = xref.get("rid")
+        if not rid:
+            continue
+        if rid in fig_ids:
+            xref.set("ref-type", "fig")
+        elif rid in table_ids:
+            xref.set("ref-type", "table")
+        elif rid in app_ids or rid in sec_ids:
+            xref.set("ref-type", "sec")
+
+    tree.write(jats_file, encoding="unicode")
+
+
 def fix_metadata(jats_file, tex_file):
     """Replaces journal-meta with a constant CCR block and injects article metadata
     (doi, publisher-id, volume, issue, fpage, pub-date) extracted from the LaTeX preamble."""
@@ -1104,8 +1157,10 @@ def main():
     fix_citation_ref_types(str(output_path))
     fix_metadata(str(output_path), str(input_path))
     fix_table_notes(str(output_path))
+    warn_fig_paragraphs(str(output_path))
     clean_body(str(output_path))
     fix_footnotes(str(output_path))
+    fix_xref_ref_types(str(output_path))
     # fix_journal_references(output_xml) #We can remove this; replaced with XSLT
     bbl_file = input_path.with_suffix('.bbl')
     if bbl_file.exists():

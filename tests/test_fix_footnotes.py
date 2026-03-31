@@ -27,7 +27,10 @@ def test_inline_fn_replaced_with_xref(xml_file):
     assert xref is not None
     assert xref.get("rid") == "fn1"
     assert xref.get("ref-type") == "fn"
-    assert xref.text == "1"
+    assert xref.get("specific-use") == "fn"
+    sup = xref.find("sup")
+    assert sup is not None
+    assert sup.text == "1"
     # tail text after the footnote marker must be preserved
     assert xref.tail == " more text."
 
