@@ -62,5 +62,5 @@ References are excluded (checked separately; only minor issues).
 
 ## Citations (minor)
 
-- [ ] (40) Two-author citations use `et al.` instead of `&` (e.g. `Shapiro et al.` vs `Shapiro & Mahajan`)
-- [ ] (41) Citation group separator is `,` instead of `;`
+- [x] (40) Two-author citations use `et al.` instead of `&` (e.g. `Shapiro et al.` vs `Shapiro & Mahajan`)
+- [x] (41) Citation group separator is `,` instead of `;`

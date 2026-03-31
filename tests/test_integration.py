@@ -31,10 +31,24 @@ def test_citations_linked(tmp_path):
     assert "Smith" in norm(single.text), f"Expected 'Smith' in citation text, got: {single.text!r}"
     assert "2020" in norm(single.text), f"Expected '2020' in citation text, got: {single.text!r}"
 
-    # Multi-author: should contain "et al." and "2021"
-    multi = xrefs[1]
-    assert "et al." in norm(multi.text), f"Expected 'et al.' in multi-author text, got: {multi.text!r}"
-    assert "2021" in norm(multi.text), f"Expected '2021' in citation text, got: {multi.text!r}"
+    # Two-author: should contain both surnames joined with "&" (APA style)
+    two_author = xrefs[1]
+    txt2 = norm(two_author.text)
+    assert "Jones" in txt2 and "&" in txt2 and "Brown" in txt2, \
+        f"Expected 'Jones & Brown' in two-author text, got: {two_author.text!r}"
+    assert "2021" in txt2, f"Expected '2021' in citation text, got: {two_author.text!r}"
+
+    # Three-plus-author: should contain "et al." (APA style)
+    three_plus = xrefs[2]
+    txt3 = norm(three_plus.text)
+    assert "Garcia" in txt3 and "et al." in txt3, \
+        f"Expected 'Garcia et al.' in 3+ author text, got: {three_plus.text!r}"
+    assert "2022" in txt3, f"Expected '2022' in citation text, got: {three_plus.text!r}"
+
+    # Grouped citations should be separated by semicolons, not commas
+    body_text = " ".join(root.find(".//body").itertext())
+    body_text = norm(body_text)
+    assert "; " in body_text, f"Expected semicolons in grouped citations, got: {body_text[:500]!r}"
 
 
 @pytest.mark.integration

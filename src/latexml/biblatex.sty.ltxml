@@ -25,6 +25,7 @@ ProcessOptions(inorder => 1);
 # \parencite produces "(Author, Year)".
 AssignValue('CITE_OPEN'  => Tokens(), 'global');
 AssignValue('CITE_CLOSE' => Tokens(), 'global');
+AssignValue('CITE_SEPARATOR' => T_OTHER(';'), 'global');
 
 RequirePackage('hyperref');    # for url and href
 #RequirePackage('natbib');
@@ -192,8 +193,17 @@ DefMacro('\endentry', sub {
       if (@names && $year) {
         my $surname = (split /\s+/, $names[0])[-1];
         $surname =~ s/\\\w+|[}{]//g;
-        my $et_al = (@names > 1) ? ' et al.' : '';
-        $label = "${surname}${et_al}, ${year}"; } }
+        my $author_part;
+        if (@names == 1) {
+          $author_part = $surname;
+        } elsif (@names == 2) {
+          my $surname2 = (split /\s+/, $names[1])[-1];
+          $surname2 =~ s/\\\w+|[}{]//g;
+          $author_part = "${surname} & ${surname2}";
+        } else {
+          $author_part = "${surname} et al.";
+        }
+        $label = "${author_part}, ${year}"; } }
     # Fallback to sequential numbering when no author/year data is available.
     if (!$label) {
       my $label_int = 1 + (LookupValue('biblatex_auto_label') || 0);

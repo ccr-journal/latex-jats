@@ -65,5 +65,40 @@
       \field{year}{2021}
       \field{pages}{50\bibrangedash 60}
     \endentry
+    \entry{team2022three}{article}{}
+      \name{author}{3}{}{%
+        {{un=0,uniquepart=base,hash=ddd}{%
+           family={Garcia},
+           familyi={G\bibinitperiod},
+           given={Maria},
+           giveni={M\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=eee}{%
+           family={Lee},
+           familyi={L\bibinitperiod},
+           given={David},
+           giveni={D\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=fff}{%
+           family={Wilson},
+           familyi={W\bibinitperiod},
+           given={Eve},
+           giveni={E\bibinitperiod},
+           givenun=0}}%
+      }
+      \strng{namehash}{dddeee+1}
+      \strng{fullhash}{dddeeefff}
+      \strng{bibnamehash}{dddeee+1}
+      \strng{authorbibnamehash}{dddeee+1}
+      \strng{authornamehash}{dddeee+1}
+      \strng{authorfullhash}{dddeeefff}
+      \field{labeldatesource}{year}
+      \field{labelnamesource}{author}
+      \field{journaltitle}{Three Author Journal}
+      \field{title}{A three-author test article}
+      \field{volume}{3}
+      \field{year}{2022}
+      \field{pages}{100\bibrangedash 110}
+    \endentry
   \enddatalist
 \endrefsection
