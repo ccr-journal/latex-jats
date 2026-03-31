@@ -352,12 +352,22 @@ div.caption {
   color: var(--color-text);
 }
 
-div.caption p {
+div.caption p,
+div.caption h3.title {
   font-family: var(--font-sans) !important;
   font-size: 9.5pt !important;
   font-weight: 600;
   margin: 0 !important;
   text-align: left !important;
+}
+
+/* --- Labels (Figure 1:, Table A1:, etc.) --------------------- */
+h5.label {
+  font-family: var(--font-sans);
+  font-size: 9.5pt;
+  font-weight: 600;
+  margin: 0 0 0.2rem;
+  color: var(--color-text);
 }
 
 table {
@@ -433,6 +443,39 @@ div.fig.panel img {
 div.fig.panel div.caption {
   text-align: left;
   margin-top: 0.5rem;
+}
+
+/* --- Fig-group (subfigures) ---------------------------------- */
+div.fig-group {
+  margin: 1.5rem 0;
+  text-align: center;
+}
+
+div.fig-group > h5.label {
+  text-align: left;
+}
+
+div.fig-group > div.caption {
+  text-align: left;
+  margin-top: 0.5rem;
+}
+
+div.fig-group div.fig.panel {
+  display: inline-block;
+  vertical-align: top;
+  margin: 0.5rem 0.5rem;
+  max-width: 48%;
+}
+
+div.fig-group div.fig.panel h5.label {
+  font-size: 8.5pt;
+  text-align: center;
+  margin: 0.3rem 0 0.1rem;
+}
+
+div.fig-group div.fig.panel div.caption {
+  text-align: center;
+  font-size: 8.5pt;
 }
 
 /* ============================================================

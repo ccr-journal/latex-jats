@@ -53,3 +53,6 @@ luac.out
 *.hex
 
 examples/*/output
+
+# Local Netlify folder
+.netlify

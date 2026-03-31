@@ -80,10 +80,14 @@ def _move_keywords_to_front(html_file):
     if footer is None:
         return
 
-    chunk_list = footer.xpath('.//div[contains(@class,"metadata-chunk")]')
-    if not chunk_list:
+    # Find the metadata-chunk that contains actual keywords (not article-categories)
+    chunk = None
+    for candidate in footer.xpath('.//div[contains(@class,"metadata-chunk")]'):
+        if candidate.xpath('.//span[@class="generated" and starts-with(normalize-space(.),"Keyword")]'):
+            chunk = candidate
+            break
+    if chunk is None:
         return
-    chunk = chunk_list[0]
 
     kwd_texts = []
     for p in chunk.xpath('.//p[contains(@class,"metadata-entry")]'):
@@ -119,6 +123,15 @@ def _move_keywords_to_front(html_file):
     area_list = chunk.xpath('ancestor::div[contains(@class,"metadata-area")]')
     if area_list:
         area = area_list[-1]
+        area_parent = area.getparent()
+        if area_parent is not None:
+            area_parent.remove(area)
+
+    # Remove the article-categories metadata-area (just shows "Categories: Article")
+    for area in footer.xpath(
+        './/div[contains(@class,"metadata-area") and '
+        './/span[@class="generated" and contains(normalize-space(.),"Subject")]]'
+    ):
         area_parent = area.getparent()
         if area_parent is not None:
             area_parent.remove(area)
