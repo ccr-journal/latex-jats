@@ -51,6 +51,26 @@ def test_fn_moved_to_fn_group_in_back(xml_file):
     fn = fn_group.find("fn")
     assert fn is not None
     assert fn.get("id") == "fn1"
+    assert fn.get("symbol") == "1"
+
+
+def test_fn_group_placed_before_ref_list(xml_file):
+    xml = _make_doc(
+        """\
+<sec>
+  <p>Text<fn id="fn1"><p id="footnote1">Note.</p></fn>.</p>
+</sec>""",
+        '<ref-list><ref id="r1"><mixed-citation>Ref</mixed-citation></ref></ref-list>',
+    )
+    path = xml_file(xml)
+    fix_footnotes(path)
+
+    root = ET.parse(path).getroot()
+    back = root.find(".//back")
+    children = list(back)
+    fn_group_idx = next(i for i, c in enumerate(children) if c.tag == "fn-group")
+    ref_list_idx = next(i for i, c in enumerate(children) if c.tag == "ref-list")
+    assert fn_group_idx < ref_list_idx
 
 
 def test_no_footnotes_no_xrefs(xml_file):

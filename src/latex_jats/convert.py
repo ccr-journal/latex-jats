@@ -398,6 +398,8 @@ def fix_footnotes(jats_file):
             # transfer tail text to xref so it isn't lost
             xref.tail = fn.tail
             fn.tail = ""
+            if num:
+                fn.set("symbol", num)
             removed_fns.append(fn)
 
             if fn in children:
@@ -418,10 +420,10 @@ def fix_footnotes(jats_file):
     fn_group = back.find("fn-group")
     if fn_group is None:
         fn_group = ET.Element("fn-group")
-        # Add <reflist> here, or at the bottom if absent
-        reflist = back.find("reflist")
+        # Place before <ref-list> if present, otherwise at the end
+        reflist = back.find("ref-list")
         if reflist is not None:
-            index = list(back).index(reflist) + 1
+            index = list(back).index(reflist)
             back.insert(index, fn_group)
         else:
             back.append(fn_group)

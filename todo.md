@@ -26,7 +26,7 @@ References are excluded (checked separately; only minor issues).
 
 - [x] (14) Figure and table elements missing `<label>` (e.g. `<label>Figure 1:</label>`)
 - [x] (15) Captions use `<caption><p>` instead of `<caption><title>`
-- [ ] (16) Hypotheses/RQs marked up as `<list list-type="bullet">` instead of `<disp-quote>`
+- [x] (16) Hypotheses/RQs marked up as `<list list-type="bullet">` instead of `<disp-quote>` **Author used bullets, no fix needed**
 - [x] (17) Spurious `<p>.</p>` inside many `<fig>` elements — warn only (author must remove stray period after `\includegraphics` in source)
 - [x] (18) Section title includes number (`1 Introduction` instead of `Introduction`)
 - [x] (19) Sub-figures (Figure 3): ours nests two `<fig>` elements; gold has a single merged image — XSLT now emits `<fig-group>` for figures containing subfigures
@@ -54,8 +54,8 @@ References are excluded (checked separately; only minor issues).
 
 ## Back Matter
 
-- [ ] (35) `<fn-group>` placed after `<app-group>`; gold puts it before `<ref-list>` with `<title>Notes</title>`
-- [ ] (36) Footnotes missing `symbol` attribute
+- [x] (35) `<fn-group>` placed after `<app-group>`; gold puts it before `<ref-list>` with `<title>Notes</title>`
+- [x] (36) Footnotes missing `symbol` attribute
 - [x] (37) Appendix IDs use `A1` instead of `apx1` **don't care, don't fix**
 - [ ] (38) Figures 4-7 inline in body; gold moves them to a separate back-matter section
 - [ ] (39) Appendix table/figure labels missing
