@@ -177,6 +177,24 @@ _JATS_XSLT_WRAPPER = """\
     xmlns:str="http://exslt.org/strings"
     extension-element-prefixes="str">
   <xsl:import href="{system_jats_xsl_uri}"/>
+  <!-- Fix: \citeyear should show only the year (e.g. "2011"), not the full author-year label.
+       After CrossRef, ltx:cite[@class='ltx_citemacro_citeyear'] wraps an ltx:ref whose text
+       content is the full bibitem label ("Author, Year"); we extract the part after the last ", ". -->
+  <xsl:template match="ltx:cite[contains(@class,'ltx_citemacro_citeyear')]">
+    <xsl:for-each select=".//ltx:ref[@idref]">
+      <xref rid="{{@idref}}">
+        <xsl:variable name="full" select="normalize-space(string(.))"/>
+        <xsl:choose>
+          <xsl:when test="contains($full, ', ')">
+            <xsl:value-of select="substring-after($full, ', ')"/>
+          </xsl:when>
+          <xsl:otherwise>
+            <xsl:value-of select="$full"/>
+          </xsl:otherwise>
+        </xsl:choose>
+      </xref>
+    </xsl:for-each>
+  </xsl:template>
   <!-- Fix: system XSLT joins given-name tokens without separator -->
   <xsl:template match="ltx:personname">
     <name>
@@ -652,6 +670,19 @@ def main():
         print(" - Step 3: Generating HTML preview...")
         convert_to_html(str(output_path), str(html_path))
         print(f"Saved HTML preview in {html_path} 😎.")
+        _write_netlify_files(output_path.parent, output_path.stem)
+
+
+def _write_netlify_files(output_dir, stem):
+    """Write Netlify _headers and _redirects files to the output directory."""
+    headers = (
+        f"/{stem}.xml\n"
+        f"  Content-Type: application/xml\n"
+        f"  X-Content-Type-Options: nosniff\n"
+    )
+    redirects = f"/    /{stem}.html    301!\n"
+    (output_dir / "_headers").write_text(headers)
+    (output_dir / "_redirects").write_text(redirects)
 
 
 if __name__ == "__main__":

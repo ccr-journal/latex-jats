@@ -21,6 +21,11 @@ DefKeyVal('biblatex', 'maxbibnames', 'Number', '4', code => sub {
 DeclareOption(undef, sub { });    # for now ignore all other ooptions.
 ProcessOptions(inorder => 1);
 
+# CCR uses APA/author-year style: \cite produces bare "Author, Year" (no brackets),
+# \parencite produces "(Author, Year)".
+AssignValue('CITE_OPEN'  => Tokens(), 'global');
+AssignValue('CITE_CLOSE' => Tokens(), 'global');
+
 RequirePackage('hyperref');    # for url and href
 #RequirePackage('natbib');
 # RequirePackage('logreq');
@@ -51,10 +56,27 @@ RequirePackage('babel_support');
 
 # TODO: Alternative citation styles
 # DefMacro('\parencite',                                 '\cite');
-DefMacro('\Parencite',                                 '\cite');
-DefMacro('\parencite OptionalMatch:* [][] Semiverbatim', '\citep[#2]{#4}');
-DefMacro('\citeyear OptionalMatch:* [] Semiverbatim', '(\cite[#2]{#4})');
-DefMacro('\citeyearpar OptionalMatch:* [] Semiverbatim', '\citeyear{#2}');
+DefMacro('\Parencite',                                   '\parencite');
+DefMacro('\parencite OptionalMatch:* [][] Semiverbatim', '(\cite[#2]{#4})');
+DefMacro('\citeyear OptionalMatch:* [] Semiverbatim', sub {
+    my ($gullet, $star, $post, $keys) = @_;
+    $post = undef if IsEmpty($post);
+    my $ns = LookupValue('CITE_NOTE_SEPARATOR');
+    Invocation(T_CS('\@@cite'),
+        Tokens(Explode('citeyear')),
+        Tokens(
+            Invocation(T_CS('\@@bibref'), Tokens(Explode("Year")), $keys, undef, undef),
+            ($post ? ($ns, T_SPACE, $post) : ()))); });
+DefMacro('\citeyearpar OptionalMatch:* [] Semiverbatim', sub {
+    my ($gullet, $star, $post, $keys) = @_;
+    $post = undef if IsEmpty($post);
+    my $ns = LookupValue('CITE_NOTE_SEPARATOR');
+    Invocation(T_CS('\@@cite'),
+        Tokens(Explode('citeyearpar')),
+        Tokens(T_OTHER('('),
+            Invocation(T_CS('\@@bibref'), Tokens(Explode("Year")), $keys, undef, undef),
+            ($post ? ($ns, T_SPACE, $post) : ()),
+            T_OTHER(')'))); });
 DefMacro('\makecell OptionalMatch:* []{}', '<td style="text-align:#1;">#2</td>');
 
 
