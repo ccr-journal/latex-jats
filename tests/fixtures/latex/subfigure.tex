@@ -1,0 +1,33 @@
+\documentclass{ccr}
+\usepackage{subfig}
+
+\title{Test Subfigure Article}
+\authorsnames{Jane Doe}
+\authorsaffiliations{{University of Amsterdam}}
+\abstract{A test abstract.}
+\keywords{test}
+\volume{1}
+\pubnumber{1}
+\pubyear{2025}
+\firstpage{1}
+\doi{10.0000/test}
+
+\addbibresource{bibliography.bib}
+
+\begin{document}
+\maketitle
+
+\section{Introduction}
+This article has a subfigure.
+
+\begin{figure}
+  \caption{A grouped figure}
+  \subfloat[First subfigure]{\includegraphics[width=0.4\textwidth]{img_a.png}\label{fig:a}}%
+  \hfill%
+  \subfloat[Second subfigure]{\includegraphics[width=0.4\textwidth]{img_b.png}\label{fig:b}}%
+  \label{fig:group}
+\end{figure}
+
+\printbibliography
+
+\end{document}

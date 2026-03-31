@@ -81,6 +81,22 @@
     </fig>
   </xsl:template>
 
+  <!-- Fix (19): Subfigures — a parent <ltx:figure> that contains child <ltx:figure>
+       elements should become a JATS <fig-group>, not a nested <fig> (which is invalid
+       JATS). The predicate [ltx:figure] gives this template a higher default priority
+       (0.5) than the general ltx:figure template above (0), so no explicit priority
+       attribute is needed. -->
+  <xsl:template match="ltx:figure[ltx:figure]">
+    <fig-group>
+      <xsl:apply-templates select="@xml:id" mode="copy-attribute"/>
+      <xsl:if test="ltx:caption/ltx:tag">
+        <label><xsl:value-of select="normalize-space(concat(ltx:caption/ltx:tag, ltx:caption/ltx:tag/@close))"/></label>
+      </xsl:if>
+      <xsl:apply-templates select="ltx:caption"/>
+      <xsl:apply-templates select="*[not(self::ltx:caption)]"/>
+    </fig-group>
+  </xsl:template>
+
   <!-- Fix (14): Same for tables (<table-wrap>). -->
   <xsl:template match="ltx:table">
     <table-wrap>

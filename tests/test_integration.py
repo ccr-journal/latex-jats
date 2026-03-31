@@ -76,3 +76,22 @@ def test_authors_names_and_affiliations(tmp_path):
     # Second author: John van der Berg — given-names must have spaces (the bug we fixed)
     assert names[1][0] == "Berg"
     assert names[1][1] == "John van der"
+
+
+@pytest.mark.integration
+def test_subfigures_produce_fig_group(tmp_path):
+    """\\subfloat inside a figure environment produces <fig-group> with child <fig> elements."""
+    output = tmp_path / "output.xml"
+    run_latexmlc(str(FIXTURES / "subfigure.tex"), str(output))
+
+    root = ET.parse(output).getroot()
+    fig_groups = root.findall(".//fig-group")
+    assert fig_groups, "No <fig-group> element found — subfigures should produce <fig-group>"
+
+    # The fig-group should contain the individual subfig <fig> elements directly
+    for fg in fig_groups:
+        child_figs = fg.findall("fig")
+        assert child_figs, f"<fig-group> has no child <fig> elements: {ET.tostring(fg, encoding='unicode')}"
+        # No nested fig-inside-fig
+        for fig in child_figs:
+            assert not fig.findall("fig"), "Nested <fig> inside <fig> found; expected flat structure under <fig-group>"
