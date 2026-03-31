@@ -1,0 +1,2223 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (NISO Z39.96-2019) Journal Publishing DTD v1.2 20190208//EN" "https://jats.nlm.nih.gov/publishing/1.2/JATS-journalpublishing1-mathml3.dtd">
+<article dtd-version="1.2" xml:lang="en" xmlns:mml="http://www.w3.org/1998/Math/MathML" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<front>
+<journal-meta>
+<journal-id journal-id-type="publisher-id">CCR</journal-id>
+<journal-title-group>
+<journal-title>Computational Communication Research</journal-title>
+</journal-title-group>
+<issn pub-type="ppub"/>
+<issn pub-type="epub">2665-9085</issn>
+<publisher>
+<publisher-name>Amsterdam University Press</publisher-name>
+<publisher-loc>Amsterdam</publisher-loc>
+</publisher>
+</journal-meta>
+<article-meta>
+<article-id pub-id-type="publisher-id">CCR2025.1.002.YAO</article-id>
+<article-id pub-id-type="doi">10.5117/CCR2025.1.002.YAO</article-id>
+<article-categories>
+<subj-group subj-group-type="heading">
+<subject>Article</subject>
+</subj-group>
+</article-categories>
+<title-group>
+<article-title>Candidate Party, Gender, and the Face Mask as a Political Symbol in Campaign Advertisements</article-title>
+</title-group>
+<contrib-group>
+<contrib contrib-type="author">
+<name>
+<surname>Yao</surname>
+<given-names>Jielu</given-names>
+</name>
+<aff>East Asian Institute, National University of Singapore, Singapore</aff>
+</contrib>
+<contrib contrib-type="author">
+<name>
+<surname>Ridout</surname>
+<given-names>Travis N.</given-names>
+</name>
+<aff>School of Politics, Philosophy and Public Affairs, Washington State University, Pullman, USA</aff>
+</contrib>
+<contrib contrib-type="author">
+<name>
+<surname>Neumann</surname>
+<given-names>Markus</given-names>
+</name>
+<aff>Duke Kunshan University, China</aff>
+</contrib>
+<contrib contrib-type="author">
+<name>
+<surname>Fowler</surname>
+<given-names>Erika Franklin</given-names>
+</name>
+<aff>Department of Government, Wesleyan University, Middletown, USA</aff>
+</contrib>
+</contrib-group>
+<pub-date pub-type="epub">
+<month>11</month>
+<year>2025</year>
+</pub-date>
+<volume>7</volume>
+<issue>1</issue>
+<fpage>1</fpage>
+<lpage>36</lpage>
+<permissions>
+<copyright-statement>&#x00a9; The authors</copyright-statement>
+<copyright-year>2025</copyright-year>
+<copyright-holder>The authors</copyright-holder>
+<license license-type="open-access">
+<license-p>This is an open access article distributed under the CC BY 4.0 license <ext-link ext-link-type="uri" xlink:href="https://creativecommons.org/licenses/by/4.0/">https://creativecommons.org/licenses/by/4.0/</ext-link></license-p>
+</license>
+</permissions>
+<abstract>
+<title>Abstract</title>
+<p>During the COVID-19 pandemic, wearing a face mask became politicized in the United States, with politicians and reporters employing competing public safety and civil liberties frames in discussions of masking. In this research, we argue that political candidates&#x2019; decisions to speak about and depict mask-wearing in their political advertising were strategic, depending on both the candidate&#x2019;s party and gender. We examine political ads run on Facebook and on television by federal candidates during the 2020 U.S. campaigns. We use Amazon&#x2019;s deep learning algorithms for PPE (personal protective equipment) detection. We extract the text and audio of each ad to identify mentions of masks and use an &#x00E0; la Carte embedding regression model to understand how the usage of the term mask differs across covariates. We find that images of masks are much more common than mentions of masks, that there are significant partisan, but not gender, differences in the use of masks, and that there are both partisan and gender differences in the way that candidates speak about masking. This research demonstrates the utility of a novel approach to collecting data. It also suggests that public health measures can become partisan in a campaign environment, with the potential to polarize both the views and behaviors of Democrats and Republicans.</p>
+</abstract>
+<kwd-group>
+<title>Keywords:</title>
+<kwd>masks</kwd>
+<kwd>COVID-19</kwd>
+<kwd>political advertising</kwd>
+</kwd-group>
+</article-meta>
+</front>
+<body>
+<sec id="s1">
+<title>Introduction</title>
+<p>Nancy Mace, a Republican member of the U.S. House of Representatives, declares in one of her Facebook ads in 2020 that &#x201C;she&#x2019;s an independent thinker&#x2014;while the president flaunts mask mandates, Mace requires them at her campaign events.&#x201D; Through this statement, Mace took a position that put considerable distance between herself and fellow Republican and then-president Donald Trump. Mace&#x2019;s decision to embrace masking is an interesting one. Perhaps Mace believed that, in spite of President Trump&#x2019;s opposition to mask mandates (<xref ref-type="bibr" rid="CIT0042">Robertson, 2020</xref>), the Republican rank-and-file was much more supportive. Or perhaps Mace saw a political opportunity stemming from her gender, as we know that women candidates are thought to &#x201C;own&#x201D; issues such as healthcare and public health (<xref ref-type="bibr" rid="CIT0051">Shapiro &#x0026; Mahajan, 1986</xref>) and to possess traits such as caring and compassion (<xref ref-type="bibr" rid="CIT0024">Huddy &#x0026; Terkildsen, 1993</xref>) that might make them better able to handle issues of public health. More broadly, we argue that a campaign&#x2019;s decision to mention masking in their advertisements during the height of the COVID-19 pandemic&#x2014;and how they talked about masking&#x2014;is quite revealing of the relative power of partisanship and gender to shape the strategic decisions that campaigns make.</p>
+<p>In the United States, beliefs about the appropriate response to the COVID-19 pandemic were politicized almost from its onset, resulting in differing attitudes and behaviors by partisan identification (<xref ref-type="bibr" rid="CIT0014">Gadarian et al., 2021</xref>; <xref ref-type="bibr" rid="CIT0016">Gollust et al., 2020</xref>; <xref ref-type="bibr" rid="CIT0036">Mordecai &#x0026; Connaughton, 2020</xref>). Politicization was especially visible in regard to wearing face masks. Even as evidence emerged that COVID-19 was airborne and the Centers for Disease Control (CDC) recommended in April 2020 that all wear a cloth or fabric face covering when going out in public, President Trump remarked that the guidance was optional and that he would be unlikely to follow it (<xref ref-type="bibr" rid="CIT0031">Liptak, 2020</xref>). Democratic presidential nominee Joe Biden, on the other hand, suggested on the campaign trail that he would implement a national mask mandate if elected and was commonly seen wearing a mask (<xref ref-type="bibr" rid="CIT0054">Stolberg, 2020</xref>). While evidence suggests that the vast majority of the public increased its mask usage over the course of the summer of 2020, partisan gaps in the use of masks persisted, with Republicans being less likely than Democrats to report wearing them even as the overwhelming majority of Americans said they generally wore a mask when in stores or businesses (<xref ref-type="bibr" rid="CIT0028">Kramer, 2020</xref>). As Figure <xref ref-type="fig" rid="fig1">1</xref> shows, the partisan gap in mask-wearing was already present by June of 2020, and it was at 10 percentage points or greater throughout that year (<xref ref-type="bibr" rid="CIT0017">Gramlich, 2022</xref>). Perhaps unsurprisingly, then, studies have found partisan differences in excess death rates during the pandemic (<xref ref-type="bibr" rid="CIT0061">Wallace et al., 2022</xref>).</p>
+<p>As Americans were coming to terms with the new reality of a global pandemic, the competitive 2020 election cycle was well underway, leaving candidates for federal office with decisions to make about how they might (or might not) choose to feature masks in their campaign messages. In this research, we focus on two possible predictors of the discussion and depiction of masks: the candidate&#x2019;s partisanship and the candidate&#x2019;s gender. As party polarization has contributed to decreases in citizens&#x2019; trust in the government (<xref ref-type="bibr" rid="CIT0012">Fowler &#x0026; Gollust, 2015</xref>; <xref ref-type="bibr" rid="CIT0030">Layman et al., 2006</xref>) and thus its authority and credibility on the issue of public health, we first examine whether partisan candidates sent different or even conflicting cues on masks to the public during the crisis. Elite communication during the COVID-19 pandemic was not consistent, which hindered the public&#x2019;s early reaction to the crisis (<xref ref-type="bibr" rid="CIT0018">Green et al., 2020</xref>). We expect that partisan differences in views of masking at the national level, reflected in the different views of Donald Trump and Joe Biden, trickled down to candidates for U.S. Senate, House, and other offices, with Democrats more likely to feature masks than Republicans.</p>
+<p>At the same time, we investigate whether women&#x2019;s presence on the campaign trail could mitigate the politicization of masks as women candidates may be more willing to advocate for the use of masks in their communication with the public. Studies find that women policymakers are more likely to prioritize issues of traditional concern to women such as health care (<xref ref-type="bibr" rid="CIT0032">Little et al., 2001</xref>; <xref ref-type="bibr" rid="CIT0039">Osborn, 2012</xref>). We also know that voters carry with them gender stereotypes, with women candidates seen as holding expertise in &#x201C;caring&#x201D; or &#x201C;compassion&#x201D; issues, such as health care (<xref ref-type="bibr" rid="CIT0051">Shapiro &#x0026; Mahajan, 1986</xref>). Thus, we may see gender differences as well in the discussion and picturing of masks.</p>
+<fig id="fig1">
+<label>Figure 1:</label>
+<caption><title>Pew Research Center: Partisan Divide in Frequent Mask Wearing</title></caption>
+<graphic xlink:href="CCR2025.1.2.YAO_fig1.jpg"/>
+</fig>
+<p>In this research, we use automated content analysis to understand both visual and textual cues in more than 102,529 political ads on Facebook and TV. Cues, defined as small pieces of information strategically included in political messages, enable elites to subtly express their opinions (<xref ref-type="bibr" rid="CIT0007">Darmofal, 2005</xref>). Visual cues have long been a crucial component of political communication (<xref ref-type="bibr" rid="CIT0046">Schill, 2012</xref>) and are especially important on television and social media. Politicians have incentives to use visual cues because, like verbal cues, visual cues can influence viewers&#x2019; voting behavior by changing their perceptions of politicians&#x2019; ideologies (<xref ref-type="bibr" rid="CIT0006">Dan &#x0026; Arendt, 2021</xref>). However, scholars traditionally have overlooked visual cues in their research because of the lack of tools for systematic image or video analysis. This neglect is particularly problematic when elites decide not to prioritize an issue in their verbal discourse while employing visual symbols related to this issue to indicate their ideology or policy stances.</p>
+<p>Our study is distinctive in a several ways. The first is its analysis of visual depictions of masking in addition to verbal cues, as most studies of elite communication during the COVID-19 pandemic have focused on verbal cues alone (see <xref ref-type="bibr" rid="CIT0018">Green et al., 2020</xref>; <xref ref-type="bibr" rid="CIT0038">Neumann et al., 2024</xref>; <xref ref-type="bibr" rid="CIT0050">Scoville et al., 2022</xref>, with <xref ref-type="bibr" rid="CIT0021">Holman et al., 2022</xref> being one exception). The second is that we employed a state-of-the-art text analysis method &#x2013; embedding regression &#x2013; that allows us to show the context in which &#x201C;masks&#x201D; were discussed differed by candidate characteristics. The third is its focus on masking as portrayed in political advertising, which has been unexplored. Looking at advertising is important because it provides a measure of sincere campaign strategy given the large amounts that campaigns must spend on ads. Finally, our research provides important evidence speaking to the relative influence of partisanship and gender in campaign decision-making.</p>
+</sec>
+<sec id="s2">
+<title>What Drives the Depiction and Mention of Masks?</title>
+<p>In political advertising, candidates for office regularly rely on cues, shortcuts, and symbols to signal their values, policy positions, priorities, competence, and experience (<xref ref-type="bibr" rid="CIT0011">Fowler, Franz, &#x0026; Ridout, 2021</xref>; <xref ref-type="bibr" rid="CIT0037">Neumann et al., 2022</xref>; <xref ref-type="bibr" rid="CIT0047">Schmuck &#x0026; Matthes, 2017</xref>; <xref ref-type="bibr" rid="CIT0059">Valentino et al., 2002</xref>). These cues are not just about the language that is being used but are often about the connection between the visual and the verbal (<xref ref-type="bibr" rid="CIT0047">Schmuck &#x0026; Matthes, 2017</xref>; <xref ref-type="bibr" rid="CIT0056">Swigger, 2012</xref>; <xref ref-type="bibr" rid="CIT0060">Valentino et al., 2004</xref>), and sometimes images are powerful on their own (<xref ref-type="bibr" rid="CIT0006">Dan &#x0026; Arendt, 2021</xref>; <xref ref-type="bibr" rid="CIT0011">Fowler, Franz, &#x0026; Ridout, 2021</xref>). For example, candidates hoping to capitalize on their experience in the health care sector might do so by explicitly saying they are a doctor or nurse, or they might appear in a health care setting or in a doctor&#x2019;s lab coat. In addition, image cues in political ads can elicit emotions such as fear or enthusiasm, which can influence citizens&#x2019; behavior and attitudes (<xref ref-type="bibr" rid="CIT0002">Brader, 2005</xref>).</p>
+<p>Cues in advertising can convey ideological commitments, can signal solidarity with affinity groups, and can also be used to combat racial, gendered, or other identity-based stereotypes. For example, those who want to signal support for gun rights might mention the NRA (<xref ref-type="bibr" rid="CIT0001">Barry et al., 2020</xref>), or they might appear in an ad carrying a rifle or handgun even if the ad itself does not explicitly reference gun rights (<xref ref-type="bibr" rid="CIT0011">Fowler, Franz, &#x0026; Ridout, 2021</xref>). In addition, candidates can stress the importance and value of specific identity groups by featuring or talking about them in their ads (<xref ref-type="bibr" rid="CIT0004">Connaughton &#x0026; Jarvis, 2004</xref>). Visual cues like puppies, puffer vests, and picket fences can be deployed as a way to counter negative racial stereotypes (<xref ref-type="bibr" rid="CIT0015">Gillespie, 2018</xref>; <xref ref-type="bibr" rid="CIT0019">Hajnal, 2006</xref>; <xref ref-type="bibr" rid="CIT0053">Stephens-Dougan, 2020</xref>; <xref ref-type="bibr" rid="CIT0057">Tesler, 2020</xref>) while feminine visual cues, such as family and children, can be paired with masculine verbal cues to counter negative gender stereotypes (<xref ref-type="bibr" rid="CIT0003">Carpinella &#x0026; Bauer, 2021</xref>).</p>
+<p>Although mask-wearing was not a political issue before the 2020 election cycle in the United States, there is every reason to believe that the decision to depict and mention masks in political ads would be strategic. First, the high salience of the pandemic meant that the decision to feature masking&#x2014;one of the primary public health recommendations for combating the spread of COVID-19 at the time&#x2014;was one that could not be ignored. Second, campaigns pay good money for political ads and thus make serious decisions about even minor elements of each ad&#x2019;s presentation. Third, political advertisements are high profile, often serving as fodder for media coverage (<xref ref-type="bibr" rid="CIT0013">Fowler &#x0026; Ridout, 2009</xref>), and thus the stakes are high. One Democratic ad maker explained, &#x201C;If there&#x2019;s a Democrat in a Trump district who is not wearing a mask, there was strategic thought put into that, and if a Republican is wearing one in a blue-leaning seat, there&#x2019;s strategy in that, too, because ads are the most expensive, well-crafted parts of the campaign&#x201D; (<xref ref-type="bibr" rid="CIT0048">E. Schneider, 2020</xref>). Indeed, one ad maker did focus groups on the topic in 2020, showing a focus group pictures of candidates wearing and not wearing masks to see how people reacted (<xref ref-type="bibr" rid="CIT0048">E. Schneider, 2020</xref>). In short, we expect that the decision to depict and discuss masking in political ads is strategic.</p>
+<p>We expect the decision to depict or mention masks in political ads to fall along partisan lines. First, cues from party leaders, Trump and Biden, may have sent a signal to voters and candidates within the party about what was appropriate masking behavior. Second, the decision to feature masks in ads may have been a reflection of the politics of the base of each party. Evidence suggests that masking behavior is related to psychological traits, such as conflict orientation, and this relationship is mediated by support for Donald Trump and Joe Biden (<xref ref-type="bibr" rid="CIT0062">Young et al., 2022</xref>). Although partisanship does not explain all variation in mask-wearing in this model, its impact is statistically significant. In addition, some citizens view wearing (or not wearing) a mask as a political statement, with a mask indicating &#x201C;submission to authoritarian rule and an emasculation of individual liberty&#x201D; (<xref ref-type="bibr" rid="CIT0025">Ike et al., 2020</xref>). Thus, rightwing politicians (i.e., Republicans), who typically embrace individual liberty, may be more likely to eschew mask depictions than left-wing politicians (i.e., Democrats).</p>
+<p>There is a third possible explanation for differences in depictions and mentions of masking across parties in 2020. Republican candidates may have wanted to reduce discussion of masks in order to reduce the salience of the COVID-19 pandemic&#x2014;and the government&#x2019;s sometimes bungling response. Because a Republican was in the White House at the start of the pandemic and during the 2020 election campaign, Republicans were likely to bear the brunt of the public&#x2019;s ire about the pandemic, and thus changing the topic to something else was likely politically smart for Republicans. Thus, we propose our first hypothesis:</p>
+<disp-quote>
+<p><bold>H1</bold>: <italic>Democratic candidates are more likely to picture or mention masks than Republican candidates in their campaign ads.</italic></p>
+</disp-quote>
+<p>The gender of the candidate may also influence the decision to feature masks. Carpinella and Bauer, 2021 show that communicating femininity via visual cues is a subtle way for women candidates to address the &#x201C;double bind&#x201D; (<xref ref-type="bibr" rid="CIT0008">Dittmar, 2015</xref>) that requires women candidates to display both masculine competency and feminine caring. Featuring people in masks, such as nurses and volunteers, may help women candidates to capitalize on voters&#x2019; stereotypes that they are caring and compassionate. At the same time, surveys find that men are less likely to wear masks than women, and the reason for that may be notions of masculinity. Indeed, a &#x201C;toughness&#x201D; scale is a more powerful predictor of mask-wearing than is partisanship (<xref ref-type="bibr" rid="CIT0040">Palmer &#x0026; Peterson, 2020</xref>). Thus, as wearing masks themselves can help women to build an image of caring, we may find women candidates more likely to feature masks in their ads than men candidates. Our second hypothesis is:</p>
+<disp-quote>
+<p><bold>H2</bold>: <italic>Women candidates are more likely to picture or mention masks than men candidates in their campaign ads.</italic></p>
+</disp-quote>
+<p>That said, research on gender differences in political campaigning and voters&#x2019; perceptions of candidates commonly notes that the effect of candidate gender is not always straightforward, as it may depend on that candidate&#x2019;s partisanship as well (<xref ref-type="bibr" rid="CIT0023">Huddy &#x0026; Capelos, 2002</xref>; <xref ref-type="bibr" rid="CIT0027">King &#x0026; Matland, 2003</xref>). This model, referred to as a parallel processing model (<xref ref-type="bibr" rid="CIT0049">M. C. Schneider &#x0026; Bos, 2016</xref>), suggests that the combination of candidate gender and party affiliation can sometimes result in something new, an effect above and beyond the effect of gender or party alone. Given the considerable empirical support for this model (<xref ref-type="bibr" rid="CIT0049">M. C. Schneider &#x0026; Bos, 2016</xref>), we expect to find an interactive effect of party and gender in which the two identities strengthen each other, such that Democratic women are the most likely to depict or mention masks in their advertising and Republican men are the least likely to depict or mention masks.<xref ref-type="fn" rid="fn1" specific-use="fn"><sup>1</sup></xref> Thus, we propose two more hypotheses:</p>
+<disp-quote>
+<p><bold>H3</bold>: <italic>Democratic women are more likely to picture or mention masks than Democratic men, Republican women, and Republican men in their campaign ads.</italic></p>
+<p><bold>H4</bold>: <italic>Republican men are less likely to picture or mention masks in their campaign ads than Republican women, Democratic men, and Democratic women.</italic></p>
+</disp-quote>
+<p>In addition, we explore whether Democrats and Republicans talk about masking in different ways. Theories of campaign rhetoric, for instance, suggest that candidates emphasize frames that are more advantageous to their parties (<xref ref-type="bibr" rid="CIT0052">Sides, 2006</xref>). Likewise, given that women and men candidates are believed to have different traits and issue expertise (<xref ref-type="bibr" rid="CIT0024">Huddy &#x0026; Terkildsen, 1993</xref>), they may talk about masking in different ways, emphasizing those issues frames that call upon their perceived strengths. We therefore ask two research questions:</p>
+<disp-quote>
+<p><bold>RQ1</bold>: <italic>Are there differences in the ways that Democrats and Republicans speak about masking, and if so, what are those differences?</italic></p>
+<p><bold>RQ2</bold>: <italic>Are there differences in the ways that men and women candidates speak about masking, and if so, what are those differences?</italic></p>
+</disp-quote>
+</sec>
+<sec id="s3">
+<title>Data</title>
+<p>To understand whether political candidates depict and speak about mask-wearing in their campaign advertising and how, we rely on Facebook and television advertising data from all U.S. congressional candidates running in the 2020 general election collected by the Wesleyan Media Project (WMP). We focus only on candidate sponsors who placed their ads on both Facebook and television. Our final dataset contains 100,551 Facebook ads and 1,978 television ads sponsored by 350 congressional candidates between September 1, 2020, and November 3, 2020. All ads in the inference set are at the unique creative level. For Facebook ads, uniqueness is defined as a combination of an ad&#x2019;s text fields. There were near-duplicates among Facebook ads due to campaigns doing A/B tests. We consider each of these near-duplicates as a unique creative because the modifications, no matter how small, were still meaningful as they were used to target different users at different times.</p>
+<p>The WMP collects Facebook ads through the Facebook Ad Library API which reports the sponsor who financed the ad and the dates the ad was seen. To identify political ads, WMP pulled ads through robust keyword searches that helped ensure the capture of all possible occurrences of candidate names. Using a list of candidates&#x2019; Facebook page IDs, we filter the data to include only the ads sponsored by congressional candidates. The Facebook API also provides ad text data, including ad creative body, page name, ad creative link title, ad creative link caption, and ad creative description. The WMP&#x2019;s acquisition script allows us to download images and videos associated with the Facebook ads.</p>
+<p>Our television advertising data also come from the WMP, which provides access to Kantar Media/CMAG (now Vivvix/CMAG) ad-tracking data that covers broadcast television stations in all 210 media markets in the United States. The tracking data include each ad&#x2019;s sponsor and the time of day each ad aired. The WMP also provided the video of each ad.</p>
+<p>After acquiring both Facebook and television advertisements, we processed ad images and videos to obtain additional text data. We use Google&#x2019;s Speech-to-Text (video model) to obtain video transcription and Amazon Rekognition&#x2019;s <italic>DetectText</italic> method to extract text from images.</p>
+<p>In addition to our key predictor variables, each candidate&#x2019;s party and gender, we include several control variables in our models. One is the rurality of each congressional candidate&#x2019;s district or state. Early reports of COVID-19 cases were concentrated in urban areas, such as New York City, and public health advice focused on &#x201C;social distancing,&#x201D; something much easier to achieve in rural areas than in large cities. We measure rurality using CityLab&#x2019;s Congressional Density Index (CDI) (<xref ref-type="bibr" rid="CIT0035">Montgomery, 2020</xref>).<xref ref-type="fn" rid="fn2" specific-use="fn"><sup>2</sup></xref> Because CityLab constructed their data at the district level, for U.S. Senate races, we aggregated congressional district population (U.S. Census Bureau, 2020) by categories and selected the CDI category with the largest population within a state. Then we recode this six-category variable into a continuous variable with 1 indicating the least rural districts and 6 the most rural districts.<xref ref-type="fn" rid="fn3" specific-use="fn"><sup>3</sup></xref></p>
+<p>We use Daily Kos Elections&#x2019; presidential results to obtain the share of the presidential vote obtained by Trump in 2016 either in the congressional district or state of interest (<xref ref-type="bibr" rid="CIT0005">Daily Kos Election, 2016</xref>). Given that Trump was highly skeptical of masks while Biden was a proponent, support for each candidate may influence support for masking in the electorate and, in consequence, a candidate&#x2019;s willingness to speak about masks.</p>
+<p>A campaign&#x2019;s decision to depict or mention masks may also depend on the medium, whether online or on television. Television advertising is delivered to a rather general audience and thus is designed to appeal to a wide spectrum of individuals (<xref ref-type="bibr" rid="CIT0011">Fowler, Franz, Martin, et al., 2021</xref>). Online advertising, on the other hand, is often delivered to individuals based on their characteristics and is more narrowly targeted. We thus control for whether an ad was placed on TV (Facebook as the reference category) and whether it was a video or image ad (with image ads as the reference category).</p>
+<p>We drew most candidate-level data from OpenSecrets, which provides information on candidates&#x2019; gender, partisanship<xref ref-type="fn" rid="fn4" specific-use="fn"><sup>4</sup></xref>, incumbency status and the race of interest (Senate or House). In addition, using Roll Call&#x2019;s Election Guide (<xref ref-type="bibr" rid="CIT0044">Roll Call, 2020</xref>), we constructed a four-point competitiveness variable for each race where 1 indicates safe Democratic or safe Republican, 2 indicates that a Democratic or Republican candidate is favored, 3 indicates that the race leans toward a Democrat or Republican, and 4 indicates a race that is too-close-to-call.<xref ref-type="fn" rid="fn5" specific-use="fn"><sup>5</sup></xref></p>
+</sec>
+<sec id="s4">
+<title>Methods</title>
+<p>To understand how candidate party, candidate gender, and their interaction affect whether candidates depict or refer to masks in their ads, we estimate the following random intercept logistic regression models stated in terms of latent linear responses:</p>
+<p><disp-formula>
+<mml:math display="block">
+<mml:mstyle displaystyle="true" fontfamily="serif">
+<mml:mrow>
+<mml:msubsup>
+<mml:mi>y</mml:mi>
+<mml:mrow>
+<mml:mi>i</mml:mi>
+<mml:mi>j</mml:mi>
+</mml:mrow>
+<mml:mo>&#x2217;</mml:mo>
+</mml:msubsup>
+<mml:mo>=</mml:mo>
+<mml:msub>
+<mml:mi>x</mml:mi>
+<mml:mrow>
+<mml:mi>i</mml:mi>
+<mml:mi>j</mml:mi>
+</mml:mrow>
+</mml:msub>
+<mml:mi>&#x03B2;</mml:mi>
+<mml:mo>+</mml:mo>
+<mml:msub>
+<mml:mi>u</mml:mi>
+<mml:mi>j</mml:mi>
+</mml:msub>
+<mml:mo>+</mml:mo>
+<mml:msub>
+<mml:mo>&#x2208;</mml:mo>
+<mml:mrow>
+<mml:mi>i</mml:mi>
+<mml:mi>j</mml:mi>
+</mml:mrow>
+</mml:msub>
+</mml:mrow>
+</mml:mstyle>
+</mml:math>
+</disp-formula></p>
+<p>Our dependent variables <italic>y<sub>ij</sub></italic> are binary variables indicating whether ad <italic>i</italic> from candidate <italic>j</italic> mentions masks or shows people wearing a mask. The vector <italic><bold>x<sub>ij</sub></bold></italic> are the covariates for the fixed effects, including variables of interest&#x2014;candidates&#x2019; gender, partisanship, the interaction of candidate gender and partisanship&#x2014;as well as controls. The random intercepts <italic><bold>u<sub>j</sub></bold> &#x223C; N</italic> (0, <italic>&#x03C8;</italic>) are assumed to be independent and identically distributed across candidate <italic>j</italic> and independent of the covariates <italic><bold>x<sub>ij</sub></bold></italic>. The <italic>&#x03F5;<sub>ij</sub></italic> have standard logistic distributions.</p>
+<p>To capture whether an ad mentions masks, we search for the word &#x201C;mask&#x201D; in all text fields, including text data from Facebook API, extracted text from the images, and video transcription. We rely on Amazon ReKognition Personal Protective Equipment (PPE) detection, a deep learning model, to examine whether an ad image or video features people wearing masks.<xref ref-type="fn" rid="fn6" specific-use="fn"><sup>6</sup></xref> As shown in Figure <xref ref-type="fig" rid="fig2">2</xref>, Amazon&#x2019;s PPE detector can identify persons in the image and videos, the parts of a body where PPE is worn, and the types of PPE detected on body parts. In addition to the object label, the detector also returns a confidence score, which indicates the probability that a given prediction is correct. Thus, we need to specify a confidence threshold to decide whether an ad depicts a mask or not. To find the optimum threshold, we drew a stratified random sample of 300 ads from our dataset to see how the performance of the Amazon PPE detector varies with different confidence thresholds.<xref ref-type="fn" rid="fn7" specific-use="fn"><sup>7</sup></xref> Figure <xref ref-type="fig" rid="fig3">3</xref> show the evaluation results. The confidence threshold of 97 achieves the highest accuracy of 0.90 and the highest weighted average F1-score (the harmonic mean of precision and recall) of 0.90, and therefore we use it for our analysis. Finally, we construct our binary dependent variable that indicates whether an ad mentions or pictures masks.</p>
+<fig id="fig2">
+<label>Figure 2:</label>
+<caption><title>Example result of Amazon ReKognition Personal Protective Equipment detection</title></caption>
+<graphic xlink:href="CCR2025.1.2.YAO_fig2.jpg"/>
+</fig>
+<p>In addition to analyzing whether candidates talk about masks in their ads, we are also interested in how they do so and how this relates to their party and gender. To this end, we use the conText embedding regression model (<xref ref-type="bibr" rid="CIT0043">Rodriguez et al., 2021</xref>). Traditional text analysis methods, such as WordScores (<xref ref-type="bibr" rid="CIT0029">Laver et al., 2003</xref>), Fightin&#x2019; Words (<xref ref-type="bibr" rid="CIT0034">Monroe et al., 2008</xref>), or Structural Topic Models (<xref ref-type="bibr" rid="CIT0041">Roberts et al., 2014</xref>),<xref ref-type="fn" rid="fn8" specific-use="fn"><sup>8</sup></xref> analyze differences in the use of language across variables such as party and gender. By contrast, conText seeks to answer a slightly different question: How does the context of a word&#x2014;and thus its meaning&#x2014;change depending on covariates? This is different from: How does the distribution of words change depending on covariates?</p>
+<fig id="fig3">
+<label>Figure 3:</label>
+<caption><title>Evaluation of the PPE detection of Amazon Rekognition</title></caption>
+<graphic xlink:href="CCR2025.1.2.YAO_fig3.jpg"/>
+</fig>
+<p>conText is tailored to target specific words. In the context of masks, this approach is appropriate because, in spite of the differences in the opinions of Democrats and Republicans, candidate from both parties commonly use the term &#x201C;mask.&#x201D; This allows us to see how Democrats and Republicans talk about masks, not just how often.</p>
+<p>conText consists of two components: a la Carte (ALC) word embeddings (<xref ref-type="bibr" rid="CIT0026">Khodak et al., 2018</xref>) and a regression framework (<xref ref-type="bibr" rid="CIT0043">Rodriguez et al., 2021</xref>). Word embeddings (<xref ref-type="bibr" rid="CIT0033">Mikolov et al., 2013</xref>) are low-dimensional (i.e., 300 dimensions, as opposed to tens of thousands of token types in bag-of-words models) representations of words, where words that occur closely together during training are clustered together in the embedding space. Therefore, calculating the cosine similarity (which is effectively a non-centered Pearson correlation) between the embeddings of two words describes how closely related they are. While pre-trained word embeddings are readily available and widely used, adjusting generic pre-trained embeddings to a specific context and ensuring that even uncommon words are well-represented is difficult for small corpora. <xref ref-type="bibr" rid="CIT0026">Khodak et al., 2018</xref> address this problem by mapping from pre-trained embeddings to additive embeddings for specific contexts (i.e. the averaged word embeddings of a given word&#x2019;s surrounding words) in what is essentially a weighted linear regression task. The parameters estimated in this regression are then used as a transformation matrix, which can be applied even to infrequent words. The newly constructed embeddings then describe the meaning of such &#x201C;focal words&#x201D; in the context of the corpus.</p>
+<p>Most importantly, conText allows for hypothesis testing. It can examine whether embeddings differ significantly across levels of covariates. <xref ref-type="bibr" rid="CIT0043">Rodriguez et al., 2021</xref> shows that this approach even applies to focal words that occur only once and builds the regression framework conText on top of this intuition. In this approach, the dependent variable consists of the combined embeddings of all instances of a given focal word. The independent variables work the same way as in a traditional regression model. The regression coefficients are the estimated embeddings for all groups. The L2 norms of these coefficients can then be used similarly to traditional regression coefficient estimates, and their standard errors can be obtained via bootstrapping. We use this framework to examine whether candidates with different demographic characteristics and constituency characteristics use the term mask differently. We use the same independent variables as those in the random intercept logistic regression models.</p>
+</sec>
+<sec id="s5">
+<title>Results</title>
+<p>We first provide some descriptive analysis of mask references by candidate party and gender. We find that direct mentions of masks were rare, while masks remained an important visual cue in candidate ads. Our data show that 10,677 ads (10.4&#x0025;) in our sample featured people wearing masks, but only 396 ads (0.4&#x0025;) in our data mentioned masks verbally and 201 ads (0.2&#x0025;) did both. Moreover, the use of masks as visual cues differs by party. In terms of mask depictions, about 11.7&#x0025; of ads sponsored by Democratic candidates showed people wearing masks, while 7.2&#x0025; sponsored by Republican candidates showed people wearing masks. The difference in the use of masks as visual cues across gender is smaller; about 11.7&#x0025; of ads sponsored by women candidates and 9.2&#x0025; of ads sponsored by men candidates featured mask-wearing people. In terms of mask mentions, 0.41&#x0025; of ads sponsored by Democrats and 0.34&#x0025; by Republicans mentioned masks; 0.30&#x0025; of ads sponsored by women and 0.47&#x0025; sponsored by men mentioned masks.</p>
+<sec id="s5.1">
+<title>Party versus gender</title>
+<p>Table <xref ref-type="table" rid="tab1">1</xref> shows the results of our random intercept logistic regressions. All models in Table <xref ref-type="table" rid="tab1">1</xref> predict whether a mask is discussed or pictured (&#x201C;featured&#x201D; hereafter) in an advertisement. In the first column, we pool Facebook and TV ads. In the second column, we show estimates from the model using only Facebook ads, and in the last column, we show estimates from the model using only television ads.</p>
+<p>The estimates from Model (1) confirm partisan differences in the display or mention of masks, with Republican candidates significantly less likely to feature a mask than Democrats. This holds true for both Facebook ads and TV ads as shown in Model (2) and (3), and thus we have confidence in the robustness of the effect of party. According to the pooled Facebook and television model, being Republican decreases the predicted probability of featuring a mask by 0.07 using the other covariates as they were observed. Figure <xref ref-type="fig" rid="fig4">4</xref> further shows the average marginal effect of being Republican across candidate gender on the predicted probability of featuring masks. We find that, regardless of candidate gender, the impact of being a Republican on the probability that a candidate features masks is significant and negative. For men candidates, being a Republican reduces the predicted probability of depicting a mask by 0.07, and for women candidates, being a Republican reduces the predicted probability by 0.06. Clearly, party matters for whether a mask is shown or mentioned, with Democrats significantly more likely to feature masks in an ad, and importantly, this holds even when controlling for Trump support in the candidate&#x2019;s district or state. Thus, our evidence supports H1.</p>
+<p>However, a candidate&#x2019;s gender does not affect the probability of featuring a mask. As shown in Figure <xref ref-type="fig" rid="fig5">5</xref>, we find no gender difference in candidates&#x2019; decision to display or discuss masks in their ads, and this is true for both Democratic and Republican candidates. Thus, H2 is not supported.</p>
+<p>Our third hypothesis suggested that Democratic women were most likely to feature masks, while our fourth hypothesis suggested that Republican men were least likely to feature masks. To examine the impact of the interaction between candidates&#x2019; party and gender, we calculated the average predicted probability of featuring masks for non-Republican women, non-Republican men, Republican men, and Republican women. As shown in Figure <xref ref-type="fig" rid="fig6">6</xref>, although the party difference remain, there is no interactive effect of party and gender, and thus H3 and H4 are unsupported.</p>
+<p>In sum, in spite of some gender differences in the acceptance of masking among the public at large, men and women candidates feature masks in their ads at a similar frequency. Only partisanship matters when it comes to using masks as political cues.</p>
+<p>A couple of other control variables had a significant impact on the likelihood of an ad&#x2019;s featuring a mask. First, incumbents were more likely to feature a mask than challengers in the pooled and TV models. Second, the more competitive the race, the less likely a mask was featured. Third, the estimates from Model (1) show that video ads and ads with video and images are more likely to feature masks than ads without video. Finally, television ads are more likely to feature a mask than online ads.</p>
+<table-wrap id="tab1">
+<label>Table 1:</label>
+<caption><title>Random Intercept Logistic Regression Predicting Mask Reference</title></caption>
+<table id="table1" width="1*">
+<colgroup>
+<col width="0.40*"/>
+<col width="0.20*"/>
+<col width="0.20*"/>
+<col width="0.20*"/>
+</colgroup>
+<thead>
+<tr>
+<th></th>
+<th>(1) Pooled</th>
+<th>(2) FB</th>
+<th>(3) TV</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Woman</td>
+<td>-0.256</td>
+<td>-0.330</td>
+<td>-0.098</td>
+</tr>
+<tr>
+<td></td>
+<td>(0.249)</td>
+<td>(0.278)</td>
+<td>(0.247)</td>
+</tr>
+<tr>
+<td>Republican</td>
+<td>-0.874<sup><xref ref-type="table-fn" rid="tab1fn3">***</xref></sup></td>
+<td>-0.960<sup><xref ref-type="table-fn" rid="tab1fn3">***</xref></sup></td>
+<td>-0.728<sup><xref ref-type="table-fn" rid="tab1fn2">**</xref></sup></td>
+</tr>
+<tr>
+<td></td>
+<td>(0.238)</td>
+<td>(0.267)</td>
+<td>(0.237)</td>
+</tr>
+<tr>
+<td>Woman &#x00D7; Republican</td>
+<td>0.122</td>
+<td>0.258</td>
+<td>-0.423</td>
+</tr>
+<tr>
+<td></td>
+<td>(0.392)</td>
+<td>(0.440)</td>
+<td>(0.398)</td>
+</tr>
+<tr>
+<td>Rurality</td>
+<td>-0.130</td>
+<td>-0.116</td>
+<td>-0.172</td>
+</tr>
+<tr>
+<td></td>
+<td>(0.087)</td>
+<td>(0.097)</td>
+<td>(0.089)</td>
+</tr>
+<tr>
+<td>Trump vote share</td>
+<td>-0.019</td>
+<td>-0.020</td>
+<td>-0.016</td>
+</tr>
+<tr>
+<td></td>
+<td>(0.010)</td>
+<td>(0.012)</td>
+<td>(0.011)</td>
+</tr>
+<tr>
+<td>Video</td>
+<td>0.761<sup><xref ref-type="table-fn" rid="tab1fn3">***</xref></sup></td>
+<td>0.755<sup><xref ref-type="table-fn" rid="tab1fn3">***</xref></sup></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>(0.030)</td>
+<td>(0.030)</td>
+<td></td>
+</tr>
+<tr>
+<td>Video &#x0026; image</td>
+<td>1.216<sup><xref ref-type="table-fn" rid="tab1fn3">***</xref></sup></td>
+<td>1.211<sup><xref ref-type="table-fn" rid="tab1fn3">***</xref></sup></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>(0.040)</td>
+<td>(0.041)</td>
+<td></td>
+</tr>
+<tr>
+<td>TV</td>
+<td>1.795<sup><xref ref-type="table-fn" rid="tab1fn3">***</xref></sup></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>(0.061)</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Incumbent</td>
+<td>0.518<sup><xref ref-type="table-fn" rid="tab1fn2">**</xref></sup></td>
+<td>0.420</td>
+<td>0.669<sup><xref ref-type="table-fn" rid="tab1fn3">***</xref></sup></td>
+</tr>
+<tr>
+<td></td>
+<td>(0.197)</td>
+<td>(0.220)</td>
+<td>(0.196)</td>
+</tr>
+<tr>
+<td>Open race</td>
+<td>0.261</td>
+<td>0.276</td>
+<td>0.189</td>
+</tr>
+<tr>
+<td></td>
+<td>(0.269)</td>
+<td>(0.301)</td>
+<td>(0.281)</td>
+</tr>
+<tr>
+<td>Senate</td>
+<td>-0.390</td>
+<td>-0.337</td>
+<td>-0.236</td>
+</tr>
+<tr>
+<td></td>
+<td>(0.240)</td>
+<td>(0.269)</td>
+<td>(0.221)</td>
+</tr>
+<tr>
+<td>Competitiveness</td>
+<td>-0.175<sup><xref ref-type="table-fn" rid="tab1fn1">*</xref></sup></td>
+<td>-0.193<sup><xref ref-type="table-fn" rid="tab1fn1">*</xref></sup></td>
+<td>-0.147<sup><xref ref-type="table-fn" rid="tab1fn1">*</xref></sup></td>
+</tr>
+<tr>
+<td></td>
+<td>(0.071)</td>
+<td>(0.080)</td>
+<td>(0.069)</td>
+</tr>
+<tr>
+<td>Constant</td>
+<td>-1.066<sup><xref ref-type="table-fn" rid="tab1fn1">*</xref></sup></td>
+<td>-1.017</td>
+<td>1.343<sup><xref ref-type="table-fn" rid="tab1fn1">*</xref></sup></td>
+</tr>
+<tr>
+<td></td>
+<td>(0.508)</td>
+<td>(0.571)</td>
+<td>(0.545)</td>
+</tr>
+<tr>
+<td>var(_cons[candidate_fecid])</td>
+<td>2.342<sup><xref ref-type="table-fn" rid="tab1fn3">***</xref></sup></td>
+<td>2.906<sup><xref ref-type="table-fn" rid="tab1fn3">***</xref></sup></td>
+<td>1.176<sup><xref ref-type="table-fn" rid="tab1fn3">***</xref></sup></td>
+</tr>
+<tr>
+<td></td>
+<td>(0.232)</td>
+<td>(0.309)</td>
+<td>(0.240)</td>
+</tr>
+<tr>
+<td>Observations</td>
+<td>102529</td>
+<td>100551</td>
+<td>1978</td>
+</tr>
+</tbody>
+</table>
+<table-wrap-foot>
+<p>Standard errors in parentheses</p>
+<fn-group>
+<fn id="tab1fn1" symbol="*"><p><italic>p</italic> &lt; 0.05,</p></fn>
+<fn id="tab1fn2" symbol="**"><p><italic>p</italic> &lt; 0.01,</p></fn>
+<fn id="tab1fn3" symbol="***"><p><italic>p</italic> &lt; 0.001</p></fn>
+</fn-group>
+</table-wrap-foot>
+</table-wrap>
+<p>As a robustness check, we estimate the previous model but separately for when masks are pictured and when masks are mentioned (results shown in Appendix <xref ref-type="sec" rid="apx1">A</xref> in Table <xref ref-type="table" rid="tab5">A1</xref>). In the mask depictions model, the coefficient on the Republican indicator is negative and significant, just as we had hypothesized. In the mask mentions model, the coefficient on the Republican indicator is negative and similar in magnitude to the coefficient in the depictions model, but it is not statistically significant, likely because the standard error is larger given the smaller number of ads that feature mask mentions.</p>
+</sec>
+<sec id="s5.2">
+<title>How do candidates speak about masks?</title>
+<p>Do Democratic and Republican candidates use different language when speaking about masks, and if so, how? We examined this question through an embedding regression model. Figure <xref ref-type="fig" rid="fig7">7</xref> shows the norm of the coefficients from the model. The coefficients on the Republican, woman, and Republican woman variables show the average difference across different classes, controlling for other variables. Note that magnitudes of the coefficients of embedding regressions have no natural absolute interpretation, but they can be compared relatively. In our case, the differences between Democrats and Republicans and between men and women candidates are significantly larger for our politicized focal word &#x201C;mask&#x201D; than for function words like &#x201C;and,&#x201D; &#x201C;but,&#x201D; and &#x201C;that.&#x201D; In addition, the embeddings are much larger between Republican women and other candidates. This means that, on average, the difference in the context in which the word &#x201C;mask&#x201D; is used between Republican men and Republican women is greater than the difference in the context in which the word &#x201C;mask&#x201D; is used between men and women candidates overall.</p>
+<p>The embedding regression suggests that there are differences by party and differences by candidate gender in the way that masks are spoken about. We also wanted to be able to speak more to the nature of these differences. Thus, Table <xref ref-type="table" rid="tab2">2</xref> shows the top 20 nearest neighbors of &#x201C;mask&#x201D; for different parties. The nearest neighbors are the vectors, that is, the embeddings of the words, closest to the estimates of how the Democrats and the Republicans use &#x201C;mask.&#x201D; There is one key difference: the word &#x201C;health&#x201D; is in the Democratic list but not in the Republican list, suggesting that Democrats often spoke about masks in a public health context. For example, when criticizing his opponent, Sri Preston Kulkarni (D-TX) pointed out that public health experts advised that people wear masks. And Senator Mark Warner (D-VA) encouraged people to &#x201C;protect yourself and others by wearing a mask.&#x201D;</p>
+<p>Republican candidates, however, did not convey a consistent message about the effectiveness of masks. For example, Glenn Grothman (R-WI) promised to &#x201C;fight hard to get life back to normal&#x201D; and save manufacturing &#x201C;jobs&#x201D; by making masks and medicines in Wisconsin. Though Dan Crenshaw (R-TX) mentioned that he distributed 50,000 masks for the local community in one ad, he did not do this because of the effectiveness of masks but rather provided them as a way to help people cope with mask mandates. In another ad, he told his audience to purchase a neck gaiter from his campaign website (&#x201C;<ext-link ext-link-type="uri" xlink:href="https://shop.crenshawforcongress.com">shop.crenshawforcongress.com</ext-link>&#x201D;), if they &#x201C;have to wear a mask,&#x201D; so that they can go out and support &#x201C;local businesses.&#x201D;</p>
+<p>Table <xref ref-type="table" rid="tab3">3</xref> shows the top 20 nearest neighbors in ads sponsored by women and men candidates. We find that the words &#x201C;health,&#x201D; &#x201C;care,&#x201D; &#x201C;workers,&#x201D; and &#x201C;pandemic&#x201D; are close to the target word &#x201C;mask&#x201D; in the embedding of ads sponsored by women candidates, but none of these words is found among the top 20 in ads sponsored by men. This provides evidence in support of H6. Nancy Goroff (D-NY), for example, criticized her opponent Lee Zeldin (R-NY) and President Trump for ignoring scientists, not wearing masks in public, and thus putting politics ahead of citizens&#x2019; &#x201C;health.&#x201D; Brynne Kennedy (D-SC) criticized her opponent for not wearing a mask to protect himself and others. Both ads implied that face masks are effective at reducing the spread of the virus.</p>
+<p>Do men and women candidates speak about masking differently? Table <xref ref-type="table" rid="tab3">3</xref> shows the top 20 nearest neighbors in ads sponsored by women and men candidates within the Republican party. It is clear that Republican men&#x2019;s discourse on masks was more about purchases (&#x201C;<ext-link ext-link-type="uri" xlink:href="https://shop.crenshawforcongress.com">shop.crenshawforcongress.com</ext-link>&#x201D;), &#x201C;business,&#x201D; and individuals&#x2019; ability to show their support for the candidates. In contrast, Republican women were more likely to use a public health frame that points to the effectiveness of masks in preventing the spread of the virus. One sees words such as &#x201C;wear,&#x201D; &#x201C;wearing,&#x201D; &#x201C;social,&#x201D; and &#x201C;distancing,&#x201D; none of which are found on the list for Republican men. To provide an example, Nancy Mace (R-SC), mentioned in the introduction, stated in an ad that she required masks at her campaign events. She also expressed her worries about the virus in classrooms but insisted that parents should have the choice to send kids to school. In sum, while the word &#x201C;mask&#x201D; is used in a variety of contexts, it is more likely to be used in a public health context in ads sponsored by women than in ads sponsored by men. The gender difference within the Republican party is particularly salient.</p>
+<table-wrap id="tab2">
+<label>Table 2:</label>
+<caption><title>Top 20 Nearest Neighbors for the Target Term &#x201C;Mask&#x201D; by Candidates&#x2019; Party</title></caption>
+<table id="table2" width="1*">
+<colgroup>
+<col width="0.10*"/>
+<col width="0.15*"/>
+<col width="0.15*"/>
+<col width="0.10*"/>
+<col width="0.30*"/>
+<col width="0.20*"/>
+</colgroup>
+<thead>
+<tr>
+<th colspan="3">Democratic</th>
+<th colspan="3">Republican</th>
+</tr>
+<tr>
+<th>Rank</th>
+<th>Feature</th>
+<th>Value</th>
+<th>Rank</th>
+<th>Feature</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>can</td>
+<td>0.54</td>
+<td>1</td>
+<td>like</td>
+<td>0.41</td>
+</tr>
+<tr>
+<td>2</td>
+<td>people</td>
+<td>0.52</td>
+<td>2</td>
+<td>fight</td>
+<td>0.40</td>
+</tr>
+<tr>
+<td>3</td>
+<td>make</td>
+<td>0.49</td>
+<td>3</td>
+<td>help</td>
+<td>0.39</td>
+</tr>
+<tr>
+<td>4</td>
+<td>help</td>
+<td>0.49</td>
+<td>4</td>
+<td><ext-link ext-link-type="uri" xlink:href="https://shop.crenshawforcongress.com">shop.crenshawforcongress.com</ext-link></td>
+<td>0.39</td>
+</tr>
+<tr>
+<td>5</td>
+<td>get</td>
+<td>0.49</td>
+<td>5</td>
+<td>end</td>
+<td>0.38</td>
+</tr>
+<tr>
+<td>6</td>
+<td>need</td>
+<td>0.48</td>
+<td>6</td>
+<td>can</td>
+<td>0.38</td>
+</tr>
+<tr>
+<td>7</td>
+<td>sure</td>
+<td>0.48</td>
+<td>7</td>
+<td>need</td>
+<td>0.38</td>
+</tr>
+<tr>
+<td>8</td>
+<td>care</td>
+<td>0.48</td>
+<td>8</td>
+<td>dan</td>
+<td>0.37</td>
+</tr>
+<tr>
+<td>9</td>
+<td>money</td>
+<td>0.47</td>
+<td>9</td>
+<td>jobs</td>
+<td>0.37</td>
+</tr>
+<tr>
+<td>10</td>
+<td>right</td>
+<td>0.47</td>
+<td>10</td>
+<td>keep</td>
+<td>0.37</td>
+</tr>
+<tr>
+<td>11</td>
+<td>know</td>
+<td>0.47</td>
+<td>11</td>
+<td>country</td>
+<td>0.36</td>
+</tr>
+<tr>
+<td>12</td>
+<td>vote</td>
+<td>0.47</td>
+<td>12</td>
+<td>local</td>
+<td>0.36</td>
+</tr>
+<tr>
+<td>13</td>
+<td>take</td>
+<td>0.46</td>
+<td>13</td>
+<td>right</td>
+<td>0.36</td>
+</tr>
+<tr>
+<td>14</td>
+<td>time</td>
+<td>0.46</td>
+<td>14</td>
+<td>protect</td>
+<td>0.36</td>
+</tr>
+<tr>
+<td>15</td>
+<td>health</td>
+<td>0.45</td>
+<td>15</td>
+<td>make</td>
+<td>0.36</td>
+</tr>
+<tr>
+<td>16</td>
+<td>going</td>
+<td>0.45</td>
+<td>16</td>
+<td>care</td>
+<td>0.35</td>
+</tr>
+<tr>
+<td>17</td>
+<td>really</td>
+<td>0.45</td>
+<td>17</td>
+<td>public</td>
+<td>0.35</td>
+</tr>
+<tr>
+<td>18</td>
+<td>race</td>
+<td>0.45</td>
+<td>18</td>
+<td>people</td>
+<td>0.35</td>
+</tr>
+<tr>
+<td>19</td>
+<td>end</td>
+<td>0.45</td>
+<td>19</td>
+<td>back</td>
+<td>0.34</td>
+</tr>
+<tr>
+<td>20</td>
+<td>keep</td>
+<td>0.45</td>
+<td>20</td>
+<td>work</td>
+<td>0.34</td>
+</tr>
+</tbody>
+</table>
+</table-wrap>
+</sec>
+</sec>
+<sec id="s6">
+<title>Discussion</title>
+<p>Our study had several important findings. First, candidate partisanship matters. Democrats were significantly more likely to feature masks in their political advertisements than were Republicans during the 2020 campaigns. This finding may reflect cues from Biden and Trump, trait differences between liberals and conservatives, and a desire by Republicans to downplay the impacts of the pandemic.</p>
+<p>Second, we found that the gender of the candidate had no impact on the featuring of a mask, and this was true within both Democratic and Republican candidates. Clearly, a candidate&#x2019;s party was far more important than the candidate&#x2019;s gender in predicting whether an ad featured a mask. This is consistent with existing research that shows that partisan stereotypes tend to win out over gender stereotypes (<xref ref-type="bibr" rid="CIT0020">Hayes, 2011</xref>).</p>
+<table-wrap id="tab3">
+<label>Table 3:</label>
+<caption><title>Top 20 nearest neighbors for the target term mask by candidates&#x2019; gender</title></caption>
+<table id="table3" width="1*">
+<colgroup>
+<col width="0.10*"/>
+<col width="0.20*"/>
+<col width="0.20*"/>
+<col width="0.10*"/>
+<col width="0.20*"/>
+<col width="0.20*"/>
+</colgroup>
+<thead>
+<tr>
+<th colspan="3">Women</th>
+<th colspan="3">Men</th>
+</tr>
+<tr>
+<th>rank</th>
+<th>feature</th>
+<th>value</th>
+<th>rank</th>
+<th>feature</th>
+<th>value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>workers</td>
+<td>0.53</td>
+<td>1</td>
+<td>can</td>
+<td>0.56</td>
+</tr>
+<tr>
+<td>2</td>
+<td>sure</td>
+<td>0.45</td>
+<td>2</td>
+<td>help</td>
+<td>0.53</td>
+</tr>
+<tr>
+<td>3</td>
+<td>public</td>
+<td>0.45</td>
+<td>3</td>
+<td>people</td>
+<td>0.51</td>
+</tr>
+<tr>
+<td>4</td>
+<td>get</td>
+<td>0.45</td>
+<td>4</td>
+<td>know</td>
+<td>0.51</td>
+</tr>
+<tr>
+<td>5</td>
+<td>make</td>
+<td>0.45</td>
+<td>5</td>
+<td>really</td>
+<td>0.50</td>
+</tr>
+<tr>
+<td>6</td>
+<td>health</td>
+<td>0.44</td>
+<td>6</td>
+<td>back</td>
+<td>0.49</td>
+</tr>
+<tr>
+<td>7</td>
+<td>care</td>
+<td>0.44</td>
+<td>7</td>
+<td>need</td>
+<td>0.49</td>
+</tr>
+<tr>
+<td>8</td>
+<td>pandemic</td>
+<td>0.44</td>
+<td>8</td>
+<td>much</td>
+<td>0.48</td>
+</tr>
+<tr>
+<td>9</td>
+<td>vote</td>
+<td>0.42</td>
+<td>9</td>
+<td>take</td>
+<td>0.48</td>
+</tr>
+<tr>
+<td>10</td>
+<td>people</td>
+<td>0.41</td>
+<td>10</td>
+<td>right</td>
+<td>0.47</td>
+</tr>
+<tr>
+<td>11</td>
+<td>working</td>
+<td>0.40</td>
+<td>11</td>
+<td>like</td>
+<td>0.47</td>
+</tr>
+<tr>
+<td>12</td>
+<td>critical</td>
+<td>0.40</td>
+<td>12</td>
+<td>one</td>
+<td>0.47</td>
+</tr>
+<tr>
+<td>13</td>
+<td>can</td>
+<td>0.39</td>
+<td>13</td>
+<td>keep</td>
+<td>0.46</td>
+</tr>
+<tr>
+<td>14</td>
+<td>use</td>
+<td>0.39</td>
+<td>14</td>
+<td>give</td>
+<td>0.46</td>
+</tr>
+<tr>
+<td>15</td>
+<td>need</td>
+<td>0.39</td>
+<td>15</td>
+<td>end</td>
+<td>0.46</td>
+</tr>
+<tr>
+<td>16</td>
+<td>lives</td>
+<td>0.38</td>
+<td>16</td>
+<td>fight</td>
+<td>0.46</td>
+</tr>
+<tr>
+<td>17</td>
+<td>work</td>
+<td>0.38</td>
+<td>17</td>
+<td>make</td>
+<td>0.46</td>
+</tr>
+<tr>
+<td>18</td>
+<td>businesses</td>
+<td>0.38</td>
+<td>18</td>
+<td>money</td>
+<td>0.46</td>
+</tr>
+<tr>
+<td>19</td>
+<td>right</td>
+<td>0.37</td>
+<td>19</td>
+<td>just</td>
+<td>0.45</td>
+</tr>
+<tr>
+<td>20</td>
+<td>time</td>
+<td>0.37</td>
+<td>20</td>
+<td>going</td>
+<td>0.45</td>
+</tr>
+</tbody>
+</table>
+</table-wrap>
+<p>Third, our embedding regressions revealed there were differences in the ways that Democrats and Republicans talked about masking, differences in the way that men and women candidates talked about masking, and there were especially large differences in the way that Republican women talked about masks compared to other candidates. That is, the words surrounding the word &#x201C;mask&#x201D; were quite different for Republican women than other candidates.</p>
+<p>That the context surrounding the word &#x201C;mask&#x201D; is different implies that candidates&#x2019; party, gender, and their interaction affects how they frame masking in their communication with the public. Of course, we should be careful with these findings given that discussions of masking, which provides the data upon which these analyses rely, are much less common than depictions of masks, especially among certain subcategories of candidates. For example, only four ads that mention masks come from Republican women candidates.</p>
+<table-wrap id="tab4">
+<label>Table 4:</label>
+<caption><title>Top 20 nearest neighbors for the target term mask by candidates&#x2019; gender within the Republican party</title></caption>
+<table id="table4" width="1*">
+<colgroup>
+<col width="0.10*"/>
+<col width="0.20*"/>
+<col width="0.20*"/>
+<col width="0.10*"/>
+<col width="0.30*"/>
+<col width="0.10*"/>
+</colgroup>
+<thead>
+<tr>
+<th colspan="3">Republican Women</th>
+<th colspan="3">Republican Men</th>
+</tr>
+<tr>
+<th>Rank</th>
+<th>Feature</th>
+<th>Value</th>
+<th>Rank</th>
+<th>Feature</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>wear</td>
+<td>0.27</td>
+<td>1</td>
+<td><ext-link ext-link-type="uri" xlink:href="https://shop.crenshawforcongress.com">shop.crenshawforcongress.com</ext-link></td>
+<td>0.38</td>
+</tr>
+<tr>
+<td>2</td>
+<td>place</td>
+<td>0.24</td>
+<td>2</td>
+<td>people</td>
+<td>0.34</td>
+</tr>
+<tr>
+<td>3</td>
+<td>mace</td>
+<td>0.23</td>
+<td>3</td>
+<td>fight</td>
+<td>0.32</td>
+</tr>
+<tr>
+<td>4</td>
+<td>may</td>
+<td>0.22</td>
+<td>4</td>
+<td>equip</td>
+<td>0.32</td>
+</tr>
+<tr>
+<td>5</td>
+<td>thinker</td>
+<td>0.22</td>
+<td>5</td>
+<td>get</td>
+<td>0.31</td>
+</tr>
+<tr>
+<td>6</td>
+<td>distancing</td>
+<td>0.21</td>
+<td>6</td>
+<td>first</td>
+<td>0.30</td>
+</tr>
+<tr>
+<td>7</td>
+<td>president</td>
+<td>0.20</td>
+<td>7</td>
+<td>back</td>
+<td>0.29</td>
+</tr>
+<tr>
+<td>8</td>
+<td>social</td>
+<td>0.19</td>
+<td>8</td>
+<td>show</td>
+<td>0.29</td>
+</tr>
+<tr>
+<td>9</td>
+<td>says</td>
+<td>0.19</td>
+<td>9</td>
+<td>support</td>
+<td>0.29</td>
+</tr>
+<tr>
+<td>10</td>
+<td>events</td>
+<td>0.19</td>
+<td>10</td>
+<td>good</td>
+<td>0.28</td>
+</tr>
+<tr>
+<td>11</td>
+<td>mandates</td>
+<td>0.19</td>
+<td>11</td>
+<td>take</td>
+<td>0.28</td>
+</tr>
+<tr>
+<td>12</td>
+<td>encouraged</td>
+<td>0.15</td>
+<td>12</td>
+<td>make</td>
+<td>0.28</td>
+</tr>
+<tr>
+<td>13</td>
+<td>right</td>
+<td>0.13</td>
+<td>13</td>
+<td>strong</td>
+<td>0.28</td>
+</tr>
+<tr>
+<td>14</td>
+<td>please</td>
+<td>0.13</td>
+<td>14</td>
+<td>right</td>
+<td>0.27</td>
+</tr>
+<tr>
+<td>15</td>
+<td>wearing</td>
+<td>0.13</td>
+<td>15</td>
+<td>safe</td>
+<td>0.26</td>
+</tr>
+<tr>
+<td>16</td>
+<td>battle</td>
+<td>0.13</td>
+<td>16</td>
+<td>can</td>
+<td>0.25</td>
+</tr>
+<tr>
+<td>17</td>
+<td>3rd</td>
+<td>0.13</td>
+<td>17</td>
+<td>jobs</td>
+<td>0.25</td>
+</tr>
+<tr>
+<td>18</td>
+<td>colarusso</td>
+<td>0.13</td>
+<td>18</td>
+<td>join</td>
+<td>0.24</td>
+</tr>
+<tr>
+<td>19</td>
+<td>light</td>
+<td>0.13</td>
+<td>19</td>
+<td>businesses</td>
+<td>0.24</td>
+</tr>
+<tr>
+<td>20</td>
+<td>first</td>
+<td>0.12</td>
+<td>20</td>
+<td>donation</td>
+<td>0.24</td>
+</tr>
+</tbody>
+</table>
+</table-wrap>
+<p>Finally, we presented some basic evidence in the form of a &#x201C;nearest neighbors&#x201D; analysis suggesting that Democrats were more likely than Republicans to talk about masks by using a public health frame. Democrats more commonly used words such as &#x201C;need,&#x201D; &#x201C;care,&#x201D; and &#x201C;health.&#x201D; At the same time, women candidates were more likely than men candidates to use these words suggestive of a public health frame. Admittedly, though, it is difficult to separate partisanship from gender in these analyses given the low number of Republican women in our sample who spoke about masking.</p>
+<p>One limitation of our study is that the &#x201C;nearest neighbors&#x201D; analysis is a blunt instrument in identifying the frames that candidates used to speak about masking. Future research that employed human coders might be able to provide a more in-depth understanding of the way in which candidates&#x2014; men and women, Republicans and Democrats&#x2014;frame masking.</p>
+<p>Another limitation is that we examine only those candidates who placed ads both on Facebook and television. Although almost all candidates placed ads on Facebook, not all did on television. Thus, we likely over-represented well-funded candidates in more competitive races&#x2014;those who could afford to invest in television. These are the types of candidates who are more likely to be strategic in their use of imagery, such as masks, and so if we were to included candidates who only placed ads on Facebook, we might find fewer differences across party.</p>
+</sec>
+<sec id="s7">
+<title>Conclusion</title>
+<p>Our study points to an important partisan gap in the discussion and depiction of masks&#x2014;and in the way that candidates talk about masking. At the same time, we demonstrate the utility of an innovative approach to generating empirical data, one that relies on a novel combination of data collection strategies.</p>
+<p>The partisan differences that we identified are important because, in addition to reflecting the partisan politicization of the issue at the elite level, they also likely aided in <italic>exacerbating</italic> those partisan differences. Democratic-sponsored ads were much more likely to depict a world in which citizens, concerned about public health, wore masks, an indication of the seriousness of the COVID-19 pandemic, even if most of these ads did not discuss masking. Republican-sponsored ads, on the other hand, were less likely to feature individuals wearing masks, and rhetoric surrounding masking&#x2014;while adopting various frames&#x2014;was more likely to be opposed to masking. Thus, political advertising likely helped to polarize Democrats and Republicans when it came to wearing masks.</p>
+<p>And this could have real-world consequences. Researchers have documented not only the effectiveness of mask-wearing in preventing COVID-19 virus transmission at the individual level but the additional benefits of mask mandates at the community level. As shown by <xref ref-type="bibr" rid="CIT0022">Huang et al., 2022</xref>, mask mandates reduced the number of daily cases by 23 percent at four weeks and 33 percent at six weeks. Yet such mandates are difficult to achieve when they become so politicized.</p>
+<p>While our substantive findings are important, our research also advances the study of computational communication. We demonstrate the use of computational techniques for the identification of both textual mentions and visual depictions of face masks, allowing us to tabulate the frequency of such mentions. But more importantly, we establish a computational approach for demonstrating how different types of actors speak differently about masking. We believe these techniques could be applied to discussions other topics that have become politicized, and to visual depictions of objects and symbols that have political meaning, such a bald eagle in the U.S. or a maple leaf in Canada, a country&#x2019;s flag, a peace sign or swastika.</p>
+<p>With respect to political communication theory, party discussion of masking seems to support the theory of <xref ref-type="bibr" rid="CIT0052">Sides (2006)</xref>, which suggests that, even if Democrats owned the issue of masking, there is often substantial &#x201C;issue trespassing&#x201D; by the other party. Here we saw substantial discussion of masking by Republicans, though not as much as by Democrats. Moreover, Sides suggests that the &#x201C;trespassing&#x201D; party is likely to reframe the issue, something we saw here as well, with Republicans using a variety of frames to address masking. Interestingly, though, we did not find much evidence of Republicans using an extreme anti-masking frame: words such as &#x201C;liberty,&#x201D; &#x201C;freedom,&#x201D; and &#x201C;government&#x201D; were seldom adjacent when Republicans spoke about masks.</p>
+<p>Our findings, of course, are the product of a particular time toward the end of the 2020 U.S. campaigns, a time before COVID-19 vaccines were available and a time during which masking overall was high and Democratic politicians were generally united in support of masking. Today, levels of masking are lower, and all states, even those with Democratic governors, have lifted mask mandates. This situation may reduce partisan differences in the depiction of masks; indeed, we may see very few ads that depict masks in the future if the current relatively low levels of COVID-19 deaths, in spite of high levels of infection, continue. But should masking become necessary again due to a new COVID-19 variant or some other pandemic, partisan differences in discussions of masking are likely to reemerge.</p>
+</sec>
+</body>
+<back>
+<fn-group>
+<title>Notes</title>
+<fn id="fn1" symbol="1"><p>Admittedly, the literature on candidate presentation generally finds significant partisan differences but very few gender differences in candidates&#x2019; issue emphases (<xref ref-type="bibr" rid="CIT0009">Dolan &#x0026; Lynch, 2017</xref>; <xref ref-type="bibr" rid="CIT0045">Sapiro et al., 2011</xref>), though <xref ref-type="bibr" rid="CIT0055">Strach and Sapiro (2011)</xref> does find an interactive effect of gender and party when it comes to discussion of the attacks of September 11, 2001.</p></fn>
+<fn id="fn2" symbol="2"><p>This measure starts with a calculation of households per square mile in each census tract in the country, and then each tract is placed into one of four categories, ranging from very low density to high density. An algorithm was then used to cluster each district into one of six categories.</p></fn>
+<fn id="fn3" symbol="3"><p>Specifically, pure urban equals 1, urban-suburban mix equals 2, dense suburban equals 3, sparse suburban equals 4, Rural-suburban mix equals 5, and pure rural equals 6.</p></fn>
+<fn id="fn4" symbol="4"><p>In the following analyses, we combined Independents with Democrats in order to examine and interpret the interaction effect between party and gender more easily. There are only four Independents that feature masks in their ads, and their stance on COVID-19 policies is aligned with Democrats.</p></fn>
+<fn id="fn5" symbol="5"><p>Ad goals and tone may influence candidates&#x2019; decision to feature masks in their ads. Therefore, we used machine learning methods to identify ad goals (donate, GOTV, learn more, purchase and other), as well as ad tone (contrast, support, and attack). We included these additional controls in Tables <xref ref-type="table" rid="tab6">A2</xref>, <xref ref-type="table" rid="tab7">A3</xref> and <xref ref-type="table" rid="tab8">A4</xref> of Appendix <xref ref-type="sec" rid="apx1">A</xref>. Note that our findings about the impact of candidate partisanship hold. We also wanted to account for the possibility that the probability of an ad featuring mask-wearing people can be influenced simply by the number of people in the ad. Thus, we also included the number of faces as a predictor in Table <xref ref-type="table" rid="tab8">A4</xref> in Appendix <xref ref-type="sec" rid="apx1">A</xref>. Importantly, our central finding about the impact of partisanship holds. Note that we focused on Facebook image ads for the robustness tests in Table <xref ref-type="table" rid="tab8">A4</xref> because for the videos we did not store the number of faces when aggregating Amazon PPE detection results from the frame level to the video level in order to reduce the computational time and save storage space.</p></fn>
+<fn id="fn6" symbol="6"><p>When examining whether an ad pictures people wearing masks, we excluded ads whose media data failed to be downloaded by our script or processed by Amazon Rekognition (2.0&#x0025; of the total ads).</p></fn>
+<fn id="fn7" symbol="7"><p>The strata are formed based on ad spend. We also over-sample ads that are likely to feature masks using PPE detection results (confidence score &gt;= 90) and over-sample Facebook ads as TV ads have way higher average spending than Facebook ads. The sample consists of 125 Facebook image ads, 125 Facebook video ads, and 50 TV ads. Within each group, about half are mask ads and half are non-mask ads.</p></fn>
+<fn id="fn8" symbol="8"><p>For comparison, we also include the results of Fightin&#x2019; Words and a Structural Topic Model (STM) estimated on the texts that mention masks in Figures <xref ref-type="fig" rid="fig9">2</xref> to <xref ref-type="fig" rid="fig10">3</xref> in Appendix <xref ref-type="sec" rid="apx2">B</xref> and Appendix <xref ref-type="sec" rid="apx3">C</xref>. These results show why Fightin&#x2019; Words and Structural Topic Models are not as suited to this task. STMs can be difficult to estimate when the model becomes too complex. Moreover, in the fitted model, most of the topics are not about masks at all and mainly relate to various partisan figures. The Fightin&#x2019; Words results are a little better, as the Democratic and women words in particular largely relate to masks, but there is a lot of overlap in results between those two categories.</p></fn>
+</fn-group>
+<ref-list>
+<title>References</title>
+<ref id="CIT0001">
+<mixed-citation publication-type="journal"><string-name><surname>Barry</surname>, <given-names>C. L.</given-names></string-name>, <string-name><surname>Bandara</surname>, <given-names>S.</given-names></string-name>, <string-name><surname>Fowler</surname>, <given-names>E. F.</given-names></string-name>, <string-name><surname>Baum</surname>, <given-names>L.</given-names></string-name>, <string-name><surname>Gollust</surname>, <given-names>S. E.</given-names></string-name>, <string-name><surname>Niederdeppe</surname>, <given-names>J.</given-names></string-name>, &#x0026; <string-name><surname>Kennedy-Hendricks</surname>, <given-names>A.</given-names></string-name> (<year>2020</year>). <article-title>Guns in political advertising over four us election cycles, 2012 to 2018</article-title>. <source><italic>Health affairs (Project Hope)</italic></source>, <volume>39</volume>(<issue>2</issue>), <fpage>327</fpage>&#x2013;<lpage>333</lpage>. <ext-link ext-link-type="doi" xlink:href="https://doi.org/10.1377/hlthaff.2019.01102">https://doi.org/10.1377/hlthaff.2019.01102</ext-link></mixed-citation>
+</ref>
+<ref id="CIT0002">
+<mixed-citation publication-type="journal"><string-name><surname>Brader</surname>, <given-names>T.</given-names></string-name> (<year>2005</year>). <article-title>Striking a responsive chord: How political ads motivate and persuade voters by appealing to emotions</article-title>. <source><italic>American Journal of Political Science</italic></source>, <volume>49</volume>(<issue>2</issue>), <fpage>388</fpage>&#x2013;<lpage>405</lpage>.</mixed-citation>
+</ref>
+<ref id="CIT0003">
+<mixed-citation publication-type="journal"><string-name><surname>Carpinella</surname>, <given-names>C.</given-names></string-name>, &#x0026; <string-name><surname>Bauer</surname>, <given-names>N. M.</given-names></string-name> (<year>2021</year>). <article-title>A visual analysis of gender stereotypes in campaign advertising</article-title>. <source><italic>Politics, Groups, and Identities</italic></source>, <volume>9</volume>(<issue>2</issue>), <fpage>369</fpage>&#x2013;<lpage>386</lpage>.</mixed-citation>
+</ref>
+<ref id="CIT0004">
+<mixed-citation publication-type="journal"><string-name><surname>Connaughton</surname>, <given-names>S. L.</given-names></string-name>, &#x0026; <string-name><surname>Jarvis</surname>, <given-names>S. E.</given-names></string-name> (<year>2004</year>). <article-title>Invitations for partisan identification: Attempts to court Latino voters through televised Latino-oriented political advertisements, 1984&#x2013;2000</article-title>. <source><italic>Journal of Communication</italic></source>, <volume>54</volume>(<issue>1</issue>), <fpage>38</fpage>&#x2013;<lpage>54</lpage>. <ext-link ext-link-type="doi" xlink:href="https://doi.org/10.1111/j.1460-2466.2004.tb02612.x">https://doi.org/10.1111/j.1460-2466.2004.tb02612.x</ext-link></mixed-citation>
+</ref>
+<ref id="CIT0005">
+<mixed-citation publication-type="collab"><collab>Daily Kos Election</collab>. (<year>2016</year>). <chapter-title>Daily Kos elections&#x2019; guide</chapter-title>. <ext-link ext-link-type="uri" xlink:href="https://docs.google.com/spreadsheets/d/1XbUXnI9OyfAuhP5P3vWtMuGc5UJlrhXbzZo3AwMuHtk/edit&#x0025;5C#gid=0">https://docs.google.com/spreadsheets/d/1XbUXnI9OyfAuhP5P3vWtMuGc5UJlrhXbzZo3AwMuHtk/edit&#x0025;5C#gid=0</ext-link></mixed-citation>
+</ref>
+<ref id="CIT0006">
+<mixed-citation publication-type="journal"><string-name><surname>Dan</surname>, <given-names>V.</given-names></string-name>, &#x0026; <string-name><surname>Arendt</surname>, <given-names>F.</given-names></string-name> (<year>2021</year>). <article-title>Visual cues to the hidden agenda: Investigating the effects of ideology-related visual subtle backdrop cues in political communication [Publisher: SAGE Publications Inc]</article-title>. <source><italic>The International Journal of Press/Politics</italic></source>, <volume>26</volume>(<issue>1</issue>), <fpage>22</fpage>&#x2013;<lpage>45</lpage>. <ext-link ext-link-type="doi" xlink:href="https://doi.org/10.1177/1940161220936593">https://doi.org/10.1177/1940161220936593</ext-link></mixed-citation>
+</ref>
+<ref id="CIT0007">
+<mixed-citation publication-type="journal"><string-name><surname>Darmofal</surname>, <given-names>D.</given-names></string-name> (<year>2005</year>). <article-title>Elite cues and citizen disagreement with expert opinion</article-title>. <source><italic>Political Research Quarterly</italic></source>, <volume>58</volume>(<issue>3</issue>), <fpage>381</fpage>&#x2013;<lpage>395</lpage>.</mixed-citation>
+</ref>
+<ref id="CIT0008">
+<mixed-citation publication-type="book"><string-name><surname>Dittmar</surname>, <given-names>K.</given-names></string-name> (<year>2015</year>). <source><italic>Navigating gendered terrain: Stereotypes and strategy in political campaigns</italic></source>. <publisher-name>Temple University Press</publisher-name>.</mixed-citation>
+</ref>
+<ref id="CIT0009">
+<mixed-citation publication-type="journal"><string-name><surname>Dolan</surname>, <given-names>K.</given-names></string-name>, &#x0026; <string-name><surname>Lynch</surname>, <given-names>T.</given-names></string-name> (<year>2017</year>). <article-title>Do candidates run as women and men or Democrats and Republicans? The impact of party and sex on issue campaigns</article-title>. <source><italic>Journal of Women, Politics &#x0026; Policy</italic></source>, <volume>38</volume>(<issue>4</issue>), <fpage>522</fpage>&#x2013;<lpage>546</lpage>.</mixed-citation>
+</ref>
+<ref id="CIT0010">
+<mixed-citation publication-type="journal"><string-name><surname>Fowler</surname>, <given-names>E. F.</given-names></string-name>, <string-name><surname>Franz</surname>, <given-names>M. M.</given-names></string-name>, <string-name><surname>Martin</surname>, <given-names>G. J.</given-names></string-name>, <string-name><surname>Peskowitz</surname>, <given-names>Z.</given-names></string-name>, &#x0026; <string-name><surname>Ridout</surname>, <given-names>T. N.</given-names></string-name> (<year>2021</year>). <article-title>Political advertising online and offline</article-title>. <source><italic>American Political Science Review</italic></source>, <volume>115</volume>(<issue>1</issue>), <fpage>130</fpage>&#x2013;<lpage>149</lpage>.</mixed-citation>
+</ref>
+<ref id="CIT0011">
+<mixed-citation publication-type="book"><string-name><surname>Fowler</surname>, <given-names>E. F.</given-names></string-name>, <string-name><surname>Franz</surname>, <given-names>M. M.</given-names></string-name>, &#x0026; <string-name><surname>Ridout</surname>, <given-names>T. N.</given-names></string-name> (<year>2021</year>). <source><italic>Political advertising in the United States</italic></source> (<edition>2nd</edition>). <publisher-name>Routledge</publisher-name>.</mixed-citation>
+</ref>
+<ref id="CIT0012">
+<mixed-citation publication-type="journal"><string-name><surname>Fowler</surname>, <given-names>E. F.</given-names></string-name>, &#x0026; <string-name><surname>Gollust</surname>, <given-names>S.</given-names></string-name> E. (<year>2015</year>). <article-title>The content and effect of politicized health controversies</article-title>. <source><italic>The ANNALS of the American Academy of Political and Social Science</italic></source>, <volume>658</volume>(<issue>1</issue>), <fpage>155</fpage>&#x2013;<lpage>171</lpage>.</mixed-citation>
+</ref>
+<ref id="CIT0013">
+<mixed-citation publication-type="journal"><string-name><surname>Fowler</surname>, <given-names>E. F.</given-names></string-name>, &#x0026; <string-name><surname>Ridout</surname>, <given-names>T. N.</given-names></string-name> (<year>2009</year>). <article-title>Local television and newspaper coverage of political advertising</article-title>. <source><italic>Political Communication</italic></source>, <volume>26</volume>(<issue>2</issue>), <fpage>119</fpage>&#x2013;<lpage>136</lpage>. <ext-link ext-link-type="doi" xlink:href="https://doi.org/10.1080/10584600902850635">https://doi.org/10.1080/10584600902850635</ext-link></mixed-citation>
+</ref>
+<ref id="CIT0014">
+<mixed-citation publication-type="journal"><string-name><surname>Gadarian</surname>, <given-names>S. K.</given-names></string-name>, <string-name><surname>Goodman</surname>, <given-names>S. W.</given-names></string-name>, &#x0026; <string-name><surname>Pepinsky</surname>, <given-names>T. B.</given-names></string-name> (<year>2021</year>). <article-title>Partisanship, health behavior, and policy attitudes in the early stages of the COVID-19 pandemic [Publisher: Public Library of Science]</article-title>. <source><italic>PLOS ONE</italic></source>, <volume>16</volume>(<issue>4</issue>), <fpage>e0249596</fpage>. <ext-link ext-link-type="doi" xlink:href="https://doi.org/10.1371/journal.pone.0249596">https://doi.org/10.1371/journal.pone.0249596</ext-link></mixed-citation>
+</ref>
+<ref id="CIT0015">
+<mixed-citation publication-type="book"><string-name><surname>Gillespie</surname>, <given-names>A.</given-names></string-name> (<year>2018</year>). <source><italic>Race and the Obama administration: Substance, symbols, and hope</italic></source>. <publisher-name>Manchester University Press</publisher-name>.</mixed-citation>
+</ref>
+<ref id="CIT0016">
+<mixed-citation publication-type="journal"><string-name><surname>Gollust</surname>, <given-names>S. E.</given-names></string-name>, <string-name><surname>Nagler</surname>, <given-names>R. H.</given-names></string-name>, &#x0026; <string-name><surname>Fowler</surname>, <given-names>E. F.</given-names></string-name> (<year>2020</year>). <article-title>The emergence of COVID-19 in the US: A public health and political communication crisis</article-title>. <source><italic>Journal of Health Politics, Policy and Law</italic></source>, <volume>45</volume>(<issue>6</issue>), <fpage>967</fpage>&#x2013;<lpage>981</lpage>. <ext-link ext-link-type="doi" xlink:href="https://doi.org/10.1215/03616878-8641506">https://doi.org/10.1215/03616878-8641506</ext-link></mixed-citation>
+</ref>
+<ref id="CIT0017">
+<mixed-citation publication-type="journal"><string-name><surname>Gramlich</surname>, <given-names>J.</given-names></string-name> (<year>2022</year>). <article-title>Two years into the pandemic, Americans inch closer to a new normal</article-title>. <source><italic>Pew Research Center</italic></source>. <ext-link ext-link-type="uri" xlink:href="https://www.pewresearch.org/2022/03/03/two-years-into-the-pandemic-americans-inch-closer-to-a-new-normal/">https://www.pewresearch.org/2022/03/03/two-years-into-the-pandemic-americans-inch-closer-to-a-new-normal/</ext-link></mixed-citation>
+</ref>
+<ref id="CIT0018">
+<mixed-citation publication-type="journal"><string-name><surname>Green</surname>, <given-names>J.</given-names></string-name>, <string-name><surname>Edgerton</surname>, <given-names>J.</given-names></string-name>, <string-name><surname>Naftel</surname>, <given-names>D.</given-names></string-name>, <string-name><surname>Shoub</surname>, <given-names>K.</given-names></string-name>, &#x0026; <string-name><surname>Cranmer</surname>, <given-names>S. J.</given-names></string-name> (<year>2020</year>). <article-title>Elusive consensus: Polarization in elite communication on the covid-19 pandemic</article-title>. <source><italic>Science Advances</italic></source>, <volume>6</volume>(<issue>28</issue>), <fpage>eabc2717</fpage>.</mixed-citation>
+</ref>
+<ref id="CIT0019">
+<mixed-citation publication-type="book"><string-name><surname>Hajnal</surname>, <given-names>Z. L.</given-names></string-name> (<year>2006</year>). <source><italic>Changing white attitudes toward black political leadership</italic></source> (<edition>1st</edition> edition). <publisher-name>Cambridge University Press</publisher-name>.</mixed-citation>
+</ref>
+<ref id="CIT0020">
+<mixed-citation publication-type="journal"><string-name><surname>Hayes</surname>, <given-names>D.</given-names></string-name> (<year>2011</year>). <article-title>When gender and party collide: Stereotyping in candidate trait attribution</article-title>. <source><italic>Politics &#x0026; Gender</italic></source>, <volume>7</volume>(<issue>2</issue>), <fpage>133</fpage>&#x2013;<lpage>165</lpage>.</mixed-citation>
+</ref>
+<ref id="CIT0021">
+<mixed-citation publication-type="journal"><string-name><surname>Holman</surname>, <given-names>M. R.</given-names></string-name>, <string-name><surname>Boussalis</surname>, <given-names>C.</given-names></string-name>, &#x0026; <string-name><surname>Coan</surname>, <given-names>T.</given-names></string-name> (<year>2022</year>). <article-title>Masking concern: Congressional social media images and concern about COVID-19</article-title>. <source><italic>APSA Annual Meeting &#x0026; Exhibition</italic></source>. Retrieved <month>March</month> <day>25</day>, <year>2022</year>, from <ext-link ext-link-type="uri" xlink:href="https://tinyurl.com/y6fxgfmz">https://tinyurl.com/y6fxgfmz</ext-link></mixed-citation>
+</ref>
+<ref id="CIT0022">
+<mixed-citation publication-type="journal"><string-name><surname>Huang</surname>, <given-names>J.</given-names></string-name>, <string-name><surname>Fisher</surname>, <given-names>B. T.</given-names></string-name>, <string-name><surname>Tam</surname>, <given-names>V.</given-names></string-name>, <string-name><surname>Wang</surname>, <given-names>Z.</given-names></string-name>, <string-name><surname>Song</surname>, <given-names>L.</given-names></string-name>, <string-name><surname>Shi</surname>, <given-names>J.</given-names></string-name>, <string-name><surname>La Rochelle</surname>, <given-names>C.</given-names></string-name>, <string-name><surname>Wang</surname>, <given-names>X.</given-names></string-name>, <string-name><surname>Morris</surname>, <given-names>J. S.</given-names></string-name>, <string-name><surname>Coffin</surname>, <given-names>S. E.</given-names></string-name>, &#x0026; <string-name><surname>Rubin</surname>, <given-names>D. M.</given-names></string-name> (<year>2022</year>). <article-title>The effectiveness of government masking mandates on COVID-19 county-level case incidence across the United States, 2020 [Publisher: Health Affairs]</article-title>. <source><italic>Health Affairs</italic></source>, <volume>41</volume>(<issue>3</issue>), <fpage>445</fpage>&#x2013;<lpage>453</lpage>. <ext-link ext-link-type="doi" xlink:href="https://doi.org/10.1377/hlthaff.2021.01072">https://doi.org/10.1377/hlthaff.2021.01072</ext-link></mixed-citation>
+</ref>
+<ref id="CIT0023">
+<mixed-citation publication-type="book"><string-name><surname>Huddy</surname>, <given-names>L.</given-names></string-name>, &#x0026; <string-name><surname>Capelos</surname>, <given-names>T.</given-names></string-name> (<year>2002</year>). <chapter-title>Gender stereotyping and candidate evaluation</chapter-title>. In <source><italic>The social psychology of politics</italic></source> (pp. <fpage>29</fpage>&#x2013;<lpage>53</lpage>). <publisher-name>Springer</publisher-name>.</mixed-citation>
+</ref>
+<ref id="CIT0024">
+<mixed-citation publication-type="journal"><string-name><surname>Huddy</surname>, <given-names>L.</given-names></string-name>, &#x0026; <string-name><surname>Terkildsen</surname>, <given-names>N.</given-names></string-name> (<year>1993</year>). <article-title>Gender stereotypes and the perception of male and female candidates</article-title>. <source><italic>American Journal of Political Science</italic></source>, <fpage>119</fpage>&#x2013;<lpage>147</lpage>.</mixed-citation>
+</ref>
+<ref id="CIT0025">
+<mixed-citation publication-type="journal"><string-name><surname>Ike</surname>, <given-names>J. D.</given-names></string-name>, <string-name><surname>Bayerle</surname>, <given-names>H.</given-names></string-name>, <string-name><surname>Logan</surname>, <given-names>R. A.</given-names></string-name>, &#x0026; <string-name><surname>Parker</surname>, <given-names>R. M.</given-names></string-name> (<year>2020</year>). <article-title>Face masks: Their history and the values they communicate</article-title>. <source><italic>Journal of Health Communication</italic></source>, <volume>25</volume>(<issue>12</issue>), <fpage>990</fpage>&#x2013;<lpage>995</lpage>. <ext-link ext-link-type="doi" xlink:href="https://doi.org/10.1080/10810730.2020.1867257">https://doi.org/10.1080/10810730.2020.1867257</ext-link></mixed-citation>
+</ref>
+<ref id="CIT0026">
+<mixed-citation publication-type="journal"><string-name><surname>Khodak</surname>, <given-names>M.</given-names></string-name>, <string-name><surname>Saunshi</surname>, <given-names>N.</given-names></string-name>, <string-name><surname>Liang</surname>, <given-names>Y.</given-names></string-name>, <string-name><surname>Ma</surname>, <given-names>T.</given-names></string-name>, <string-name><surname>Stewart</surname>, <given-names>B.</given-names></string-name>, &#x0026; <string-name><surname>Arora</surname>, <given-names>S.</given-names></string-name> (<year>2018</year>). <article-title>A la carte embedding: Cheap but effective induction of semantic feature vectors</article-title>. <source><italic>Proceedings of the 56th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)</italic></source>, <fpage>12</fpage>&#x2013;<lpage>22</lpage>. <ext-link ext-link-type="doi" xlink:href="https://doi.org/10.18653/v1/P18-1002">https://doi.org/10.18653/v1/P18-1002</ext-link></mixed-citation>
+</ref>
+<ref id="CIT0027">
+<mixed-citation publication-type="journal"><string-name><surname>King</surname>, <given-names>D. C.</given-names></string-name>, &#x0026; <string-name><surname>Matland</surname>, <given-names>R. E.</given-names></string-name> (<year>2003</year>). <article-title>Sex and the grand old party: An experimental investigation of the effect of candidate sex on support for a Republican candidate</article-title>. <source><italic>American Politics Research</italic></source>, <volume>31</volume>(<issue>6</issue>), <fpage>595</fpage>&#x2013;<lpage>612</lpage>.</mixed-citation>
+</ref>
+<ref id="CIT0028">
+<mixed-citation publication-type="journal"><string-name><surname>Kramer</surname>, <given-names>S.</given-names></string-name> (<year>2020</year>). <article-title>More Americans say they are regularly wearing masks in stores and other businesses</article-title>. Retrieved <month>March</month> <day>23</day>, <year>2022</year>, from <ext-link ext-link-type="uri" xlink:href="https://www.pewresearch.org/fact-tank/2020/08/27/more-americans-say-they-are-regularly-wearing-masks-in-stores-and-other-businesses/">https://www.pewresearch.org/fact-tank/2020/08/27/more-americans-say-they-are-regularly-wearing-masks-in-stores-and-other-businesses/</ext-link></mixed-citation>
+</ref>
+<ref id="CIT0029">
+<mixed-citation publication-type="journal"><string-name><surname>Laver</surname>, <given-names>M.</given-names></string-name>, <string-name><surname>Benoit</surname>, <given-names>K.</given-names></string-name>, &#x0026; <string-name><surname>Garry</surname>, <given-names>J.</given-names></string-name> (<year>2003</year>). <article-title>Extracting policy positions from political texts using words as data</article-title>. <source><italic>American Political Science Review</italic></source>, <volume>97</volume>(<issue>2</issue>), <fpage>311</fpage>&#x2013;<lpage>331</lpage>. <ext-link ext-link-type="doi" xlink:href="https://doi.org/10.1017/S0003055403000698">https://doi.org/10.1017/S0003055403000698</ext-link></mixed-citation>
+</ref>
+<ref id="CIT0030">
+<mixed-citation publication-type="journal"><string-name><surname>Layman</surname>, <given-names>G. C.</given-names></string-name>, <string-name><surname>Carsey</surname>, <given-names>T. M.</given-names></string-name>, &#x0026; <string-name><surname>Horowitz</surname>, <given-names>J. M.</given-names></string-name> (<year>2006</year>). <article-title>Party polarization in American politics: Characteristics, causes, and consequences</article-title>. <source><italic>Annu. Rev. Polit. Sci.</italic></source>, <volume>9</volume>, <fpage>83</fpage>&#x2013;<lpage>110</lpage>.</mixed-citation>
+</ref>
+<ref id="CIT0031">
+<mixed-citation publication-type="journal"><string-name><surname>Liptak</surname>, <given-names>K.</given-names></string-name> (<year>2020</year>). <article-title>Trump announces new face mask recommendations after heated internal debate</article-title>. <source><italic>CNN</italic></source>. <ext-link ext-link-type="uri" xlink:href="https://www.cnn.com/2020/04/03/politics/trump-white-house-face-masks/index.html">https://www.cnn.com/2020/04/03/politics/trump-white-house-face-masks/index.html</ext-link></mixed-citation>
+</ref>
+<ref id="CIT0032">
+<mixed-citation publication-type="journal"><string-name><surname>Little</surname>, <given-names>T. H.</given-names></string-name>, <string-name><surname>Dunn</surname>, <given-names>D.</given-names></string-name>, &#x0026; <string-name><surname>Deen</surname>, <given-names>R. E.</given-names></string-name> (<year>2001</year>). <article-title>A view from the top: Gender differences in legislative priorities among state legislative leaders</article-title>. <source><italic>Women &#x0026; Politics</italic></source>, <volume>22</volume>(<issue>4</issue>), <fpage>29</fpage>&#x2013;<lpage>50</lpage>.</mixed-citation>
+</ref>
+<ref id="CIT0033">
+<mixed-citation publication-type="journal"><string-name><surname>Mikolov</surname>, <given-names>T.</given-names></string-name>, <string-name><surname>Sutskever</surname>, <given-names>I.</given-names></string-name>, <string-name><surname>Chen</surname>, <given-names>K.</given-names></string-name>, <string-name><surname>Corrado</surname>, <given-names>G. S.</given-names></string-name>, &#x0026; <string-name><surname>Dean</surname>, <given-names>J.</given-names></string-name> (<year>2013</year>). <article-title>Distributed representations of words and phrases and their compositionality</article-title>, <fpage>9</fpage>.</mixed-citation>
+</ref>
+<ref id="CIT0034">
+<mixed-citation publication-type="journal"><string-name><surname>Monroe</surname>, <given-names>B. L.</given-names></string-name>, <string-name><surname>Colaresi</surname>, <given-names>M. P.</given-names></string-name>, &#x0026; <string-name><surname>Quinn</surname>, <given-names>K. M.</given-names></string-name> (<year>2008</year>). <article-title>Fightin&#x2019; words: Lexical feature selection and evaluation for identifying the content of political conflict</article-title>. <source><italic>Political Analysis</italic></source>, <volume>16</volume>(4 SPEC. ISS.), <fpage>372</fpage>&#x2013;<lpage>403</lpage>. <ext-link ext-link-type="doi" xlink:href="https://doi.org/10.1093/pan/mpn018">https://doi.org/10.1093/pan/mpn018</ext-link></mixed-citation>
+</ref>
+<ref id="CIT0035">
+<mixed-citation publication-type="journal"><string-name><surname>Montgomery</surname>, <given-names>D.</given-names></string-name> (<year>2020</year>). <article-title>Citylab congressional density index</article-title>. <source><italic>CityLab</italic></source>. <italic>Retrieved from: <ext-link ext-link-type="uri" xlink:href="https://github.com/theatlantic/citylab-data/blob/master/citylab-congress/citylab_-cdi.csv">https://github.com/theatlantic/citylab-data/blob/master/citylab-congress/citylab_cdi.csv</ext-link></italic>.</mixed-citation>
+</ref>
+<ref id="CIT0036">
+<mixed-citation publication-type="book"><string-name><surname>Mordecai</surname>, <given-names>M.</given-names></string-name>, &#x0026; <string-name><surname>Connaughton</surname>, <given-names>A.</given-names></string-name> (<year>2020</year>). <source><italic>Public opinion about coronavirus is more politically divided in U.S. than in other advanced economies</italic></source>. <publisher-name>Pew Research Center</publisher-name>. Retrieved <month>September</month> <day>20</day>, <year>2021</year>, from <ext-link ext-link-type="uri" xlink:href="https://www.pewresearch.org/fact-tank/2020/10/28/public-opinion-about-coronavirus-is-more-politically-divided-in-u-s-than-in-other-advanced-economies/">https://www.pewresearch.org/fact-tank/2020/10/28/public-opinion-about-coronavirus-is-more-politically-divided-in-u-s-than-in-other-advanced-economies/</ext-link></mixed-citation>
+</ref>
+<ref id="CIT0037">
+<mixed-citation publication-type="journal"><string-name><surname>Neumann</surname>, <given-names>M.</given-names></string-name>, <string-name><surname>Fowler</surname>, <given-names>E. F.</given-names></string-name>, &#x0026; <string-name><surname>Ridout</surname>, <given-names>T. N.</given-names></string-name> (<year>2022</year>). <article-title>Body language and gender stereotypes in campaign video</article-title>. <source><italic>Computational Communication Research</italic></source>, <volume>4</volume>(<issue>1</issue>).</mixed-citation>
+</ref>
+<ref id="CIT0038">
+<mixed-citation publication-type="journal"><string-name><surname>Neumann</surname>, <given-names>M.</given-names></string-name>, <string-name><surname>Moore</surname>, <given-names>S. T.</given-names></string-name>, <string-name><surname>Baum</surname>, <given-names>L. M.</given-names></string-name>, <string-name><surname>Oleinikov</surname>, <given-names>P.</given-names></string-name>, <string-name><surname>Xu</surname>, <given-names>Y.</given-names></string-name>, <string-name><surname>Niederdeppe</surname>, <given-names>J.</given-names></string-name>, <string-name><surname>Lewis Jr</surname>, <given-names>N.</given-names></string-name>, <string-name><surname>Gollust</surname>, <given-names>S. E.</given-names></string-name>, &#x0026; <string-name><surname>Fowler</surname>, <given-names>E. F.</given-names></string-name> (<year>2024</year>). <article-title>Politicizing masks? examining the volume and content of local news coverage of face coverings in the us through the covid-19 pandemic</article-title>. <source><italic>Political Communication</italic></source>, <volume>41</volume>(<issue>1</issue>), <fpage>66</fpage>&#x2013;<lpage>106</lpage>.</mixed-citation>
+</ref>
+<ref id="CIT0039">
+<mixed-citation publication-type="book"><string-name><surname>Osborn</surname>, <given-names>T. L.</given-names></string-name> (<year>2012</year>). <source><italic>How women represent women: Political parties, gender and representation in the state legislatures</italic></source>. <publisher-name>Oxford University Press</publisher-name>, <publisher-loc>USA</publisher-loc>.</mixed-citation>
+</ref>
+<ref id="CIT0040">
+<mixed-citation publication-type="journal"><string-name><surname>Palmer</surname>, <given-names>C. L.</given-names></string-name>, &#x0026; <string-name><surname>Peterson</surname>, <given-names>R. D.</given-names></string-name> (<year>2020</year>). <article-title>Toxic mask-ulinity: The link between masculine toughness and affective reactions to mask wearing in the COVID-19 era [Publisher: Cambridge University Press]</article-title>. <source><italic>Politics &#x0026; Gender</italic></source>, <volume>16</volume>(<issue>4</issue>), <fpage>1044</fpage>&#x2013;<lpage>1051</lpage>. <ext-link ext-link-type="doi" xlink:href="https://doi.org/10.1017/S1743923X20000422">https://doi.org/10.1017/S1743923X20000422</ext-link></mixed-citation>
+</ref>
+<ref id="CIT0041">
+<mixed-citation publication-type="journal"><string-name><surname>Roberts</surname>, <given-names>M. E.</given-names></string-name>, <string-name><surname>Stewart</surname>, <given-names>B. M.</given-names></string-name>, <string-name><surname>Tingley</surname>, <given-names>D.</given-names></string-name>, <string-name><surname>Lucas</surname>, <given-names>C.</given-names></string-name>, <string-name><surname>Leder-Luis</surname>, <given-names>J.</given-names></string-name>, <string-name><surname>Gadarian</surname>, <given-names>S. K.</given-names></string-name>, <string-name><surname>Albertson</surname>, <given-names>B.</given-names></string-name>, &#x0026; <string-name><surname>Rand</surname>, <given-names>D. G.</given-names></string-name> (<year>2014</year>). <article-title>Structural topic models for open-ended survey responses</article-title>. <source><italic>American Journal of Political Science</italic></source>, <volume>58</volume>(<issue>4</issue>), <fpage>1064</fpage>&#x2013;<lpage>1082</lpage>. <ext-link ext-link-type="doi" xlink:href="https://doi.org/10.1111/ajps.12103">https://doi.org/10.1111/ajps.12103</ext-link></mixed-citation>
+</ref>
+<ref id="CIT0042">
+<mixed-citation publication-type="journal"><string-name><surname>Robertson</surname>, <given-names>N.</given-names></string-name> (<year>2020</year>). <article-title>Trump doesn&#x2019;t think us needs a national mask mandate</article-title>. <source><italic>CNN</italic></source>. <ext-link ext-link-type="uri" xlink:href="https://www.cnn.com/2020/07/18/politics/trump-us-mask-mandate-coronavirus/index.html">https://www.cnn.com/2020/07/18/politics/trump-us-mask-mandate-coronavirus/index.html</ext-link></mixed-citation>
+</ref>
+<ref id="CIT0043">
+<mixed-citation publication-type="book"><string-name><surname>Rodriguez</surname>, <given-names>P. L.</given-names></string-name>, <string-name><surname>Spirling</surname>, <given-names>A.</given-names></string-name>, &#x0026; <string-name><surname>Stewart</surname>, <given-names>B. M.</given-names></string-name> (<year>2021</year>). <source><italic>Embedding regression: Models for context-specific description and inference</italic></source> (tech. rep.). <publisher-name>Working Paper Vanderbilt University</publisher-name>.</mixed-citation>
+</ref>
+<ref id="CIT0044">
+<mixed-citation publication-type="collab"><collab>Roll Call</collab>. (<year>2020</year>). <article-title>Roll call election guide</article-title>. <ext-link ext-link-type="uri" xlink:href="https://www.rollcall.com/election-guide-house/">https://www.rollcall.com/election-guide-house/</ext-link></mixed-citation>
+</ref>
+<ref id="CIT0045">
+<mixed-citation publication-type="journal"><string-name><surname>Sapiro</surname>, <given-names>V.</given-names></string-name>, <string-name><surname>Cramer Walsh</surname>, <given-names>K.</given-names></string-name>, <string-name><surname>Strach</surname>, <given-names>P.</given-names></string-name>, &#x0026; <string-name><surname>Hennings</surname>, <given-names>V.</given-names></string-name> (<year>2011</year>). <article-title>Gender, context, and television advertising: A comprehensive analysis of 2000 and 2002 House races</article-title>. <source><italic>Political Research Quarterly</italic></source>, <volume>64</volume>(<issue>1</issue>), <fpage>107</fpage>&#x2013;<lpage>119</lpage>.</mixed-citation>
+</ref>
+<ref id="CIT0046">
+<mixed-citation publication-type="journal"><string-name><surname>Schill</surname>, <given-names>D.</given-names></string-name> (<year>2012</year>). <article-title>The visual image and the political image: A review of visual communication research in the field of political communication</article-title>. <source><italic>Review of Communication</italic></source>, <volume>12</volume>(<issue>2</issue>), <fpage>118</fpage>&#x2013;<lpage>142</lpage>.</mixed-citation>
+</ref>
+<ref id="CIT0047">
+<mixed-citation publication-type="journal"><string-name><surname>Schmuck</surname>, <given-names>D.</given-names></string-name>, &#x0026; <string-name><surname>Matthes</surname>, <given-names>J.</given-names></string-name> (<year>2017</year>). <article-title>Effects of economic and symbolic threat appeals in right-wing populist advertising on anti-immigrant attitudes: The impact of textual and visual appeals</article-title>. <source><italic>Political Communication</italic></source>, <volume>34</volume>(<issue>4</issue>), <fpage>607</fpage>&#x2013;<lpage>626</lpage>. <ext-link ext-link-type="doi" xlink:href="https://doi.org/10.1080/10584609.2017.1316807">https://doi.org/10.1080/10584609.2017.1316807</ext-link></mixed-citation>
+</ref>
+<ref id="CIT0048">
+<mixed-citation publication-type="journal"><string-name><surname>Schneider</surname>, <given-names>E.</given-names></string-name> (<year>2020</year>). <article-title>The face mask &#x2018;is almost as much of a symbol as a MAGA hat&#x2019;</article-title>. <source><italic>Politico</italic></source>. <ext-link ext-link-type="uri" xlink:href="https://www.politico.com/news/2020/09/30/face-masks-political-ads-coronavirus-424149">https://www.politico.com/news/2020/09/30/face-masks-political-ads-coronavirus-424149</ext-link></mixed-citation>
+</ref>
+<ref id="CIT0049">
+<mixed-citation publication-type="journal"><string-name><surname>Schneider</surname>, <given-names>M. C.</given-names></string-name>, &#x0026; <string-name><surname>Bos</surname>, <given-names>A. L.</given-names></string-name> (<year>2016</year>). <article-title>The interplay of candidate party and gender in evaluations of political candidates</article-title>. <source><italic>Journal of Women, Politics &#x0026; Policy</italic></source>, <volume>37</volume>(<issue>3</issue>), <fpage>274</fpage>&#x2013;<lpage>294</lpage>.</mixed-citation>
+</ref>
+<ref id="CIT0050">
+<mixed-citation publication-type="journal"><string-name><surname>Scoville</surname>, <given-names>C.</given-names></string-name>, <string-name><surname>McCumber</surname>, <given-names>A.</given-names></string-name>, <string-name><surname>Amironesei</surname>, <given-names>R.</given-names></string-name>, &#x0026; <string-name><surname>Jeon</surname>, <given-names>J.</given-names></string-name> (<year>2022</year>). <article-title>Mask refusal backlash: The politicization of face masks in the American public sphere during the early stages of the covid-19 pandemic</article-title>. <source><italic>Socius</italic></source>, <fpage>8</fpage>.</mixed-citation>
+</ref>
+<ref id="CIT0051">
+<mixed-citation publication-type="journal"><string-name><surname>Shapiro</surname>, <given-names>R. Y.</given-names></string-name>, &#x0026; <string-name><surname>Mahajan</surname>, <given-names>H.</given-names></string-name> (<year>1986</year>). <article-title>Gender differences in policy preferences: A summary of trends from the 1960s to the 1980s</article-title>. <source><italic>Public Opinion Quarterly</italic></source>, <volume>50</volume>(<issue>1</issue>), <fpage>42</fpage>&#x2013;<lpage>61</lpage>.</mixed-citation>
+</ref>
+<ref id="CIT0052">
+<mixed-citation publication-type="journal"><string-name><surname>Sides</surname>, <given-names>J.</given-names></string-name> (<year>2006</year>). <article-title>The origins of campaign agendas</article-title>. <source><italic>British Journal of Political Science</italic></source>, <volume>36</volume>(<issue>3</issue>), <fpage>407</fpage>&#x2013;<lpage>436</lpage>.</mixed-citation>
+</ref>
+<ref id="CIT0053">
+<mixed-citation publication-type="book"><string-name><surname>Stephens-Dougan</surname>, <given-names>L.</given-names></string-name> (<year>2020</year>). <source><italic>Race to the bottom: How racial appeals work in American politics</italic></source>. <publisher-name>University of Chicago Press</publisher-name>. Retrieved <month>March</month> <day>29</day>, <year>2022</year>, from <ext-link ext-link-type="uri" xlink:href="https://press.uchicago.edu/ucp/books/book/chicago/R/bo50271574.html">https://press.uchicago.edu/ucp/books/book/chicago/R/bo50271574.html</ext-link></mixed-citation>
+</ref>
+<ref id="CIT0054">
+<mixed-citation publication-type="journal"><string-name><surname>Stolberg</surname>, <given-names>S. G.</given-names></string-name> (<year>2020</year>). <article-title>Biden&#x2019;s call for &#x2018;national mask mandate&#x2019; gains traction in public health circles</article-title>. <source><italic>New York Times</italic></source>. <ext-link ext-link-type="uri" xlink:href="https://www.nytimes.com/2020/10/29/us/politics/trump-biden-mask-mandate.html">https://www.nytimes.com/2020/10/29/us/politics/trump-biden-mask-mandate.html</ext-link></mixed-citation>
+</ref>
+<ref id="CIT0055">
+<mixed-citation publication-type="journal"><string-name><surname>Strach</surname>, <given-names>P.</given-names></string-name>, &#x0026; <string-name><surname>Sapiro</surname>, <given-names>V.</given-names></string-name> (<year>2011</year>). <article-title>Campaigning for congress in the &#x201C;9/11&#x201D; era: Considerations of gender and party in response to an exogenous shock</article-title>. <source><italic>American Politics Research</italic></source>, <volume>39</volume>(<issue>2</issue>), <fpage>264</fpage>&#x2013;<lpage>290</lpage>.</mixed-citation>
+</ref>
+<ref id="CIT0056">
+<mixed-citation publication-type="journal"><string-name><surname>Swigger</surname>, <given-names>N.</given-names></string-name> (<year>2012</year>). <article-title>What you see is what you get: Drawing inferences from campaign imagery</article-title>. <source><italic>Political Communication</italic></source>, <volume>29</volume>(<issue>4</issue>), <fpage>367</fpage>&#x2013;<lpage>386</lpage>.</mixed-citation>
+</ref>
+<ref id="CIT0057">
+<mixed-citation publication-type="journal"><string-name><surname>Tesler</surname>, <given-names>M.</given-names></string-name> (<year>2020</year>). <article-title>Raphael Warnock&#x2019;s dog ads cut against white voters&#x2019; stereotypes of black people</article-title>. Retrieved <month>March</month> <day>23</day>, <year>2022</year>, from <ext-link ext-link-type="uri" xlink:href="https://fivethirtyeight.com/features/raphael-warnocks-dog-ads-cut-against-white-voters-stereotypes-of-black-people/">https://fivethirtyeight.com/features/raphael-warnocks-dog-ads-cut-against-white-voters-stereotypes-of-black-people/</ext-link></mixed-citation>
+</ref>
+<ref id="CIT0058">
+<mixed-citation publication-type="collab"><collab>U.S. Census Bureau</collab>. (<year>2020</year>). <article-title>American community survey 5-year data (2009-2019)</article-title>.</mixed-citation>
+</ref>
+<ref id="CIT0059">
+<mixed-citation publication-type="journal"><string-name><surname>Valentino</surname>, <given-names>N. A.</given-names></string-name>, <string-name><surname>Hutchings</surname>, <given-names>V. L.</given-names></string-name>, &#x0026; <string-name><surname>White</surname>, <given-names>I. K.</given-names></string-name> (<year>2002</year>). <article-title>Cues that matter: How political ads prime racial attitudes during campaigns [Publisher: Cambridge University Press]</article-title>. <source><italic>American Political Science Review</italic></source>, <volume>96</volume>(<issue>1</issue>), <fpage>75</fpage>&#x2013;<lpage>90</lpage>. <ext-link ext-link-type="doi" xlink:href="https://doi.org/10.1017/S0003055402004240">https://doi.org/10.1017/S0003055402004240</ext-link></mixed-citation>
+</ref>
+<ref id="CIT0060">
+<mixed-citation publication-type="journal"><string-name><surname>Valentino</surname>, <given-names>N. A.</given-names></string-name>, <string-name><surname>Hutchings</surname>, <given-names>V. L.</given-names></string-name>, &#x0026; <string-name><surname>Williams</surname>, <given-names>D.</given-names></string-name> (<year>2004</year>). <article-title>The impact of political advertising on knowledge, internet information seeking, and candidate preference</article-title>. <source><italic>Journal of Communication</italic></source>, <volume>54</volume>(<issue>2</issue>), <fpage>337</fpage>&#x2013;<lpage>354</lpage>.</mixed-citation>
+</ref>
+<ref id="CIT0061">
+<mixed-citation publication-type="book"><string-name><surname>Wallace</surname>, <given-names>J.</given-names></string-name>, <string-name><surname>Goldsmith-Pinkham</surname>, <given-names>P.</given-names></string-name>, &#x0026; <string-name><surname>Schwartz</surname>, <given-names>J. L.</given-names></string-name> (<year>2022</year>). <source><italic>Excess death rates for Republicans and Democrats during the COVID-19 pandemic</italic></source> (tech. rep.). <publisher-name>National Bureau of Economic Research</publisher-name>.</mixed-citation>
+</ref>
+<ref id="CIT0062">
+<mixed-citation publication-type="journal"><string-name><surname>Young</surname>, <given-names>D. G.</given-names></string-name>, <string-name><surname>Rasheed</surname>, <given-names>H.</given-names></string-name>, <string-name><surname>Bleakley</surname>, <given-names>A.</given-names></string-name>, &#x0026; <string-name><surname>Langbaum</surname>, <given-names>J. B.</given-names></string-name> (<year>2022</year>). <article-title>The politics of mask-wearing: Political preferences, reactance, and conflict aversion during COVID</article-title>. <source><italic>Social Science &#x0026; Medicine (1982)</italic></source>, <volume>298</volume>, <fpage>114836</fpage>. <ext-link ext-link-type="doi" xlink:href="https://doi.org/10.1016/j.socscimed.2022.114836">https://doi.org/10.1016/j.socscimed.2022.114836</ext-link></mixed-citation>
+</ref>
+</ref-list>
+<sec id="s8">
+<title></title>
+<fig id="fig4">
+<label>Figure 4:</label>
+<caption><title>Average Marginal Effects of Being Republican across Gender on Pr(Masks) with 95&#x0025; CIs.</title></caption>
+<graphic xlink:href="CCR2025.1.2.YAO_fig4.jpg"/>
+</fig>
+<fig id="fig5">
+<label>Figure 5:</label>
+<caption><title>Average Marginal Effects of Being a Woman across Party on Pr(Masks) with 95&#x0025; CIs.</title></caption>
+<graphic xlink:href="CCR2025.1.2.YAO_fig5.jpg"/>
+</fig>
+<fig id="fig6">
+<label>Figure 6:</label>
+<caption><title>Average Predicted Probability of Featuring Masks with 95&#x0025; CIs.</title></caption>
+<graphic xlink:href="CCR2025.1.2.YAO_fig6.jpg"/>
+</fig>
+<fig id="fig7">
+<label>Figure 7:</label>
+<caption><title>Results of the Embedding Regressions</title></caption>
+<graphic xlink:href="CCR2025.1.2.YAO_fig7.jpg"/>
+</fig>
+</sec>
+<app-group>
+<app id="apx1">
+<title>Appendix A Appendix</title>
+<table-wrap id="tab5">
+<label>Table A1:</label>
+<caption><title>Random Intercept Logistic Regression Predicting Mask Reference</title></caption>
+<table id="table5" width="1*">
+<colgroup>
+<col width="0.50*"/>
+<col width="0.25*"/>
+<col width="0.25*"/>
+</colgroup>
+<thead>
+<tr>
+<th></th>
+<th>(1) Mask picturing</th>
+<th>(2) Mask mentioning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Woman</td>
+<td>-0.266</td>
+<td>-0.599</td>
+</tr>
+<tr>
+<td></td>
+<td>(0.246)</td>
+<td>(0.627)</td>
+</tr>
+<tr>
+<td>Republican</td>
+<td>-0.881<sup><xref ref-type="table-fn" rid="tab5fn3">***</xref></sup></td>
+<td>-0.734</td>
+</tr>
+<tr>
+<td></td>
+<td>(0.235)</td>
+<td>(0.720)</td>
+</tr>
+<tr>
+<td>Woman &#x00D7; Republican</td>
+<td>0.112</td>
+<td>-0.912</td>
+</tr>
+<tr>
+<td></td>
+<td>(0.387)</td>
+<td>(1.647)</td>
+</tr>
+<tr>
+<td>Rurality</td>
+<td>-0.117</td>
+<td>-0.400</td>
+</tr>
+<tr>
+<td></td>
+<td>(0.086)</td>
+<td>(0.271)</td>
+</tr>
+<tr>
+<td>Trump vote share</td>
+<td>-0.024<sup><xref ref-type="table-fn" rid="tab5fn1">*</xref></sup></td>
+<td>0.129<sup><xref ref-type="table-fn" rid="tab5fn3">***</xref></sup></td>
+</tr>
+<tr>
+<td></td>
+<td>(0.010)</td>
+<td>(0.037)</td>
+</tr>
+<tr>
+<td>Video</td>
+<td>0.812<sup><xref ref-type="table-fn" rid="tab5fn3">***</xref></sup></td>
+<td>0.062</td>
+</tr>
+<tr>
+<td></td>
+<td>(0.031)</td>
+<td>(0.128)</td>
+</tr>
+<tr>
+<td>Video &#x0026; image</td>
+<td>1.261<sup><xref ref-type="table-fn" rid="tab5fn3">***</xref></sup></td>
+<td>0.107</td>
+</tr>
+<tr>
+<td></td>
+<td>(0.041)</td>
+<td>(0.200)</td>
+</tr>
+<tr>
+<td>TV</td>
+<td>1.811<sup><xref ref-type="table-fn" rid="tab5fn3">***</xref></sup></td>
+<td>-0.414</td>
+</tr>
+<tr>
+<td></td>
+<td>(0.061)</td>
+<td>(0.364)</td>
+</tr>
+<tr>
+<td>Incumbent</td>
+<td>0.519<sup><xref ref-type="table-fn" rid="tab5fn2">**</xref></sup></td>
+<td>-1.040</td>
+</tr>
+<tr>
+<td></td>
+<td>(0.194)</td>
+<td>(0.651)</td>
+</tr>
+<tr>
+<td>Open race</td>
+<td>0.231</td>
+<td>0.117</td>
+</tr>
+<tr>
+<td></td>
+<td>(0.266)</td>
+<td>(0.797)</td>
+</tr>
+<tr>
+<td>Senate</td>
+<td>-0.422</td>
+<td>0.510</td>
+</tr>
+<tr>
+<td></td>
+<td>(0.237)</td>
+<td>(0.632)</td>
+</tr>
+<tr>
+<td>Competitiveness</td>
+<td>-0.150<sup><xref ref-type="table-fn" rid="tab5fn1">*</xref></sup></td>
+<td>-0.509<sup><xref ref-type="table-fn" rid="tab5fn1">*</xref></sup></td>
+</tr>
+<tr>
+<td></td>
+<td>(0.070)</td>
+<td>(0.222)</td>
+</tr>
+<tr>
+<td>Constant</td>
+<td>-0.974</td>
+<td>-11.909<sup><xref ref-type="table-fn" rid="tab5fn3">***</xref></sup></td>
+</tr>
+<tr>
+<td></td>
+<td>(0.502)</td>
+<td>(2.083)</td>
+</tr>
+<tr>
+<td>var(_cons[candidate_fecid])</td>
+<td>2.260<sup><xref ref-type="table-fn" rid="tab5fn3">***</xref></sup></td>
+<td>12.322<sup><xref ref-type="table-fn" rid="tab5fn3">***</xref></sup></td>
+</tr>
+<tr>
+<td></td>
+<td>(0.226)</td>
+<td>(2.707)</td>
+</tr>
+<tr>
+<td>Observations</td>
+<td>102529</td>
+<td>102529</td>
+</tr>
+</tbody>
+</table>
+<table-wrap-foot>
+<p>Standard errors in parentheses</p>
+<fn-group>
+<fn id="tab5fn1" symbol="*"><p><italic>p</italic> &lt; 0.05,</p></fn>
+<fn id="tab5fn2" symbol="**"><p><italic>p</italic> &lt; 0.01,</p></fn>
+<fn id="tab5fn3" symbol="***"><p><italic>p</italic> &lt; 0.001</p></fn>
+</fn-group>
+</table-wrap-foot>
+</table-wrap>
+<table-wrap id="tab6">
+<label>Table A2:</label>
+<caption><title>Random Intercept Logistic Regression on Mask Picturing and Mask Mentioning</title></caption>
+<table id="table6" width="1*">
+<colgroup>
+<col width="0.40*"/>
+<col width="0.15*"/>
+<col width="0.15*"/>
+<col width="0.15*"/>
+<col width="0.15*"/>
+</colgroup>
+<thead>
+<tr>
+<th></th>
+<th>(1) Pooled</th>
+<th>(2) Pooled</th>
+<th>(3) FB</th>
+<th>(4) TV</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Woman</td>
+<td>-0.256</td>
+<td>-0.319</td>
+<td>-0.383</td>
+<td>-0.082</td>
+</tr>
+<tr>
+<td></td>
+<td>(0.249)</td>
+<td>(0.240)</td>
+<td>(0.267)</td>
+<td>(0.255)</td>
+</tr>
+<tr>
+<td>Republican</td>
+<td>-0.874<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+<td>-1.107<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+<td>-1.235<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+<td>-0.681<xref ref-type="table-fn" rid="tab8fn2"><sup>**</sup></xref></td>
+</tr>
+<tr>
+<td></td>
+<td>(0.238)</td>
+<td>(0.229)</td>
+<td>(0.257)</td>
+<td>(0.244)</td>
+</tr>
+<tr>
+<td>Woman &#x00D7; Republican</td>
+<td>0.122</td>
+<td>0.116</td>
+<td>0.226</td>
+<td>-0.450</td>
+</tr>
+<tr>
+<td></td>
+<td>(0.392)</td>
+<td>(0.378)</td>
+<td>(0.423)</td>
+<td>(0.409)</td>
+</tr>
+<tr>
+<td>Rurality</td>
+<td>-0.130</td>
+<td>-0.151</td>
+<td>-0.146</td>
+<td>-0.175</td>
+</tr>
+<tr>
+<td></td>
+<td>(0.087)</td>
+<td>(0.084)</td>
+<td>(0.094)</td>
+<td>(0.091)</td>
+</tr>
+<tr>
+<td>Trump vote share</td>
+<td>-0.019</td>
+<td>-0.012</td>
+<td>-0.011</td>
+<td>-0.016</td>
+</tr>
+<tr>
+<td></td>
+<td>(0.010)</td>
+<td>(0.010)</td>
+<td>(0.011)</td>
+<td>(0.012)</td>
+</tr>
+<tr>
+<td>Video</td>
+<td>0.761<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+<td>0.580<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+<td>0.574<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>(0.030)</td>
+<td>(0.032)</td>
+<td>(0.032)</td>
+<td></td>
+</tr>
+<tr>
+<td>Video,image</td>
+<td>1.216<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+<td>0.902<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+<td>0.896<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>(0.040)</td>
+<td>(0.042)</td>
+<td>(0.042)</td>
+<td></td>
+</tr>
+<tr>
+<td>TV</td>
+<td>1.795<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+<td>0.969<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td>(0.061)</td>
+<td>(0.062)</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Incumbent</td>
+<td>0.518<xref ref-type="table-fn" rid="tab8fn2"><sup>**</sup></xref></td>
+<td>0.370</td>
+<td>0.268</td>
+<td>0.565<xref ref-type="table-fn" rid="tab8fn2"><sup>**</sup></xref></td>
+</tr>
+<tr>
+<td></td>
+<td>(0.197)</td>
+<td>(0.190)</td>
+<td>(0.212)</td>
+<td>(0.203)</td>
+</tr>
+<tr>
+<td>Open race</td>
+<td>0.261</td>
+<td>-0.016</td>
+<td>-0.042</td>
+<td>0.115</td>
+</tr>
+<tr>
+<td></td>
+<td>(0.269)</td>
+<td>(0.260)</td>
+<td>(0.291)</td>
+<td>(0.289)</td>
+</tr>
+<tr>
+<td>Senate</td>
+<td>-0.390</td>
+<td>-0.181</td>
+<td>-0.116</td>
+<td>-0.268</td>
+</tr>
+<tr>
+<td></td>
+<td>(0.240)</td>
+<td>(0.231)</td>
+<td>(0.258)</td>
+<td>(0.228)</td>
+</tr>
+<tr>
+<td>Competitiveness</td>
+<td>-0.175<xref ref-type="table-fn" rid="tab8fn1"><sup>*</sup></xref></td>
+<td>-0.116</td>
+<td>-0.119</td>
+<td>-0.127</td>
+</tr>
+<tr>
+<td></td>
+<td>(0.071)</td>
+<td>(0.069)</td>
+<td>(0.077)</td>
+<td>(0.071)</td>
+</tr>
+<tr>
+<td>Goal_donate</td>
+<td></td>
+<td>-2.203<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+<td>-2.224<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+<td>0.000</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>(0.036)</td>
+<td>(0.037)</td>
+<td>(.)</td>
+</tr>
+<tr>
+<td>Goal_GOTV</td>
+<td></td>
+<td>-2.426<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+<td>-2.436<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>(0.110)</td>
+<td>(0.111)</td>
+<td></td>
+</tr>
+<tr>
+<td>Goal_learnmore</td>
+<td></td>
+<td>-0.679<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+<td>-0.694<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+<td>-0.163</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>(0.049)</td>
+<td>(0.050)</td>
+<td>(0.381)</td>
+</tr>
+<tr>
+<td>Goal_other</td>
+<td></td>
+<td>-3.881<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+<td>-3.894<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+<td>0.000</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>(0.137)</td>
+<td>(0.137)</td>
+<td>(.)</td>
+</tr>
+<tr>
+<td>Tone_contrast</td>
+<td></td>
+<td>0.440<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+<td>0.496<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+<td>-0.634</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>(0.064)</td>
+<td>(0.066)</td>
+<td>(0.336)</td>
+</tr>
+<tr>
+<td>Tone_support</td>
+<td></td>
+<td>0.710<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+<td>0.739<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+<td>-0.026</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>(0.060)</td>
+<td>(0.061)</td>
+<td>(0.334)</td>
+</tr>
+<tr>
+<td>Constant</td>
+<td>-1.066<xref ref-type="table-fn" rid="tab8fn1"><sup>*</sup></xref></td>
+<td>-0.888</td>
+<td>-0.960</td>
+<td>1.603<xref ref-type="table-fn" rid="tab8fn1"><sup>*</sup></xref></td>
+</tr>
+<tr>
+<td></td>
+<td>(0.508)</td>
+<td>(0.494)</td>
+<td>(0.554)</td>
+<td>(0.652)</td>
+</tr>
+<tr>
+<td>var(_cons[candidate_fecid])</td>
+<td>2.342<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+<td>2.149<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+<td>2.630<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+<td>1.276<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+</tr>
+<tr>
+<td></td>
+<td>(0.232)</td>
+<td>(0.215)</td>
+<td>(0.284)</td>
+<td>(0.258)</td>
+</tr>
+</tbody>
+</table>
+</table-wrap>
+<table-wrap id="tab7">
+<table id="table7" width="1*">
+<colgroup>
+<col width="0.50*"/>
+<col width="0.25*"/>
+<col width="0.25*"/>
+</colgroup>
+<thead>
+<tr>
+<th></th>
+<th>(1) Mask picturing</th>
+<th>(2) Mask mentioning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Woman</td>
+<td>-0.329</td>
+<td>-0.602</td>
+</tr>
+<tr>
+<td></td>
+<td>(0.239)</td>
+<td>(0.619)</td>
+</tr>
+<tr>
+<td>Republican</td>
+<td>-1.116<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+<td>-1.063</td>
+</tr>
+<tr>
+<td></td>
+<td>(0.228)</td>
+<td>(0.711)</td>
+</tr>
+<tr>
+<td>Woman &#x00D7; Republican</td>
+<td>0.101</td>
+<td>-0.819</td>
+</tr>
+<tr>
+<td></td>
+<td>(0.377)</td>
+<td>(1.507)</td>
+</tr>
+<tr>
+<td>Rurality</td>
+<td>-0.138</td>
+<td>-0.398</td>
+</tr>
+<tr>
+<td></td>
+<td>(0.083)</td>
+<td>(0.268)</td>
+</tr>
+<tr>
+<td>Trump vote share</td>
+<td>-0.018</td>
+<td>0.133<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+</tr>
+<tr>
+<td></td>
+<td>(0.010)</td>
+<td>(0.035)</td>
+</tr>
+<tr>
+<td>Video</td>
+<td>0.628<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+<td>0.207</td>
+</tr>
+<tr>
+<td></td>
+<td>(0.032)</td>
+<td>(0.132)</td>
+</tr>
+<tr>
+<td>Video &#x0026; image</td>
+<td>0.946<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+<td>0.310</td>
+</tr>
+<tr>
+<td></td>
+<td>(0.042)</td>
+<td>(0.205)</td>
+</tr>
+<tr>
+<td>TV</td>
+<td>0.981<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+<td>-0.830<xref ref-type="table-fn" rid="tab8fn1"><sup>*</sup></xref></td>
+</tr>
+<tr>
+<td></td>
+<td>(0.062)</td>
+<td>(0.354)</td>
+</tr>
+<tr>
+<td>Incumbent</td>
+<td>0.373<xref ref-type="table-fn" rid="tab8fn1"><sup>*</sup></xref></td>
+<td>-1.182</td>
+</tr>
+<tr>
+<td></td>
+<td>(0.189)</td>
+<td>(0.633)</td>
+</tr>
+<tr>
+<td>Open race</td>
+<td>-0.051</td>
+<td>-0.034</td>
+</tr>
+<tr>
+<td></td>
+<td>(0.259)</td>
+<td>(0.782)</td>
+</tr>
+<tr>
+<td>Senate</td>
+<td>-0.210</td>
+<td>0.676</td>
+</tr>
+<tr>
+<td></td>
+<td>(0.230)</td>
+<td>(0.621)</td>
+</tr>
+<tr>
+<td>Competitiveness</td>
+<td>-0.089</td>
+<td>-0.466<xref ref-type="table-fn" rid="tab8fn1"><sup>*</sup></xref></td>
+</tr>
+<tr>
+<td></td>
+<td>(0.068)</td>
+<td>(0.215)</td>
+</tr>
+<tr>
+<td>Goal_donate</td>
+<td>-2.222<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+<td>-1.761<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+</tr>
+<tr>
+<td></td>
+<td>(0.037)</td>
+<td>(0.182)</td>
+</tr>
+<tr>
+<td>Goal_GOTV</td>
+<td>-2.440<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+<td>-2.489<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+</tr>
+<tr>
+<td></td>
+<td>(0.112)</td>
+<td>(0.731)</td>
+</tr>
+<tr>
+<td>Goal_learnmore</td>
+<td>-0.667<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+<td>-0.451</td>
+</tr>
+<tr>
+<td></td>
+<td>(0.049)</td>
+<td>(0.266)</td>
+</tr>
+<tr>
+<td>Goal_other</td>
+<td>-4.768<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+<td>1.004<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+</tr>
+<tr>
+<td></td>
+<td>(0.202)</td>
+<td>(0.243)</td>
+</tr>
+<tr>
+<td>Tone_contrast</td>
+<td>0.472<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+<td>-1.129<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+</tr>
+<tr>
+<td></td>
+<td>(0.065)</td>
+<td>(0.224)</td>
+</tr>
+<tr>
+<td>Tone_support</td>
+<td>0.750<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+<td>-0.819<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+</tr>
+<tr>
+<td></td>
+<td>(0.060)</td>
+<td>(0.203)</td>
+</tr>
+<tr>
+<td>Constant</td>
+<td>-0.821</td>
+<td>-10.528<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+</tr>
+<tr>
+<td></td>
+<td>(0.493)</td>
+<td>(1.970)</td>
+</tr>
+<tr>
+<td>var(_cons[candidate_fecid])</td>
+<td>2.116<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+<td>10.425<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+</tr>
+<tr>
+<td></td>
+<td>(0.213)</td>
+<td>(2.347)</td>
+</tr>
+<tr>
+<td>Observations</td>
+<td>102529</td>
+<td>102529</td>
+</tr>
+</tbody>
+</table>
+</table-wrap>
+<table-wrap id="tab8">
+<table id="table8" width="1*">
+<colgroup>
+<col width="0.40*"/>
+<col width="0.20*"/>
+<col width="0.20*"/>
+<col width="0.20*"/>
+</colgroup>
+<thead>
+<tr>
+<th></th>
+<th>(1) Mask_picturing</th>
+<th>(2) Mask_picturing</th>
+<th>(3) Mask_picturing</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Woman</td>
+<td>0.275</td>
+<td>0.148</td>
+<td>0.154</td>
+</tr>
+<tr>
+<td></td>
+<td>(0.447)</td>
+<td>(0.456)</td>
+<td>(0.454)</td>
+</tr>
+<tr>
+<td>Republican</td>
+<td>-0.528</td>
+<td>-0.900<xref ref-type="table-fn" rid="tab8fn1"><sup>*</sup></xref></td>
+<td>-0.970<xref ref-type="table-fn" rid="tab8fn1"><sup>*</sup></xref></td>
+</tr>
+<tr>
+<td></td>
+<td>(0.445)</td>
+<td>(0.454)</td>
+<td>(0.453)</td>
+</tr>
+<tr>
+<td>Woman &#x00D7; Republican</td>
+<td>-0.022</td>
+<td>0.204</td>
+<td>0.237</td>
+</tr>
+<tr>
+<td></td>
+<td>(0.730)</td>
+<td>(0.742)</td>
+<td>(0.741)</td>
+</tr>
+<tr>
+<td>Rurality</td>
+<td>-0.161</td>
+<td>-0.236</td>
+<td>-0.232</td>
+</tr>
+<tr>
+<td></td>
+<td>(0.164)</td>
+<td>(0.167)</td>
+<td>(0.166)</td>
+</tr>
+<tr>
+<td>Incumbent</td>
+<td>0.641</td>
+<td>0.707</td>
+<td>0.678</td>
+</tr>
+<tr>
+<td></td>
+<td>(0.362)</td>
+<td>(0.369)</td>
+<td>(0.368)</td>
+</tr>
+<tr>
+<td>Open race</td>
+<td>0.038</td>
+<td>-0.383</td>
+<td>-0.480</td>
+</tr>
+<tr>
+<td></td>
+<td>(0.518)</td>
+<td>(0.533)</td>
+<td>(0.532)</td>
+</tr>
+<tr>
+<td>Senate</td>
+<td>0.681</td>
+<td>0.883<xref ref-type="table-fn" rid="tab8fn1"><sup>*</sup></xref></td>
+<td>0.840</td>
+</tr>
+<tr>
+<td></td>
+<td>(0.439)</td>
+<td>(0.447)</td>
+<td>(0.445)</td>
+</tr>
+<tr>
+<td>Competitiveness</td>
+<td>-0.404<xref ref-type="table-fn" rid="tab8fn2"><sup>**</sup></xref></td>
+<td>-0.287<xref ref-type="table-fn" rid="tab8fn1"><sup>*</sup></xref></td>
+<td>-0.279<xref ref-type="table-fn" rid="tab8fn1"><sup>*</sup></xref></td>
+</tr>
+<tr>
+<td></td>
+<td>(0.132)</td>
+<td>(0.134)</td>
+<td>(0.133)</td>
+</tr>
+<tr>
+<td>Trump vote share</td>
+<td>-0.012</td>
+<td>-0.004</td>
+<td>-0.003</td>
+</tr>
+<tr>
+<td></td>
+<td>(0.020)</td>
+<td>(0.020)</td>
+<td>(0.020)</td>
+</tr>
+<tr>
+<td>Goal_donate</td>
+<td></td>
+<td>-1.923<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+<td>-1.908<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>(0.078)</td>
+<td>(0.079)</td>
+</tr>
+<tr>
+<td>Goal_GOTV</td>
+<td></td>
+<td>-1.650<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+<td>-1.492<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>(0.198)</td>
+<td>(0.199)</td>
+</tr>
+<tr>
+<td>Goal_Learnmore</td>
+<td></td>
+<td>-2.748<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+<td>-2.713<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>(0.164)</td>
+<td>(0.165)</td>
+</tr>
+<tr>
+<td>Goal_Other</td>
+<td></td>
+<td>-4.716<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+<td>-4.553<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>(0.240)</td>
+<td>(0.240)</td>
+</tr>
+<tr>
+<td>Tone_contrast</td>
+<td></td>
+<td>0.732<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+<td>0.629<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>(0.179)</td>
+<td>(0.180)</td>
+</tr>
+<tr>
+<td>Tone_support</td>
+<td></td>
+<td>0.605<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+<td>0.599<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>(0.165)</td>
+<td>(0.166)</td>
+</tr>
+<tr>
+<td>No. of face</td>
+<td></td>
+<td></td>
+<td>0.100<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td>(0.007)</td>
+</tr>
+<tr>
+<td>Constant</td>
+<td>-3.182<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+<td>-3.055<xref ref-type="table-fn" rid="tab8fn2"><sup>**</sup></xref></td>
+<td>-3.280<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+</tr>
+<tr>
+<td></td>
+<td>(0.954)</td>
+<td>(0.989)</td>
+<td>(0.986)</td>
+</tr>
+<tr>
+<td>/</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>var(_cons[candidate_fecid])</td>
+<td>5.837<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+<td>5.931<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+<td>5.784<xref ref-type="table-fn" rid="tab8fn3"><sup>***</sup></xref></td>
+</tr>
+<tr>
+<td></td>
+<td>(0.973)</td>
+<td>(0.994)</td>
+<td>(0.970)</td>
+</tr>
+<tr>
+<td>Observations</td>
+<td>47668</td>
+<td>47668</td>
+<td>47668</td>
+</tr>
+</tbody>
+</table>
+<table-wrap-foot>
+<p>Standard errors in parentheses</p>
+<fn-group>
+<fn id="tab8fn1" symbol="*"><p><italic>p &lt; 0.05,</italic></p></fn>
+<fn id="tab8fn2" symbol="**"><p><italic>p &lt; 0.01,</italic></p></fn>
+<fn id="tab8fn3" symbol="***"><p><italic>p &lt; 0.001</italic></p></fn>
+</fn-group>
+</table-wrap-foot>
+</table-wrap>
+</app>
+<app id="apx2">
+<title>Appendix B Fightin&#x2019; Words</title>
+<fig id="fig8">
+<label>Figure 1:</label>
+<caption><title>Fightin words z-scores by party. Words with higher values (positive or negative) are more associated with a specific party.</title></caption>
+<graphic xlink:href="CCR2025.1.2.YAO_fig8.jpg"/>
+</fig>
+<fig id="fig9">
+<label>Figure 2:</label>
+<caption><title>Fightin words z-scores by gender. Words with higher values (positive or negative) are more associated with a specific gender.</title></caption>
+<graphic xlink:href="CCR2025.1.2.YAO_fig9.jpg"/>
+</fig>
+</app>
+<app id="apx3">
+<title>Appendix C Structural Topic Models</title>
+<fig id="fig10">
+<label>Figure 3:</label>
+<caption><title>Structural topic model - difference in topic proportions between Democrats and Republicans. Topics with higher values are more associated with Democrats. The words to the left of the estimate are the top words of the topic.</title></caption>
+<graphic xlink:href="CCR2025.1.2.YAO_fig10.jpg"/>
+</fig>
+<fig id="fig11">
+<label>Figure 4:</label>
+<caption><title>Structural topic model - difference in topic proportions between women and men candidates. Topics with higher values are more associated with women candidates. The words to the left of the estimate are the top words of the topic.</title></caption>
+<graphic xlink:href="CCR2025.1.2.YAO_fig11.jpg"/>
+</fig>
+</app>
+</app-group>
+</back>
+</article>
