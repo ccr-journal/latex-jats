@@ -57,8 +57,8 @@ References are excluded (checked separately; only minor issues).
 - [x] (35) `<fn-group>` placed after `<app-group>`; gold puts it before `<ref-list>` with `<title>Notes</title>`
 - [x] (36) Footnotes missing `symbol` attribute
 - [x] (37) Appendix IDs use `A1` instead of `apx1` **don't care, don't fix**
-- [ ] (38) Figures 4-7 inline in body; gold moves them to a separate back-matter section
-- [ ] (39) Appendix table/figure labels missing
+- [x] (38) Figures 4-7 inline in body; gold moves them to a separate back-matter section **not a bug, figures correctly placed per LaTeX source; gold placement is editorial**
+- [x] (39) Appendix table/figure labels missing
 
 ## Citations (minor)
 

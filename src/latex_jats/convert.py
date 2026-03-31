@@ -321,6 +321,69 @@ def warn_fig_paragraphs(jats_file):
                 )
 
 
+def fix_appendix_labels(jats_file):
+    """Rewrite table/figure labels inside <app> elements to use appendix-prefixed numbering.
+
+    LaTeXML generates globally sequential labels (Table 5, Figure 8) for floats
+    inside appendices. This function rewrites them to appendix-prefixed form
+    (Table A1, Figure B1) and updates any <xref> elements that reference them.
+    """
+    ET.register_namespace("xlink", "http://www.w3.org/1999/xlink")
+    tree = ET.parse(jats_file)
+    root = tree.getroot()
+
+    app_group = root.find(".//app-group")
+    if app_group is None:
+        return
+
+    id_to_new_label = {}  # e.g. {"A1.T5": "A1", "A2.F8": "B1"}
+
+    for idx, app in enumerate(app_group.findall("app")):
+        # Determine appendix letter from <title> text, fall back to positional
+        letter = None
+        title_el = app.find("title")
+        if title_el is not None and title_el.text:
+            m = re.match(r"Appendix\s+([A-Z])", title_el.text)
+            if m:
+                letter = m.group(1)
+        if letter is None:
+            letter = chr(ord("A") + idx)
+
+        # Renumber tables
+        table_counter = 1
+        for tw in app.findall(".//table-wrap"):
+            label_el = tw.find("label")
+            if label_el is not None and label_el.text:
+                m = re.match(r"^(Table)\s+\d+(:.*)$", label_el.text)
+                if m:
+                    label_el.text = f"{m.group(1)} {letter}{table_counter}{m.group(2)}"
+                    tw_id = tw.get("id", "")
+                    if tw_id:
+                        id_to_new_label[tw_id] = f"{letter}{table_counter}"
+                    table_counter += 1
+
+        # Renumber figures
+        fig_counter = 1
+        for fig in app.findall(".//fig"):
+            label_el = fig.find("label")
+            if label_el is not None and label_el.text:
+                m = re.match(r"^(Figure)\s+\d+(:.*)$", label_el.text)
+                if m:
+                    label_el.text = f"{m.group(1)} {letter}{fig_counter}{m.group(2)}"
+                    fig_id = fig.get("id", "")
+                    if fig_id:
+                        id_to_new_label[fig_id] = f"{letter}{fig_counter}"
+                    fig_counter += 1
+
+    # Update xref text pointing to relabeled elements
+    for xref in root.findall(".//xref"):
+        rid = xref.get("rid", "")
+        if rid in id_to_new_label:
+            xref.text = id_to_new_label[rid]
+
+    tree.write(jats_file, encoding="unicode")
+
+
 def clean_body(jats_file):
     """Removes empty <p> elements and misplaced <title> inside <body>."""
     ET.register_namespace("xlink", "http://www.w3.org/1999/xlink")
@@ -1184,6 +1247,7 @@ def main():
     warn_tfoot_notes(str(output_path))
     warn_fig_paragraphs(str(output_path))
     clean_body(str(output_path))
+    fix_appendix_labels(str(output_path))
     fix_footnotes(str(output_path))
     fix_xref_ref_types(str(output_path))
     # fix_journal_references(output_xml) #We can remove this; replaced with XSLT
