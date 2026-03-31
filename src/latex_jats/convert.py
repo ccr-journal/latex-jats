@@ -496,6 +496,373 @@ def fix_journal_references(jats_file):
     tree.write(jats_file, encoding="unicode")
 
 
+def _clean_bbl_text(s):
+    """Strip common LaTeX name-delimiter macros and braces from a bbl field string."""
+    s = re.sub(r'\\bibrangedash', '--', s)
+    s = re.sub(r'\\bibinitperiod', '.', s)
+    s = re.sub(r'\\bibinitdelim\s*', ' ', s)
+    s = re.sub(r'\\bibnamedelim[abcdi]\s*', ' ', s)
+    s = s.replace('\\&', '&')                          # \& → &
+    s = s.replace('``', '\u201c')                      # `` → "
+    s = s.replace("''", '\u201d')                      # '' → "
+    s = s.replace('`', '\u2018')                       # ` → '
+    s = re.sub(r'\\[a-zA-Z]+\{([^}]*)\}', r'\1', s)  # \cmd{arg} → arg
+    s = re.sub(r'\\[a-zA-Z]+\s*', '', s)              # remaining \cmds
+    # Strip braces (repeatedly to handle {{double}}):
+    prev = None
+    while prev != s:
+        prev = s
+        s = re.sub(r'\{([^{}]*)\}', r'\1', s)
+    return re.sub(r'\s+', ' ', s).strip()
+
+
+def _parse_bbl_names(name_block):
+    """Parse a biblatex \name{}{}{}{...} block into a list of author dicts."""
+    authors = []
+    # Each author is enclosed in an outer {{hash_info}{%\n  name_fields }}%
+    for m in re.finditer(r'\{\{[^}]*\}\{%\s*(.*?)\}\}%', name_block, re.DOTALL):
+        fields_text = m.group(1)
+        family_m = re.search(r'\bfamily=\{((?:[^{}]|\{[^{}]*\})*)\}', fields_text)
+        giveni_m = re.search(r'\bgiveni=\{((?:[^{}]|\{[^{}]*\})*)\}', fields_text)
+        prefix_m = re.search(r'\bprefix=\{((?:[^{}]|\{[^{}]*\})*)\}', fields_text)
+        if family_m:
+            family = _clean_bbl_text(family_m.group(1))
+            giveni = _clean_bbl_text(giveni_m.group(1)) if giveni_m else ''
+            prefix = _clean_bbl_text(prefix_m.group(1)) if prefix_m else ''
+            authors.append({'family': family, 'given': giveni, 'prefix': prefix,
+                            'is_collab': not bool(giveni_m)})
+    return authors
+
+
+def parse_bbl(bbl_path):
+    """Parse a biblatex v3.x .bbl file into an ordered list of entry dicts.
+
+    Each dict has: key, type, authors (list of dicts with family, given, prefix,
+    is_collab), and field/list values (title, journaltitle, booktitle, year,
+    volume, number, pages, edition, doi, url, publisher, location, ...).
+    """
+    content = Path(bbl_path).read_text(encoding='utf-8')
+    entries = []
+    for entry_m in re.finditer(
+            r'\\entry\{([^}]+)\}\{([^}]+)\}\{[^}]*\}(.*?)\\endentry',
+            content, re.DOTALL):
+        key, entry_type, body = entry_m.group(1), entry_m.group(2), entry_m.group(3)
+        entry = {'key': key, 'type': entry_type, 'authors': []}
+
+        # Parse \name{author/editor}{count}{}{...} blocks
+        for nm in re.finditer(r'\\name\{(author|editor)\}\{\d+\}\{[^}]*\}\{(.*?)\n\s*\}',
+                               body, re.DOTALL):
+            role, name_block = nm.group(1), nm.group(2)
+            if role == 'author':
+                entry['authors'] = _parse_bbl_names(name_block)
+
+        # Parse \field{name}{value} — supports up to 2 levels of nested braces
+        for fm in re.finditer(r'\\field\{([^}]+)\}\{((?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})*)\}', body):
+            name, val = fm.group(1), fm.group(2)
+            if not name.startswith('label') and name not in (
+                    'sortinit', 'sortinithash', 'extradatescope', 'labeldatesource'):
+                entry[name] = _clean_bbl_text(val)
+
+        # Parse \list{name}{count}{% {value}% } — take the first value
+        for lm in re.finditer(r'\\list\{([^}]+)\}\{\d+\}\{%\s*\{([^}]*)\}', body):
+            name, val = lm.group(1), lm.group(2)
+            entry[name] = _clean_bbl_text(val)
+        # institution → publisher fallback (reports/techreports use \list{institution})
+        if 'institution' in entry and 'publisher' not in entry:
+            entry['publisher'] = entry['institution']
+
+        # Parse \verb{name}\n\verb content\n\endverb
+        for vm in re.finditer(r'\\verb\{([^}]+)\}\n\s*\\verb (.+?)\n\s*\\endverb', body):
+            name, val = vm.group(1), vm.group(2).strip()
+            entry[name] = val
+
+        entries.append(entry)
+    return entries
+
+
+_XLINK_NS = 'http://www.w3.org/1999/xlink'
+
+_PUB_TYPE = {
+    'article': 'journal',
+    'book': 'book', 'collection': 'book', 'mvbook': 'book',
+    'inbook': 'book', 'incollection': 'book', 'inproceedings': 'confproc',
+    'proceedings': 'confproc',
+    'thesis': 'thesis', 'phdthesis': 'thesis', 'mastersthesis': 'thesis',
+    'report': 'book', 'techreport': 'book', 'misc': 'book',
+    'online': 'book', 'software': 'book',
+}
+
+
+def _append_text(elem, text):
+    """Append text to the tail of the last child, or to elem.text if no children."""
+    children = list(elem)
+    if children:
+        children[-1].tail = (children[-1].tail or '') + text
+    else:
+        elem.text = (elem.text or '') + text
+
+
+def _is_elocator(page_str):
+    """Return True if a page string is an electronic locator (not a numeric page)."""
+    return bool(re.search(r'[a-zA-Z]', page_str))
+
+
+
+def _add_pages(mc, pages, *, prefix='', suffix='.'):
+    """Append <fpage>[–<lpage>] elements to mc from a pages string like '327--333'."""
+    parts = re.split(r'--|\u2013', pages)
+    fp = parts[0].strip()
+    lp = parts[-1].strip() if len(parts) > 1 else ''
+    if prefix:
+        _append_text(mc, prefix)
+    fpage = ET.SubElement(mc, 'fpage')
+    fpage.text = fp
+    # Only add <lpage> if it's different from fpage and not an e-locator
+    if lp and lp != fp and not _is_elocator(lp):
+        fpage.tail = '\u2013'
+        lpage = ET.SubElement(mc, 'lpage')
+        lpage.text = lp
+        lpage.tail = suffix
+    else:
+        fpage.tail = suffix
+
+
+def _build_mixed_citation(entry, warnings=None):
+    """Build a structured JATS <mixed-citation> element from a parsed .bbl entry dict.
+
+    If warnings is a list, heuristic decisions are appended to it so the user
+    can verify them.
+    """
+    if warnings is None:
+        warnings = []
+    entry_type = entry['type']
+    authors = entry.get('authors', [])
+    is_collab = authors and authors[0].get('is_collab')
+
+    title = entry.get('title', '')
+    journaltitle = entry.get('journaltitle', '')
+    booktitle = entry.get('booktitle', '')
+
+    # Heuristic: misc/online with a journaltitle → treat as journal article
+    treat_as_article = entry_type == 'article'
+    if not treat_as_article and entry_type in ('misc', 'online') and journaltitle:
+        treat_as_article = True
+        warnings.append(
+            f"bbl key {entry['key']!r}: type is {entry_type!r} but has "
+            f"journaltitle; treating as journal article — please verify")
+
+    # publication-type
+    if is_collab:
+        pub_type = 'collab'
+    elif treat_as_article:
+        pub_type = 'journal'
+    else:
+        pub_type = _PUB_TYPE.get(entry_type, 'book')
+
+    mc = ET.Element('mixed-citation', {'publication-type': pub_type})
+
+    # Authors / collab
+    if is_collab:
+        collab = ET.SubElement(mc, 'collab')
+        collab.text = authors[0]['family']
+        collab.tail = '.'
+    elif authors:
+        n = len(authors)
+        for i, author in enumerate(authors):
+            sn = ET.SubElement(mc, 'string-name')
+            surname = ET.SubElement(sn, 'surname')
+            surname.text = author['family']
+            if author['prefix']:
+                surname.text = author['prefix'] + ' ' + surname.text
+            surname.tail = ', '
+            given = ET.SubElement(sn, 'given-names')
+            given.text = author['given']
+            # separator after string-name
+            if i < n - 2:
+                sn.tail = ', '
+            elif i == n - 2:
+                sn.tail = ', \u0026 '
+            # last author: no tail needed (year comes next)
+
+    # Year
+    year_val = entry.get('year')
+    if year_val:
+        _append_text(mc, ' (')
+        year_elem = ET.SubElement(mc, 'year')
+        year_elem.text = year_val
+        year_elem.tail = '). '
+
+    if treat_as_article:
+        # Article title
+        if title:
+            at = ET.SubElement(mc, 'article-title')
+            at.text = title
+            at.tail = '. '
+        # Journal source
+        if journaltitle:
+            src = ET.SubElement(mc, 'source')
+            italic = ET.SubElement(src, 'italic')
+            italic.text = journaltitle
+            src.tail = ', '
+        # Volume and issue
+        volume = entry.get('volume', '')
+        number = entry.get('number', '')
+        if volume:
+            vol = ET.SubElement(mc, 'volume')
+            vol.text = volume
+            if number:
+                vol.tail = '('
+                iss = ET.SubElement(mc, 'issue')
+                iss.text = number
+                iss.tail = '), '
+            else:
+                vol.tail = ', '
+        # Pages
+        pages = entry.get('pages', '')
+        if pages:
+            _add_pages(mc, pages)
+
+    elif entry_type in ('inbook', 'incollection'):
+        # Chapter title
+        if title:
+            ct = ET.SubElement(mc, 'chapter-title')
+            ct.text = title
+            ct.tail = '. '
+        # Book source
+        if booktitle:
+            _append_text(mc, 'In ')
+            src = ET.SubElement(mc, 'source')
+            italic = ET.SubElement(src, 'italic')
+            italic.text = booktitle
+            src.tail = ' '
+        # Pages
+        pages = entry.get('pages', '')
+        if pages:
+            _add_pages(mc, pages, prefix='(pp. ', suffix='). ')
+
+    elif is_collab:
+        # Collab entries: title in <article-title> (not <source>)
+        if title:
+            at = ET.SubElement(mc, 'article-title')
+            at.text = title
+            at.tail = '. '
+
+    else:
+        # Book/misc/report: title in <source>
+        if title:
+            src = ET.SubElement(mc, 'source')
+            italic = ET.SubElement(src, 'italic')
+            italic.text = title
+            # edition
+            edition = entry.get('edition', '')
+            if edition:
+                ed_text = re.sub(r'\s*edition\s*$', '', edition, flags=re.IGNORECASE).strip()
+                src.tail = ' ('
+                ed = ET.SubElement(mc, 'edition')
+                ed.text = ed_text
+                ed.tail = '). '
+            else:
+                src.tail = '. '
+
+    # Publisher (skip for journal articles and collab entries)
+    publisher = entry.get('publisher', '') if not treat_as_article and not is_collab else ''
+    location = entry.get('location', '') if not treat_as_article and not is_collab else ''
+    if publisher:
+        pub = ET.SubElement(mc, 'publisher-name')
+        pub.text = publisher
+        if location:
+            pub.tail = ', '
+            loc = ET.SubElement(mc, 'publisher-loc')
+            loc.text = location
+            loc.tail = '.'
+        else:
+            pub.tail = '.'
+
+    # "Retrieved <month> <day>, <year>, from" — only when no DOI (URL is the
+    # primary access path, not a supplement to a DOI-based reference)
+    doi = entry.get('doi', '')
+    urlmonth = entry.get('urlmonth', '')
+    urlday = entry.get('urlday', '')
+    urlyear = entry.get('urlyear', '')
+    if (urlmonth or urlday or urlyear) and not doi:
+        _append_text(mc, ' Retrieved ')
+        _MONTH_NAMES = {
+            '1': 'January', '2': 'February', '3': 'March', '4': 'April',
+            '5': 'May', '6': 'June', '7': 'July', '8': 'August',
+            '9': 'September', '10': 'October', '11': 'November', '12': 'December',
+        }
+        if urlmonth:
+            m_elem = ET.SubElement(mc, 'month')
+            m_elem.text = _MONTH_NAMES.get(urlmonth, urlmonth)
+            m_elem.tail = ' '
+        if urlday:
+            d_elem = ET.SubElement(mc, 'day')
+            d_elem.text = urlday
+            d_elem.tail = ', '
+        if urlyear:
+            y_elem = ET.SubElement(mc, 'year')
+            y_elem.text = urlyear
+            y_elem.tail = ', from '
+
+    # DOI or URL
+    url = entry.get('url', '')
+    if doi:
+        _append_text(mc, ' ')
+        href = f'https://doi.org/{doi}'
+        link = ET.SubElement(mc, 'ext-link',
+                             {'ext-link-type': 'doi',
+                              '{%s}href' % _XLINK_NS: href})
+        link.text = href
+    elif url and not url.startswith('https://doi.org/'):
+        _append_text(mc, ' ')
+        link = ET.SubElement(mc, 'ext-link',
+                             {'ext-link-type': 'uri',
+                              '{%s}href' % _XLINK_NS: url})
+        link.text = url
+
+    return mc
+
+
+def fix_references(jats_file, bbl_file):
+    """Rewrites <mixed-citation> elements with structured JATS from the .bbl source data.
+
+    Uses positional matching: .bbl entry order == JATS <ref> order (both sorted by biber).
+    Includes a sanity check comparing the first author's family name against the flat text.
+    """
+    ET.register_namespace('xlink', _XLINK_NS)
+    entries = parse_bbl(bbl_file)
+    tree = ET.parse(jats_file)
+    root = tree.getroot()
+    refs = root.findall('.//ref')
+    if len(refs) != len(entries):
+        print(f'Warning: {len(refs)} refs in JATS but {len(entries)} entries in .bbl; '
+              'some may be skipped')
+    for ref, entry in zip(refs, entries):
+        mc = ref.find('mixed-citation')
+        if mc is None:
+            continue
+        # Sanity check: first author family name should appear in the flat text
+        flat_text = ''.join(mc.itertext())
+        authors = entry.get('authors', [])
+        first_family = authors[0]['family'] if authors else ''
+        if first_family and first_family not in flat_text:
+            print(f"Warning: bbl key {entry['key']!r}: "
+                  f"family name {first_family!r} not in ref text; skipping")
+            continue
+        ref_warnings = []
+        new_mc = _build_mixed_citation(entry, warnings=ref_warnings)
+        for w in ref_warnings:
+            print(f'Note: {w}')
+        attrib = dict(mc.attrib)
+        mc.clear()
+        mc.attrib.update(attrib)
+        mc.attrib.update(new_mc.attrib)
+        mc.text = new_mc.text
+        for child in new_mc:
+            mc.append(child)
+    tree.write(jats_file, encoding='unicode', xml_declaration=False)
+
+
 _JOURNAL_META_XML = """\
 <journal-meta>
   <journal-id journal-id-type="publisher-id">CCR</journal-id>
@@ -648,6 +1015,11 @@ def main():
     clean_body(str(output_path))
     fix_footnotes(str(output_path))
     # fix_journal_references(output_xml) #We can remove this; replaced with XSLT
+    bbl_file = input_path.with_suffix('.bbl')
+    if bbl_file.exists():
+        fix_references(str(output_path), str(bbl_file))
+    else:
+        print(f' - Warning: no .bbl file at {bbl_file}; references will be plain text')
 
     print(f"Saved corrected JATS XML in {output_path} 😎.")
 
