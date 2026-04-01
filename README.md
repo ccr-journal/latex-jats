@@ -35,7 +35,13 @@ sudo apt install cpanminus libxml2-dev libxslt1-dev libdb-dev
 sudo cpanm --notest LaTeXML
 ```
 
-**2. Install the Python package** using [uv](https://docs.astral.sh/uv/):
+**2. Install [jing](https://relaxng.org/jclark/jing.html)** for JATS XML validation (RelaxNG):
+
+```sh
+sudo apt install jing
+```
+
+**3. Install the Python package** using [uv](https://docs.astral.sh/uv/):
 
 ```sh
 uv sync
@@ -51,7 +57,7 @@ uv run latex-jats examples/CCR2023.1.004.KATH/latex/main.tex
 uv run latex-jats examples/CCR2023.1.004.KATH/latex/main.tex path/to/output.xml
 ```
 
-We can validate the JATS file online with [J4R Validator](https://j4r.nlm.nih.gov/) or [PubMed Central Validator](https://pmc.ncbi.nlm.nih.gov/tools/stylechecker/). Currently there are still a lot of errors, so we're not done yet.
+The output is automatically validated against the [JATS Publishing 1.2 RelaxNG schema](https://jats.nlm.nih.gov/publishing/1.2/rng.html) (MathML3 variant) using `jing`. You can also validate online with [J4R Validator](https://j4r.nlm.nih.gov/) or [PubMed Central Validator](https://pmc.ncbi.nlm.nih.gov/tools/stylechecker/).
 
 <!--
 These are words of wisdom, but I don't think they belong in the README

@@ -637,6 +637,16 @@ a[href^="#bib"] {
 }
 
 /* ============================================================
+   SEMANTIC TOOLTIPS
+   Subtle hover indicator for elements with title attributes
+   ============================================================ */
+
+[title]:hover {
+  outline: 1px dashed #bbb;
+  outline-offset: 2px;
+}
+
+/* ============================================================
    PRINT STYLES
    ============================================================ */
 

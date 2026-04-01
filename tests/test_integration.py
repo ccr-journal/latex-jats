@@ -3,7 +3,9 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 import pytest
 
-from latex_jats.convert import run_latexmlc
+import shutil
+
+from latex_jats.convert import run_latexmlc, validate_jats
 
 FIXTURES = Path(__file__).parent / "fixtures" / "latex"
 
@@ -109,3 +111,13 @@ def test_subfigures_produce_fig_group(tmp_path):
         # No nested fig-inside-fig
         for fig in child_figs:
             assert not fig.findall("fig"), "Nested <fig> inside <fig> found; expected flat structure under <fig-group>"
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(not shutil.which("jing"), reason="jing not installed")
+def test_jats_validates(tmp_path):
+    """Output JATS XML from the authors fixture validates against the JATS Publishing 1.2 RNG schema."""
+    output = tmp_path / "output.xml"
+    run_latexmlc(str(FIXTURES / "authors.tex"), str(output))
+    errors = validate_jats(str(output))
+    assert not errors, f"JATS validation errors:\n" + "\n".join(errors)

@@ -54,8 +54,33 @@ def _warn_bare_greater_than(tex_path):
 
 
 LATEXML_DIR = Path(__file__).parent.parent / "latexml"
-JATS_XSL = Path(__file__).parent.parent / "xslt" / "main" / "jats-html.xsl"
+JATS_XSL = Path(__file__).parent.parent / "xslt" / "jats-html-wrapper.xsl"
 CSS_SRC = Path(__file__).parent.parent / "css" / "jats-preview.css"
+JATS_RNG = Path(__file__).parent.parent / "schema" / "jats-publishing-1.2-rng" / "JATS-journalpublishing1-mathml3.rng"
+
+
+def validate_jats(xml_file):
+    """Validate a JATS XML file against the JATS Publishing 1.2 RelaxNG schema.
+
+    Returns a list of validation error strings (empty if valid).
+    Requires ``jing`` to be installed.
+    """
+    if not shutil.which("jing"):
+        logger.warning("jing not installed — skipping JATS validation")
+        return []
+    result = subprocess.run(
+        ["jing", str(JATS_RNG), str(xml_file)],
+        capture_output=True, text=True,
+    )
+    errors = [
+        line for line in result.stdout.splitlines() + result.stderr.splitlines()
+        if "error:" in line
+    ]
+    for err in errors:
+        logger.warning(f"JATS validation: {err}")
+    if not errors:
+        logger.info("JATS validation passed")
+    return errors
 
 
 def convert_to_html(xml_file, html_file):
@@ -1296,9 +1321,12 @@ def main():
     fix_ext_links(str(output_path))
     finalize_xml(str(output_path))
 
+    # step 2b: validate JATS XML
+    validate_jats(str(output_path))
+
     logger.info(f"Saved corrected JATS XML in {output_path}")
 
-    # step 2b: copy graphics from the latex source directory to the output directory
+    # step 2c: copy graphics from the latex source directory to the output directory
     image_exts = {".png", ".jpg", ".jpeg", ".gif", ".svg", ".tif", ".tiff"}
     latex_dir = input_path.parent
     copied = []
