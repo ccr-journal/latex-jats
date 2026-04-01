@@ -54,6 +54,51 @@ def test_citations_linked(tmp_path):
 
 
 @pytest.mark.integration
+def test_citation_optional_args(tmp_path):
+    """Citation commands with optional prenote/postnote arguments render correctly."""
+    output = tmp_path / "output.xml"
+    run_latexmlc(str(FIXTURES / "citations.tex"), str(output))
+
+    root = ET.parse(output).getroot()
+
+    def norm(text):
+        return text.replace("\xa0", " ").replace("\u0335", "") if text else ""
+
+    body = root.find(".//body")
+    body_text = norm(" ".join(body.itertext()))
+
+    # \parencite[p.~42]{smith2020test} — postnote only
+    assert "(Smith," in body_text and "p. 42)" in body_text, \
+        f"Expected parencite postnote in body text"
+
+    # \parencite[cf.][p.~42]{smith2020test} — prenote and postnote
+    assert "(cf. Smith," in body_text, \
+        f"Expected parencite prenote 'cf.' in body text"
+
+    # \textcite[p.~42]{jones2021multi} — textual with postnote
+    # Should be: Jones & Brown (2021, p. 42)
+    assert "Brown (" in body_text or "Brown(" in body_text, \
+        f"Expected textcite author before parens in body text"
+    assert "p. 42)" in body_text, \
+        f"Expected textcite postnote in body text"
+
+    # \textcite[see][p.~99]{team2022three} — textual with prenote+postnote
+    assert "(see" in body_text, \
+        f"Expected textcite prenote 'see' in body text"
+    assert "p. 99)" in body_text, \
+        f"Expected textcite postnote 'p. 99' in body text"
+
+    # \citeyear[p.~42]{smith2020test} — year with postnote
+    assert "2020" in body_text and "p. 42" in body_text
+
+    # No rid="[" anywhere — the bug that prompted these fixes
+    xrefs = root.findall(".//xref")
+    for xref in xrefs:
+        assert xref.get("rid") != "[", \
+            f"Found xref with rid='[': {ET.tostring(xref, encoding='unicode')}"
+
+
+@pytest.mark.integration
 def test_abstract_and_keywords(tmp_path):
     """\\abstract{} and \\keywords{} produce <abstract> and <kwd-group> in JATS."""
     output = tmp_path / "output.xml"

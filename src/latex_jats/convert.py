@@ -1099,6 +1099,27 @@ _JOURNAL_META_XML = """\
 </journal-meta>"""
 
 
+def sanitize_ids(jats_file):
+    """Replace characters invalid in XML Name tokens (colons, slashes) in id/rid attributes.
+
+    Some biblatex cite keys contain colons (e.g. ``garg:2018:W``) or slashes
+    which are not valid in XML ID/IDREF values.  We replace them with hyphens
+    consistently across all ``id`` and ``rid`` attributes so cross-references
+    still match.
+    """
+    _INVALID_ID_RE = re.compile(r'[:/]')
+
+    ET.register_namespace("xlink", "http://www.w3.org/1999/xlink")
+    tree = ET.parse(jats_file)
+    root = tree.getroot()
+    for elem in root.iter():
+        for attr in ("id", "rid"):
+            val = elem.get(attr)
+            if val and _INVALID_ID_RE.search(val):
+                elem.set(attr, _INVALID_ID_RE.sub("-", val))
+    tree.write(jats_file, encoding="unicode")
+
+
 def fix_citation_ref_types(jats_file):
     """Add ref-type="bibr" to xref elements that point to bibliography ref entries.
 
@@ -1341,7 +1362,11 @@ def main():
     else:
         preamble = input_path.read_text(encoding="utf-8").split(r"\begin{document}")[0]
         m = re.search(r'\\doi\{([^}]*)\}', preamble)
-        doi_suffix = m.group(1).split("/", 1)[1] if m and "/" in m.group(1) else input_path.stem
+        if not m:
+            logger.warning(r"No \doi{} found in LaTeX preamble; using filename as output name")
+        elif not re.fullmatch(r'10\.5117/CCR\d{4}\.\d+\.\d+\.\w+', m.group(1)):
+            logger.warning(r"Malformed \doi{%s} — expected format: 10.5117/CCR<year>.<vol>.<issue>.<author>", m.group(1))
+        doi_suffix = m.group(1).rsplit("/", 1)[1] if m and "/" in m.group(1) else input_path.stem
         output_path = input_path.parent.parent / "output" / f"{doi_suffix}.xml"
     output_path.parent.mkdir(parents=True, exist_ok=True)
     log_dir = output_path.parent / "logs"
@@ -1359,6 +1384,7 @@ def main():
 
     # step 2: JATS XML post processing
     logger.info("Step 2: Post-processing JATS XML...")
+    sanitize_ids(str(output_path))
     fix_citation_ref_types(str(output_path))
     fix_metadata(str(output_path), str(input_path))
     fix_table_notes(str(output_path))

@@ -14,21 +14,32 @@
   <xsl:import href="SYSTEM_JATS_XSL_URI"/>
 
   <!-- Fix: \citeyear should show only the year (e.g. "2011"), not the full author-year label.
-       After CrossRef, ltx:cite[@class='ltx_citemacro_citeyear'] wraps an ltx:ref whose text
-       content is the full bibitem label ("Author, Year"); we extract the part after the last ", ". -->
+       With structured author/year bibliography tags, CrossRef resolves the bibref to an
+       ltx:ref whose text content is already just the year.  Any surrounding text nodes
+       (e.g. ", p. 323" postnotes) are preserved as siblings inside the ltx:cite. -->
   <xsl:template match="ltx:cite[contains(@class,'ltx_citemacro_citeyear')]">
-    <xsl:for-each select=".//ltx:ref[@idref]">
-      <xref rid="{@idref}">
-        <xsl:variable name="full" select="normalize-space(string(.))"/>
-        <xsl:choose>
-          <xsl:when test="contains($full, ', ')">
-            <xsl:value-of select="substring-after($full, ', ')"/>
-          </xsl:when>
-          <xsl:otherwise>
-            <xsl:value-of select="$full"/>
-          </xsl:otherwise>
-        </xsl:choose>
-      </xref>
+    <xsl:for-each select="node()">
+      <xsl:choose>
+        <xsl:when test="self::ltx:ref[@idref]">
+          <xref rid="{@idref}">
+            <xsl:variable name="full" select="normalize-space(string(.))"/>
+            <xsl:choose>
+              <xsl:when test="contains($full, ', ')">
+                <xsl:value-of select="substring-after($full, ', ')"/>
+              </xsl:when>
+              <xsl:otherwise>
+                <xsl:value-of select="$full"/>
+              </xsl:otherwise>
+            </xsl:choose>
+          </xref>
+        </xsl:when>
+        <xsl:when test="self::text()">
+          <xsl:value-of select="."/>
+        </xsl:when>
+        <xsl:otherwise>
+          <xsl:apply-templates select="."/>
+        </xsl:otherwise>
+      </xsl:choose>
     </xsl:for-each>
   </xsl:template>
 

@@ -22,6 +22,15 @@ and a two-author citation \cite{jones2021multi}
 and a three-plus-author citation \cite{team2022three}
 and a grouped citation \cite{smith2020test,jones2021multi,team2022three}.
 
+\section{Citation optional arguments}
+Postnote only: \parencite[p.~42]{smith2020test}.
+Prenote and postnote: \parencite[cf.][p.~42]{smith2020test}.
+Textcite postnote: \textcite[p.~42]{jones2021multi}.
+Textcite prenote and postnote: \textcite[see][p.~99]{team2022three}.
+Citeyear postnote: \citeyear[p.~42]{smith2020test}.
+No optional args: \parencite{jones2021multi}.
+Autocite postnote: \autocite[p.~7]{team2022three}.
+
 \printbibliography
 
 \end{document}
