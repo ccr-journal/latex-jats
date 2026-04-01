@@ -53,6 +53,45 @@ def _warn_bare_greater_than(tex_path):
                                f'Use $\\ge$, $\\le$, $>$, or $<$ instead.')
 
 
+def _warn_title_in_table(tex_path):
+    r"""Warn about \title{} used inside table environments.
+
+    Authors should use \caption{} instead; \title{} produces invalid JATS
+    because LaTeXML wraps it as a <p> containing the <table>.
+    """
+    tex_dir = tex_path.parent
+    files = [tex_path]
+    try:
+        main_text = tex_path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        main_text = tex_path.read_text(encoding="latin-1")
+    for m in re.finditer(r'\\(?:input|include)\{([^}]+)\}', main_text):
+        child = tex_dir / m.group(1)
+        if not child.suffix:
+            child = child.with_suffix('.tex')
+        if child.exists() and child not in files:
+            files.append(child)
+
+    for fpath in files:
+        try:
+            lines = fpath.read_text(encoding="utf-8").splitlines()
+        except UnicodeDecodeError:
+            lines = fpath.read_text(encoding="latin-1").splitlines()
+        in_table = False
+        for lineno, line in enumerate(lines, 1):
+            stripped = re.sub(r'(?<!\\)%.*', '', line)
+            if re.search(r'\\begin\{table\}', stripped):
+                in_table = True
+            if re.search(r'\\end\{table\}', stripped):
+                in_table = False
+            if in_table and re.search(r'\\title\{', stripped):
+                logger.warning(
+                    r'\title{} in table environment (%s:%d): '
+                    r'use \caption{} instead — \title{} produces invalid JATS.',
+                    fpath.name, lineno,
+                )
+
+
 LATEXML_DIR = Path(__file__).parent.parent / "latexml"
 JATS_XSL = Path(__file__).parent.parent / "xslt" / "jats-html-wrapper.xsl"
 CSS_SRC = Path(__file__).parent.parent / "css" / "jats-preview.css"
@@ -339,23 +378,38 @@ def warn_tfoot_notes(jats_file):
                 )
 
 
-def warn_fig_paragraphs(jats_file):
-    """Warns about stray <p> elements inside <fig> that contain only punctuation/whitespace.
+def _warn_stray_text_after_includegraphics(tex_path):
+    r"""Warn about trailing punctuation after \includegraphics in figure environments.
 
-    These typically originate from a period placed after \\includegraphics in the LaTeX
-    source (e.g. \\includegraphics{img.png}.). The stray text is preserved in the JATS
-    output; the author should remove it from the source.
+    E.g. \includegraphics{img.png}. — the trailing period ends up as stray
+    text in the JATS output.  The author should remove it.
     """
-    tree = ET.parse(jats_file)
-    root = tree.getroot()
-    for fig in root.findall(".//fig"):
-        fig_id = fig.get("id", "<unknown>")
-        for p in fig.findall("p"):
-            text = (p.text or "").strip()
-            if text and not any(c.isalnum() for c in text):
-                logging.warning(
-                    f"Stray text in figure {fig_id!r}: {text!r} — "
-                    "remove the trailing punctuation after \\includegraphics in the LaTeX source"
+    tex_dir = tex_path.parent
+    files = [tex_path]
+    try:
+        main_text = tex_path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        main_text = tex_path.read_text(encoding="latin-1")
+    for m in re.finditer(r'\\(?:input|include)\{([^}]+)\}', main_text):
+        child = tex_dir / m.group(1)
+        if not child.suffix:
+            child = child.with_suffix('.tex')
+        if child.exists() and child not in files:
+            files.append(child)
+
+    for fpath in files:
+        try:
+            lines = fpath.read_text(encoding="utf-8").splitlines()
+        except UnicodeDecodeError:
+            lines = fpath.read_text(encoding="latin-1").splitlines()
+        for lineno, line in enumerate(lines, 1):
+            stripped = re.sub(r'(?<!\\)%.*', '', line)
+            m = re.search(r'\\includegraphics(?:\[[^\]]*\])?\{[^}]+\}\s*([^\s%\\])', stripped)
+            if m:
+                logger.warning(
+                    r'Stray text after \includegraphics (%s:%d): %r — '
+                    r'remove the trailing punctuation.',
+                    fpath.name, lineno, m.group(1),
                 )
 
 
@@ -1296,6 +1350,8 @@ def main():
 
     # step 0: warn about known LaTeX pitfalls
     _warn_bare_greater_than(input_path)
+    _warn_title_in_table(input_path)
+    _warn_stray_text_after_includegraphics(input_path)
 
     # step 1: LaTeX to JATS conversion
     logger.info("Step 1: Converting LaTeX to JATS XML...")
@@ -1307,7 +1363,7 @@ def main():
     fix_metadata(str(output_path), str(input_path))
     fix_table_notes(str(output_path))
     warn_tfoot_notes(str(output_path))
-    warn_fig_paragraphs(str(output_path))
+
     clean_body(str(output_path))
     fix_appendix_labels(str(output_path))
     fix_footnotes(str(output_path))
