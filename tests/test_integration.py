@@ -159,6 +159,23 @@ def test_subfigures_produce_fig_group(tmp_path):
 
 
 @pytest.mark.integration
+def test_adjustbox_table_structure(tmp_path):
+    """adjustbox inside a table environment should be transparent — <table> is a direct child of <table-wrap>."""
+    output = tmp_path / "output.xml"
+    run_latexmlc(str(FIXTURES / "adjustbox_table.tex"), str(output))
+
+    root = ET.parse(output).getroot()
+    table_wraps = root.findall(".//table-wrap")
+    assert table_wraps, "No <table-wrap> found"
+    for tw in table_wraps:
+        tables = tw.findall("table")
+        assert tables, f"<table-wrap> {tw.get('id')} has no direct <table> child"
+        # table must NOT be nested inside <p>
+        for p in tw.findall("p"):
+            assert p.find(".//table") is None, "<table> found nested inside <p> within <table-wrap>"
+
+
+@pytest.mark.integration
 @pytest.mark.skipif(not shutil.which("jing"), reason="jing not installed")
 def test_jats_validates(tmp_path):
     """Output JATS XML from the authors fixture validates against the JATS Publishing 1.2 RNG schema."""

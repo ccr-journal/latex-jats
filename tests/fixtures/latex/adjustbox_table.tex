@@ -1,0 +1,39 @@
+\documentclass{ccr}
+\usepackage{adjustbox}
+\usepackage{tabularx}
+
+\title{Test Article}
+\authorsnames{Jane Doe}
+\authorsaffiliations{{University of Amsterdam}}
+\abstract{A test abstract.}
+\keywords{test}
+\volume{1}
+\pubnumber{1}
+\pubyear{2025}
+\firstpage{1}
+\doi{10.0000/test-adjustbox}
+
+\addbibresource{bibliography.bib}
+
+\begin{document}
+\maketitle
+
+\section{Results}
+
+\begin{table}[h]
+\centering
+\caption{A table with adjustbox}
+\begin{adjustbox}{max width=\linewidth}
+\begin{tabularx}{\linewidth}{ll}
+\hline
+A & B \\
+\hline
+1 & 2 \\
+\hline
+\end{tabularx}
+\end{adjustbox}
+\end{table}
+
+\printbibliography
+
+\end{document}

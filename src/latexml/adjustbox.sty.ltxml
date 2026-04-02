@@ -1,0 +1,13 @@
+# LaTeXML binding for adjustbox.sty
+#
+# adjustbox is for print-layout scaling — irrelevant for structured output.
+# Override the system binding to pass content through transparently.
+
+package LaTeXML::Package::Pool;
+use strict;
+use warnings;
+use LaTeXML::Package;
+
+DefEnvironment('{adjustbox}{}', '#body');
+
+1;
