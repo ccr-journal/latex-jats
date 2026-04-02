@@ -21,7 +21,7 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
-from latex_jats.convert import convert, get_doi_suffix
+from latex_jats.convert import convert, get_doi_suffix, validate_jats
 from latex_jats.prepare_source import _needs_compilation, prepare
 
 logger = logging.getLogger(__name__)
@@ -131,7 +131,7 @@ def _capture_step(step_name: str, output_dir: Path, func, *args, **kwargs) -> St
     success = False
     try:
         result = func(*args, **kwargs)
-        # prepare() returns bool; convert() returns None (raises on failure)
+        # prepare() returns bool; convert()/validate_jats() return other types
         success = result if isinstance(result, bool) else True
     except Exception:
         logger.exception("Step '%s' raised an exception", step_name)
@@ -155,7 +155,8 @@ def _capture_step(step_name: str, output_dir: Path, func, *args, **kwargs) -> St
     return step_result
 
 
-def run_prepare(example_dir: Path, output_dir: Path, force: bool = False) -> StepResult:
+def run_prepare(example_dir: Path, output_dir: Path, force: bool = False,
+                fix: bool = False) -> StepResult:
     """Run the prepare-source step and copy PDF to output tree."""
     prepare_dir = output_dir / "prepare"
     result = _capture_step(
@@ -163,7 +164,7 @@ def run_prepare(example_dir: Path, output_dir: Path, force: bool = False) -> Ste
         output_dir,
         prepare,
         example_dir,
-        fix_problems=False,
+        fix_problems=fix,
         force=force,
         log_dir=prepare_dir,
     )
@@ -195,7 +196,26 @@ def run_convert(example_dir: Path, output_dir: Path, force: bool = False) -> Ste
     return result
 
 
-def run_article(example_dir: Path, force: bool = False, force_convert: bool = False) -> list[StepResult]:
+def _validate_wrapper(xml_file: str) -> bool:
+    """Wrapper around validate_jats that returns bool for _capture_step."""
+    errors = validate_jats(xml_file)
+    if errors:
+        logger.warning("%d JATS validation error(s)", len(errors))
+        return False
+    return True
+
+
+def run_validate(example_dir: Path, output_dir: Path) -> StepResult:
+    """Run JATS validation as a separate step."""
+    main_tex = example_dir / "main.tex"
+    doi_suffix = get_doi_suffix(main_tex)
+    convert_dir = output_dir / "convert"
+    xml_file = convert_dir / f"{doi_suffix}.xml"
+    return _capture_step("validate", output_dir, _validate_wrapper, str(xml_file))
+
+
+def run_article(example_dir: Path, force: bool = False, force_convert: bool = False,
+                fix: bool = False) -> list[StepResult]:
     """Run prepare then convert for one article. Stop on first failure."""
     article_id = example_dir.name
     output_dir = OUTPUT_DIR / article_id
@@ -204,7 +224,7 @@ def run_article(example_dir: Path, force: bool = False, force_convert: bool = Fa
     # Step 1: prepare
     if force or needs_prepare(example_dir, output_dir):
         logger.info("--- %s: prepare ---", article_id)
-        result = run_prepare(example_dir, output_dir, force=force)
+        result = run_prepare(example_dir, output_dir, force=force, fix=fix)
         results.append(result)
         if not result.success:
             logger.error("FAILED (prepare): %s", article_id)
@@ -224,8 +244,23 @@ def run_article(example_dir: Path, force: bool = False, force_convert: bool = Fa
             _write_article_status(output_dir, results)
             return results
         logger.info("OK (convert): %s (%.1fs)", article_id, result.duration_s)
+        ran_convert = True
     else:
         logger.info("--- %s: convert (up to date, skipping) ---", article_id)
+        ran_convert = False
+
+    # Step 3: validate (re-run if convert ran, or if validate hasn't run yet)
+    validate_status = output_dir / "validate" / "status.json"
+    if ran_convert or not validate_status.exists():
+        logger.info("--- %s: validate ---", article_id)
+        result = run_validate(example_dir, output_dir)
+        results.append(result)
+        if result.success:
+            logger.info("OK (validate): %s", article_id)
+        else:
+            logger.warning("WARN (validate): %s has validation errors", article_id)
+    else:
+        logger.info("--- %s: validate (up to date, skipping) ---", article_id)
 
     if results:
         _write_article_status(output_dir, results)
@@ -258,19 +293,20 @@ def generate_index(output_root: Path):
         "<title>CCR Preview</title>",
         "<style>",
         "body { font-family: sans-serif; max-width: 900px; margin: 2em auto; }",
-        ".ok { color: green; } .fail { color: red; } .skip { color: gray; }",
+        ".ok { color: green; } .warn { color: orange; } .fail { color: red; } .skip { color: gray; }",
         "table { border-collapse: collapse; width: 100%; }",
         "th, td { border: 1px solid #ccc; padding: 6px 10px; text-align: left; white-space: nowrap; }",
         "</style>",
         "</head><body>",
         "<h1>CCR Article Previews</h1>",
-        "<table><tr><th>Article</th><th>HTML</th><th>XML</th><th>PDF</th><th>Prepare</th><th>Convert</th></tr>",
+        "<table><tr><th>Article</th><th>HTML</th><th>XML</th><th>PDF</th><th>Prepare</th><th>Convert</th><th>Validate</th></tr>",
     ]
 
     for article_dir in articles:
         article = article_dir.name
         convert_dir = article_dir / "convert"
         prepare_dir = article_dir / "prepare"
+        validate_dir = article_dir / "validate"
 
         # Output links (HTML, XML, PDF) as separate cells
         html_link = "-"
@@ -318,7 +354,8 @@ def generate_index(output_root: Path):
             f"<tr><td><strong>{article}</strong></td>"
             f"<td>{html_link}</td><td>{xml_link}</td><td>{pdf_link}</td>"
             f"<td>{_step_cell(prepare_dir)}</td>"
-            f"<td>{_step_cell(convert_dir)}</td></tr>"
+            f"<td>{_step_cell(convert_dir)}</td>"
+            f"<td>{_step_cell(validate_dir)}</td></tr>"
         )
 
     lines.append("</table></body></html>")
@@ -337,6 +374,8 @@ def main():
     )
     parser.add_argument("--force", action="store_true", help="Rerun all steps")
     parser.add_argument("--force-convert", action="store_true", help="Force only the convert step")
+    parser.add_argument("--fix", action="store_true",
+                        help="Apply simple source fixes (unescaped &, bare <>, etc.) before compiling")
     args = parser.parse_args()
 
     examples = find_examples(args.example)
@@ -348,6 +387,7 @@ def main():
             example_dir,
             force=args.force,
             force_convert=args.force_convert,
+            fix=args.fix,
         )
         all_results[example_dir.name] = results
 

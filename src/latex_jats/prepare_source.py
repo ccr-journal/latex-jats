@@ -42,10 +42,11 @@ def _needs_compilation(latex_dir: Path) -> bool:
     bbl = latex_dir / "main.bbl"
     if not pdf.exists() or not bbl.exists():
         return True
-    # Recompile if any .tex file is newer than main.pdf
+    # Recompile if any .tex or .bib file is newer than main.pdf/main.bbl
     oldest_output = min(pdf.stat().st_mtime, bbl.stat().st_mtime)
-    tex_files = list(latex_dir.glob("*.tex")) + list(latex_dir.glob("**/*.tex"))
-    return any(f.stat().st_mtime > oldest_output for f in tex_files)
+    source_files = (list(latex_dir.glob("*.tex")) + list(latex_dir.glob("**/*.tex"))
+                    + list(latex_dir.glob("*.bib")))
+    return any(f.stat().st_mtime > oldest_output for f in source_files)
 
 
 def _run(cmd: list[str], cwd: Path, log_file: Path | None = None) -> bool:
@@ -89,6 +90,15 @@ def compile_latex(latex_dir: Path, log_dir: Path | None = None) -> bool:
 
     pdflatex = ["pdflatex", "-interaction=nonstopmode", "-halt-on-error", "main.tex"]
     pdflatex_log = log_dir / "pdflatex.log" if log_dir else None
+
+    # Remove stale .bbl if .bib is newer, so pdflatex doesn't choke on it
+    bbl = latex_dir / "main.bbl"
+    bib_files = list(latex_dir.glob("*.bib"))
+    if bbl.exists() and bib_files:
+        bbl_mtime = bbl.stat().st_mtime
+        if any(b.stat().st_mtime > bbl_mtime for b in bib_files):
+            bbl.unlink()
+            logger.info("Removed stale main.bbl (newer .bib found)")
 
     if not _run(pdflatex, latex_dir, pdflatex_log):
         return False
@@ -146,18 +156,18 @@ def prepare(source: Path, fix_problems: bool = False, force: bool = False,
         return False
 
     # Optional source fixes
+    fixed = 0
     if fix_problems:
         logger.info("Applying source fixes (--fix-simple-problems)...")
-        total = 0
         for tex_file in _collect_tex_files(main_tex):
-            total += fix_file(tex_file, apply=True)
-        if total:
-            logger.info("Fixed %d line(s).", total)
+            fixed += fix_file(tex_file, apply=True)
+        if fixed:
+            logger.info("Fixed %d line(s); will recompile.", fixed)
         else:
             logger.info("No source fixes needed.")
 
     # Compilation
-    if not force and not _needs_compilation(latex_dir):
+    if not force and not fixed and not _needs_compilation(latex_dir):
         logger.info("main.pdf and main.bbl are up to date; skipping compilation "
                     "(use --force to recompile)")
         return True

@@ -1443,6 +1443,29 @@ _ROOT_ATTRS = {
 }
 
 
+def fix_pdf_graphic_refs(jats_file):
+    """Rewrite <graphic xlink:href="...*.pdf"/> to .svg.
+
+    LaTeXML converts PDF figures to SVG during processing but keeps the
+    original .pdf extension in the JATS output. This fixes the references
+    to point to the SVG files that actually exist.
+    """
+    XLINK = "http://www.w3.org/1999/xlink"
+    ET.register_namespace("xlink", XLINK)
+    tree = ET.parse(jats_file)
+    root = tree.getroot()
+    count = 0
+    for el in root.iter("graphic"):
+        href = el.get(f"{{{XLINK}}}href", "")
+        if href.lower().endswith(".pdf"):
+            new_href = href[:-4] + ".svg"
+            el.set(f"{{{XLINK}}}href", new_href)
+            count += 1
+    if count:
+        tree.write(jats_file, encoding="unicode")
+        logger.info(f"Rewrote {count} graphic reference(s) from .pdf to .svg")
+
+
 def fix_ext_links(jats_file):
     """Add ext-link-type="uri" to <ext-link> elements that lack an ext-link-type attribute."""
     ET.register_namespace("xlink", "http://www.w3.org/1999/xlink")
@@ -1527,10 +1550,8 @@ def convert(input_path: Path, output_path: Path, html: bool = False) -> None:
     else:
         logger.warning(f'no .bbl file at {bbl_file}; references will be plain text')
     fix_ext_links(str(output_path))
+    fix_pdf_graphic_refs(str(output_path))
     finalize_xml(str(output_path))
-
-    # step 2b: validate JATS XML
-    validate_jats(str(output_path))
 
     logger.info(f"Saved corrected JATS XML in {output_path}")
 
@@ -1555,6 +1576,7 @@ def convert(input_path: Path, output_path: Path, html: bool = False) -> None:
         logger.info("Step 3: Generating HTML preview...")
         convert_to_html(str(output_path), str(html_path))
         logger.info(f"Saved HTML preview in {html_path}")
+
 
 
 # here it all comes together

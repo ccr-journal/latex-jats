@@ -7,6 +7,7 @@ Usage:
 Fixes applied:
   - bare < and > in text mode  → wrapped in math mode ($<$, $>$)
   - trailing punctuation after \\includegraphics → removed
+  - unescaped & in .bib field values → escaped as \\&
 """
 
 import argparse
@@ -18,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 def _collect_tex_files(main_tex: Path) -> list[Path]:
-    """Return main_tex plus all \\input / \\include targets."""
+    """Return main_tex plus all \\input / \\include targets and .bib files."""
     tex_dir = main_tex.parent
     files = [main_tex]
     try:
@@ -31,6 +32,14 @@ def _collect_tex_files(main_tex: Path) -> list[Path]:
             child = child.with_suffix('.tex')
         if child.exists() and child not in files:
             files.append(child)
+    # Also collect .bib files referenced via \addbibresource or \bibliography
+    for m in re.finditer(r'\\(?:addbibresource|bibliography)\{([^}]+)\}', text):
+        for name in m.group(1).split(','):
+            child = tex_dir / name.strip()
+            if not child.suffix:
+                child = child.with_suffix('.bib')
+            if child.exists() and child not in files:
+                files.append(child)
     return files
 
 
@@ -119,11 +128,37 @@ ALL_FIXES = [
 ]
 
 
+def fix_bib_ampersands(lines: list[str], filename: str) -> list[str]:
+    r"""Escape unescaped & in .bib field values.
+
+    Replaces bare & with \& inside braced field values like
+    journal = {Memory & Cognition}. Leaves already-escaped \& alone.
+    """
+    out = []
+    for lineno, line in enumerate(lines, 1):
+        # Only fix lines that look like bib field values: key = {... & ...}
+        # and that contain an unescaped & (not preceded by \)
+        if re.search(r'(?<!\\)&', line) and re.search(r'=\s*\{', line):
+            new_line = re.sub(r'(?<!\\)&', r'\\&', line)
+            if new_line != line:
+                logger.info("fix unescaped &: %s:%d", filename, lineno)
+            out.append(new_line)
+        else:
+            out.append(line)
+    return out
+
+
+BIB_FIXES = [
+    fix_bib_ampersands,
+]
+
+
 def fix_file(path: Path, apply: bool) -> int:
     """Run all fixes on a single file. Returns number of lines changed."""
     lines = _read_lines(path)
+    fixes = BIB_FIXES if path.suffix == '.bib' else ALL_FIXES
     result = lines
-    for fix in ALL_FIXES:
+    for fix in fixes:
         result = fix(result, path.name)
 
     changed = sum(1 for a, b in zip(lines, result) if a != b)
