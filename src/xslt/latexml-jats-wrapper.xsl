@@ -151,4 +151,22 @@
     <xsl:text>&#x0A;</xsl:text>
   </xsl:template>
 
+  <!-- Fix: nested tabular inside a table cell → flatten to line-break-separated content.
+       JATS does not allow <table> inside <td>/<th>. The LaTeX pattern
+       \begin{tabular}[c]{@{}c@{}}line1\\line2\end{tabular} inside table cells
+       is used for multi-line cell content; flatten to inline content with <break/>. -->
+  <xsl:template match="ltx:tabular[ancestor::ltx:td or ancestor::ltx:th]">
+    <xsl:for-each select="ltx:thead/ltx:tr | ltx:tbody/ltx:tr | ltx:tr">
+      <xsl:if test="position() > 1">
+        <break/>
+      </xsl:if>
+      <xsl:for-each select="ltx:td | ltx:th">
+        <xsl:if test="position() > 1">
+          <xsl:text> </xsl:text>
+        </xsl:if>
+        <xsl:apply-templates/>
+      </xsl:for-each>
+    </xsl:for-each>
+  </xsl:template>
+
 </xsl:stylesheet>

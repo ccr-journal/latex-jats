@@ -338,6 +338,44 @@ def run_latexmlc(input_tex, output_xml, log_dir=None):
         xsl_path.unlink(missing_ok=True)
 
 
+def fix_table_in_p(jats_file):
+    """Promote <table> out of any <p> that is inside a <table-wrap>.
+
+    When a stray character (e.g. a period after \\caption*{...}.) starts a
+    paragraph in a table float, LaTeXML may place the following <table> inside
+    that <p>.  Promote the <table> to a direct child of <table-wrap> so that
+    fix_table_notes can then correctly move any remaining text-only <p> to
+    <table-wrap-foot>.
+    """
+    ET.register_namespace("xlink", "http://www.w3.org/1999/xlink")
+    tree = ET.parse(jats_file)
+    root = tree.getroot()
+
+    changed = True
+    while changed:
+        changed = False
+        for table_wrap in root.findall(".//table-wrap"):
+            for p in list(table_wrap):
+                if p.tag != "p":
+                    continue
+                table = p.find("table")
+                if table is None:
+                    continue
+                # Promote <table> out of <p> to <table-wrap> level
+                p.remove(table)
+                p_idx = list(table_wrap).index(p)
+                table_wrap.insert(p_idx + 1, table)
+                # Remove the <p> if it no longer has meaningful content
+                if not (p.text and p.text.strip()) and not list(p):
+                    table_wrap.remove(p)
+                changed = True
+                break
+            if changed:
+                break
+
+    tree.write(jats_file, encoding="unicode")
+
+
 def fix_table_notes(jats_file):
     """Moves misplaced <p> elements inside <table-wrap> to <table-wrap-foot> and removes the original."""
     ET.register_namespace("xlink", "http://www.w3.org/1999/xlink")
@@ -570,6 +608,37 @@ def fix_nested_p(jats_file):
 
                 changed = True
                 break  # restart iteration since tree was modified
+            if changed:
+                break
+
+    tree.write(jats_file, encoding="unicode")
+
+
+def fix_disp_formula_in_list_item(jats_file):
+    """Wrap bare <disp-formula> elements inside <list-item> in a <p>.
+
+    JATS does not allow <disp-formula> directly inside <list-item>; it must
+    appear inside a <p>.  This happens when \\begin{description} items contain
+    display-math (\\[...\\]) which LaTeXML places as a direct child of the list item.
+    """
+    ET.register_namespace("xlink", "http://www.w3.org/1999/xlink")
+    tree = ET.parse(jats_file)
+    root = tree.getroot()
+
+    changed = True
+    while changed:
+        changed = False
+        for list_item in root.findall(".//list-item"):
+            for child in list(list_item):
+                if child.tag != "disp-formula":
+                    continue
+                idx = list(list_item).index(child)
+                list_item.remove(child)
+                p = ET.Element("p")
+                p.append(child)
+                list_item.insert(idx, p)
+                changed = True
+                break
             if changed:
                 break
 
@@ -1445,11 +1514,13 @@ def main():
     sanitize_ids(str(output_path))
     fix_citation_ref_types(str(output_path))
     fix_metadata(str(output_path), str(input_path))
+    fix_table_in_p(str(output_path))
     fix_table_notes(str(output_path))
     warn_tfoot_notes(str(output_path))
 
     clean_body(str(output_path))
     fix_nested_p(str(output_path))
+    fix_disp_formula_in_list_item(str(output_path))
     fix_appendix_labels(str(output_path))
     fix_footnotes(str(output_path))
     fix_xref_ref_types(str(output_path))

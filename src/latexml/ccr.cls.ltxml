@@ -112,4 +112,13 @@ DefMacro('\IE', '\hspace{1em}');
 DefMacro('\fancypagestyle', '');
 DefMacro('\pagestyle', '');
 
-1; 
+# Support \caption* (starred/unnumbered captions).
+# LaTeXML's base \caption does not handle the starred form; without this,
+# \caption*{text} misparses: * is consumed as the caption title and {text}
+# becomes a stray paragraph that swallows the following \begin{tabular}.
+DefMacro('\caption',
+  '\lx@donecaptiontrue\@ifundefined{@captype}{\@@generic@caption}'
+  . '{\@ifstar{\lx@scaption}{\expandafter\@caption\expandafter{\@captype}}}');
+DefMacro('\lx@scaption {}', '\@@caption{#1}');
+
+1;
