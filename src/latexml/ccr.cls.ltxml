@@ -18,6 +18,8 @@ RequirePackage('babel');
 
 RequirePackage('fancyhdr');
 RequirePackage('graphicx');
+# Override \resizebox to pass content through — print scaling is irrelevant for JATS
+DefMacro('\resizebox OptionalMatch:* {}{}{}', '#3');
 RequirePackage('etoolbox');
 RequirePackage('csquotes');
 RequirePackage('biblatex');
