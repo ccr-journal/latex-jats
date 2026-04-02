@@ -136,4 +136,19 @@
     </table-wrap>
   </xsl:template>
 
+  <!-- lstlisting → JATS <code> block.
+       The system JATS XSLT has no template for ltx:listing/ltx:listingline,
+       so without this override the content is dumped as bare text. -->
+  <xsl:template match="ltx:listing">
+    <code>
+      <xsl:apply-templates select="@xml:id" mode="copy-attribute"/>
+      <xsl:apply-templates/>
+    </code>
+  </xsl:template>
+
+  <xsl:template match="ltx:listingline">
+    <xsl:apply-templates/>
+    <xsl:text>&#x0A;</xsl:text>
+  </xsl:template>
+
 </xsl:stylesheet>

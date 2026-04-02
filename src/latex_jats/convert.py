@@ -518,6 +518,64 @@ def clean_body(jats_file):
     tree.write(jats_file, encoding="unicode")
 
 
+def fix_nested_p(jats_file):
+    """Flatten nested <p> elements: promote inner <p> to siblings of the outer <p>.
+
+    JATS does not allow <p> inside <p>.  This can happen when LaTeXML converts
+    minipage environments (e.g. inside table cells) to nested paragraphs.
+    """
+    ET.register_namespace("xlink", "http://www.w3.org/1999/xlink")
+    tree = ET.parse(jats_file)
+    root = tree.getroot()
+
+    changed = True
+    while changed:
+        changed = False
+        for parent in root.iter():
+            for child in list(parent):
+                if child.tag != "p" or not child.findall("p"):
+                    continue
+                # Found a <p> with inner <p> children — flatten it
+                pos = list(parent).index(child)
+                parent.remove(child)
+                insert_pos = pos
+
+                # Build replacement: accumulate non-<p> content in a wrapper,
+                # promote each inner <p> as a sibling.
+                wrapper = ET.Element("p")
+                if child.attrib:
+                    wrapper.attrib.update(child.attrib)
+                wrapper.text = child.text
+
+                for sub in child:
+                    if sub.tag == "p":
+                        # Flush current wrapper if it has any content
+                        if (wrapper.text and wrapper.text.strip()) or len(wrapper):
+                            parent.insert(insert_pos, wrapper)
+                            insert_pos += 1
+                            wrapper = ET.Element("p")
+                        # Promote the inner <p>
+                        parent.insert(insert_pos, sub)
+                        insert_pos += 1
+                        # Tail text after inner <p> starts a new wrapper
+                        if sub.tail and sub.tail.strip():
+                            wrapper.text = sub.tail
+                            sub.tail = None
+                    else:
+                        wrapper.append(sub)
+
+                # Flush remaining wrapper
+                if (wrapper.text and wrapper.text.strip()) or len(wrapper):
+                    parent.insert(insert_pos, wrapper)
+
+                changed = True
+                break  # restart iteration since tree was modified
+            if changed:
+                break
+
+    tree.write(jats_file, encoding="unicode")
+
+
 def fix_footnotes(jats_file):
     # LaTeXML's JATS XSLT (LaTeXML-jats.xsl) converts \footnote to inline <fn>
     # elements inside <p>, which is valid JATS. The publisher expects the other
@@ -1391,6 +1449,7 @@ def main():
     warn_tfoot_notes(str(output_path))
 
     clean_body(str(output_path))
+    fix_nested_p(str(output_path))
     fix_appendix_labels(str(output_path))
     fix_footnotes(str(output_path))
     fix_xref_ref_types(str(output_path))
