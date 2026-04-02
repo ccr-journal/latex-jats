@@ -1471,30 +1471,27 @@ def finalize_xml(jats_file):
         f.write(xml_body)
 
 
-# here it all comes together
-def main():
-    import argparse
+def get_doi_suffix(input_path: Path) -> str:
+    """Extract the DOI suffix (e.g. 'CCR2023.1.004.KATH') from the LaTeX preamble."""
+    preamble = input_path.read_text(encoding="utf-8").split(r"\begin{document}")[0]
+    m = re.search(r'\\doi\{([^}]*)\}', preamble)
+    if not m:
+        logger.warning(r"No \doi{} found in LaTeX preamble; using filename as output name")
+    elif not re.fullmatch(r'10\.5117/CCR\d{4}\.\d+\.\d+\.\w+', m.group(1)):
+        logger.warning(r"Malformed \doi{%s} — expected format: 10.5117/CCR<year>.<vol>.<issue>.<author>", m.group(1))
+    return m.group(1).rsplit("/", 1)[1] if m and "/" in m.group(1) else input_path.stem
 
-    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument("input", help="Input LaTeX file")
-    parser.add_argument("output", nargs="?", help="Output JATS XML file (default: <article>/output/<doi-suffix>.xml)")
-    parser.add_argument("--html", action="store_true", help="Also generate an HTML preview via the NCBI JATS stylesheet")
-    args = parser.parse_args()
+def resolve_output_path(input_path: Path) -> Path:
+    """Derive the default output path from the DOI in the LaTeX preamble."""
+    return input_path.parent.parent / "output" / f"{get_doi_suffix(input_path)}.xml"
 
-    input_path = Path(args.input)
-    if args.output:
-        output_path = Path(args.output)
-    else:
-        preamble = input_path.read_text(encoding="utf-8").split(r"\begin{document}")[0]
-        m = re.search(r'\\doi\{([^}]*)\}', preamble)
-        if not m:
-            logger.warning(r"No \doi{} found in LaTeX preamble; using filename as output name")
-        elif not re.fullmatch(r'10\.5117/CCR\d{4}\.\d+\.\d+\.\w+', m.group(1)):
-            logger.warning(r"Malformed \doi{%s} — expected format: 10.5117/CCR<year>.<vol>.<issue>.<author>", m.group(1))
-        doi_suffix = m.group(1).rsplit("/", 1)[1] if m and "/" in m.group(1) else input_path.stem
-        output_path = input_path.parent.parent / "output" / f"{doi_suffix}.xml"
+
+def convert(input_path: Path, output_path: Path, html: bool = False) -> None:
+    """Convert a LaTeX file to JATS XML (and optionally HTML).
+
+    This is the programmatic API used by the runner. Raises on failure.
+    """
     output_path.parent.mkdir(parents=True, exist_ok=True)
     log_dir = output_path.parent / "logs"
 
@@ -1524,7 +1521,6 @@ def main():
     fix_appendix_labels(str(output_path))
     fix_footnotes(str(output_path))
     fix_xref_ref_types(str(output_path))
-    # fix_journal_references(output_xml) #We can remove this; replaced with XSLT
     bbl_file = input_path.with_suffix('.bbl')
     if bbl_file.exists():
         fix_references(str(output_path), str(bbl_file))
@@ -1542,34 +1538,41 @@ def main():
     image_exts = {".png", ".jpg", ".jpeg", ".gif", ".svg", ".tif", ".tiff"}
     latex_dir = input_path.parent
     copied = []
-    for img in latex_dir.iterdir():
-        if img.suffix.lower() in image_exts:
-            dest = output_path.parent / img.name
+    for img in latex_dir.rglob("*"):
+        if img.is_file() and img.suffix.lower() in image_exts:
+            rel = img.relative_to(latex_dir)
+            dest = output_path.parent / rel
+            dest.parent.mkdir(parents=True, exist_ok=True)
             if not dest.exists() or img.stat().st_mtime > dest.stat().st_mtime:
                 shutil.copy2(img, dest)
-                copied.append(img.name)
+                copied.append(str(rel))
     if copied:
         logger.info(f"Copied {len(copied)} image(s) to output: {', '.join(copied)}")
 
     # step 3 (optional): generate HTML preview
-    if args.html:
+    if html:
         html_path = output_path.with_suffix(".html")
         logger.info("Step 3: Generating HTML preview...")
         convert_to_html(str(output_path), str(html_path))
         logger.info(f"Saved HTML preview in {html_path}")
-        _write_netlify_files(output_path.parent, output_path.stem)
 
 
-def _write_netlify_files(output_dir, stem):
-    """Write Netlify _headers and _redirects files to the output directory."""
-    headers = (
-        f"/{stem}.xml\n"
-        f"  Content-Type: application/xml\n"
-        f"  X-Content-Type-Options: nosniff\n"
-    )
-    redirects = f"/    /{stem}.html    301!\n"
-    (output_dir / "_headers").write_text(headers)
-    (output_dir / "_redirects").write_text(redirects)
+# here it all comes together
+def main():
+    import argparse
+
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("input", help="Input LaTeX file")
+    parser.add_argument("output", nargs="?", help="Output JATS XML file (default: <article>/output/<doi-suffix>.xml)")
+    parser.add_argument("--html", action="store_true", help="Also generate an HTML preview via the NCBI JATS stylesheet")
+    args = parser.parse_args()
+
+    input_path = Path(args.input)
+    output_path = Path(args.output) if args.output else resolve_output_path(input_path)
+
+    convert(input_path, output_path, html=args.html)
 
 
 if __name__ == "__main__":

@@ -8,12 +8,22 @@ The end goal is to turn this into a web service where authors can upload their L
 
 ## Running the tool
 
+**Runner (recommended for examples):**
 ```sh
-uv run latex-jats examples/CCR2023.1.004.KATH/latex/main.tex
+uv run run-examples                       # run all examples (incremental)
+uv run run-examples CCR2023.1.004.KATH    # run one example
+uv run run-examples --force               # rerun everything
+uv run run-examples --force-convert       # only force the convert step
+```
+
+Output goes to `output/<article-id>/` at the project root, with `prepare/` and `convert/` subdirectories containing logs and status.json files.
+
+**Direct conversion (single file):**
+```sh
 uv run latex-jats path/to/main.tex path/to/output.xml --html
 ```
 
-Output defaults to `<article-dir>/output/<doi-suffix>.xml` (derived from the `\doi{}` macro in the LaTeX preamble). Pass `--html` to also generate `<doi-suffix>.html` alongside a copy of `jats-preview.css`.
+Pass `--html` to also generate `<doi-suffix>.html` alongside a copy of `jats-preview.css`.
 
 ## Pipeline
 
@@ -41,7 +51,9 @@ Three sequential steps in `src/latex_jats/convert.py`:
 ```
 src/
   latex_jats/
-    convert.py        main pipeline: all conversion and fixup functions
+    convert.py        main pipeline: convert() function and all fixup functions
+    runner.py         incremental build runner for examples (run-examples CLI)
+    prepare_source.py validates and compiles LaTeX (prepare-source CLI)
     fixbib.py         standalone bibliography cleaner
   latexml/
     ccr.cls.ltxml     LaTeXML bindings for ccr.cls (authors, abstract, keywords, metadata macros)
@@ -62,8 +74,13 @@ tests/
   test_integration.py     integration tests (full pipeline via latexmlc)
   fixtures/latex/         minimal .tex files used by integration tests
 examples/
-  CCR2023.1.004.KATH/     reference article with latex/ input and output/ JATS+HTML
+  CCR2023.1.004.KATH/     each example has main.tex + source files directly in the folder
   CCR2025.1.2.YAO/        article with gold/ JATS XML from the typesetting company for comparison
+output/                   centralized output tree (gitignored), also the Netlify deploy dir
+  <article-id>/
+    prepare/              compilation logs + status.json
+    convert/              JATS XML, HTML, PDF, images + status.json
+  index.html              generated preview index with status indicators
 ```
 
 The `gold/` directory under CCR2025.1.2.YAO contains the JATS XML produced by the professional typesetting company. Use it as a reference when evaluating output quality. It may contain minor imperfections, so it does not need to be matched exactly. See `todo.md` in the project root for a tracked list of discrepancies.

@@ -52,7 +52,7 @@ luac.out
 *.x86_64
 *.hex
 
-examples/*/output
+/output/
 
 # Local Netlify folder
 .netlify

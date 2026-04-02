@@ -23,6 +23,8 @@ markers = ["integration: requires latexmlc installed (deselect with -m 'not inte
 latex-jats = "latex_jats.convert:main"
 fixbib = "latex_jats.fixbib:main"
 fix-input = "latex_jats.fix_input:main"
+prepare-source = "latex_jats.prepare_source:main"
+run-examples = "latex_jats.runner:main"
 
 [tool.basedpyright]
 typeCheckingMode = "basic"
