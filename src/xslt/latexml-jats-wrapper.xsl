@@ -136,6 +136,22 @@
     </table-wrap>
   </xsl:template>
 
+  <!-- A floating lstlisting (lstlisting with float option) has a caption and
+       is wrapped by LaTeXML in ltx:float[@class='ltx_lstlisting'].
+       The default ltx:float → <boxed-text>, but <caption> is not allowed
+       inside <boxed-text>. Render as <fig fig-type="listing"> instead,
+       which supports <label>, <caption>, and block content. -->
+  <xsl:template match="ltx:float[contains(@class,'ltx_lstlisting')]">
+    <fig fig-type="listing">
+      <xsl:apply-templates select="@xml:id" mode="copy-attribute"/>
+      <xsl:if test="ltx:caption/ltx:tag">
+        <label><xsl:value-of select="normalize-space(concat(ltx:caption/ltx:tag, ltx:caption/ltx:tag/@close))"/></label>
+      </xsl:if>
+      <xsl:apply-templates select="ltx:caption"/>
+      <xsl:apply-templates select="*[not(self::ltx:caption) and not(self::ltx:toccaption) and not(self::ltx:tags)]"/>
+    </fig>
+  </xsl:template>
+
   <!-- lstlisting → JATS <code> block.
        The system JATS XSLT has no template for ltx:listing/ltx:listingline,
        so without this override the content is dumped as bare text. -->
