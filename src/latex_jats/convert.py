@@ -1,3 +1,4 @@
+import base64
 import logging
 import re
 import shutil
@@ -294,6 +295,55 @@ def _find_latexml_jats_xsl():
 
 _JATS_XSLT_WRAPPER = Path(__file__).parent.parent / "xslt" / "latexml-jats-wrapper.xsl"
 
+_LTX_NS = "http://dlmf.nist.gov/LaTeXML"
+_LTX = f"{{{_LTX_NS}}}"
+
+
+def fix_listing_data(latexml_xml_path):
+    """Replace broken ltx:listingline children with decoded base64 text.
+
+    LaTeXML's listings.sty stores the raw listing text as base64 in the
+    ``data`` attribute of ``ltx:listing``.  When ``\\lstset{literate=...}``
+    maps unicode characters to LaTeX commands, the child
+    ``ltx:listingline`` elements contain rich markup (inline-formula, rule)
+    that produces invalid JATS inside ``<code>``.  Decoding the base64 data
+    and rebuilding the listinglines as plain-text nodes fixes this.
+    """
+    tree = ET.parse(latexml_xml_path)
+    root = tree.getroot()
+    changed = False
+
+    for listing in root.iter(f"{_LTX}listing"):
+        if listing.get("dataencoding") != "base64":
+            continue
+        data = listing.get("data", "")
+        if not data:
+            continue
+        try:
+            text = base64.b64decode(data).decode("utf-8")
+        except Exception:
+            continue
+
+        # Remove all existing children (broken listinglines)
+        for child in list(listing):
+            listing.remove(child)
+        listing.text = None
+
+        # Rebuild with one ltx:listingline per line
+        lines = text.split("\n")
+        # Drop trailing empty line from a final newline
+        if lines and lines[-1] == "":
+            lines = lines[:-1]
+        for line_text in lines:
+            ll = ET.SubElement(listing, f"{_LTX}listingline")
+            ll.text = line_text
+            ll.tail = "\n"
+        changed = True
+
+    if changed:
+        ET.register_namespace("ltx", _LTX_NS)
+        tree.write(latexml_xml_path, encoding="unicode", xml_declaration=True)
+
 
 def run_latexmlc(input_tex, output_xml, log_dir=None):
     """Runs latexmlc to convert a LaTeX file to JATS XML.
@@ -327,6 +377,8 @@ def run_latexmlc(input_tex, output_xml, log_dir=None):
         if latexml_log:
             latexmlc_cmd.append(f"--log={latexml_log}")
         subprocess.run(latexmlc_cmd, check=True)
+
+        fix_listing_data(str(latexml_path))
 
         post_cmd = ["latexmlpost", f"--stylesheet={xsl_path}", "--format=jats",
                     "--destination", str(output_xml), str(latexml_path)]

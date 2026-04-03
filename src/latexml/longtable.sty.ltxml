@@ -1,0 +1,166 @@
+# -*- mode: Perl -*-
+# /=====================================================================\ #
+# |  longtable                                                          | #
+# | Implementation for LaTeXML                                          | #
+# |=====================================================================| #
+# | Part of LaTeXML:                                                    | #
+# |  Public domain software, produced as part of work done by the       | #
+# |  United States Government & not subject to copyright in the US.     | #
+# |---------------------------------------------------------------------| #
+# | Bruce Miller <bruce.miller@nist.gov>                        #_#     | #
+# | http://dlmf.nist.gov/LaTeXML/                              (o o)    | #
+# \=========================================================ooo==U==ooo=/ #
+#
+# CCR local override: applies LONGTABLE_LABEL in afterDigest so that
+# \label{...} inside longtable produces a matching xml:id on <ltx:table>.
+# This is a bug in the upstream binding (the label is stored but never read).
+#
+package LaTeXML::Package::Pool;
+use strict;
+use warnings;
+use LaTeXML::Package;
+
+#======================================================================
+# NOTE: The way the headers & footers are captured causes trailing \hlines
+# to generate empty rows.
+#======================================================================
+# Environment \begin{longtable}[align]{pattern} ... \end{longtable}
+DefMacro('\longtable[]{}',
+  '\lx@longtable@bindings{#2}\@@longtable[#1]{#2}\@start@alignment');
+DefMacro('\endlongtable',
+  '\@finish@alignment\@end@tabular');
+# {longtable*} is defined in revtex4-1 to be able to span a two column document
+DefMacro('\csname longtable*\endcsname []{}',
+  '\lx@longtable@bindings{#2}\@@longtable[#1]{#2}\@start@alignment');
+DefMacro('\csname endlongtable*\endcsname',
+  '\@finish@alignment\@end@tabular');
+
+DefMacro('\@gobble@optional[]', Tokens());
+
+DefConstructor('\@@longtable [] Undigested DigestedBody',
+  "<ltx:table xml:id='#id' inlist='lot' labels='#label'>"
+    . "#tags"
+    . "?#headcaption(<ltx:caption>#headcaption</ltx:caption>)"
+    . "?#headtoccaption(<ltx:toccaption>#headtoccaption</ltx:toccaption>)"
+    . "#3"
+    . "?#footcaption(<ltx:caption>#footcaption</ltx:caption>)"
+    . "?#foottoccaption(<ltx:toccaption>#foottoccaption</ltx:toccaption>)"
+    . "</ltx:table>",
+  reversion    => '\begin{longtable}[#1]{#2}#3\end{longtable}',
+  beforeDigest => sub { $_[0]->bgroup; Let('\pagebreak', '\@gobble@optional'); },
+  afterDigest  => sub {
+    my ($stomach, $whatsit) = @_;
+    $whatsit->setProperties(%{ LookupValue('LONGTABLE_PROPERTIES') || {} });
+    # --- CCR FIX: apply the stored \label to the table element ---
+    if (my $label = LookupValue('LONGTABLE_LABEL')) {
+      $whatsit->setProperty(label => $label);
+    }
+    # Insert caption and toccaption, if any were encountered.
+    if (my $captions = LookupValue('LONGTABLE_HEAD_CAPTIONS') || LookupValue('LONGTABLE_CAPTIONS')) {
+      my ($toccaption, $caption) = @$captions;
+      $whatsit->setProperty(headcaption    => $caption)    if $caption;
+      $whatsit->setProperty(headtoccaption => $toccaption) if $toccaption; }
+    if (my $captions = LookupValue('LONGTABLE_FOOT_CAPTIONS')) {
+      my ($toccaption, $caption) = @$captions;
+      $whatsit->setProperty(footcaption    => $caption)    if $caption;
+      $whatsit->setProperty(foottoccaption => $toccaption) if $toccaption; }
+    my $alignment = LookupValue('Alignment');
+    # Reinsert the head and foot into the alignment.
+    if (my $head = LookupValue('LONGTABLE_HEAD')) {
+      $alignment->prependRows(@{$head}); }
+    if (my $foot = LookupValue('LONGTABLE_FOOT')) {
+      $alignment->appendRows(@{$foot}); }
+    return; },
+  mode => 'text');
+
+DefPrimitive('\lx@longtable@bindings AlignmentTemplate', sub { longtableBindings($_[1]); });
+
+sub longtableBindings {
+  my ($template) = @_;
+  tabularBindings($template, guess_headers => 0);
+  Let('\endfirsthead', '\lx@longtable@endfirsthead');
+  Let('\endhead',      '\lx@longtable@endhead');
+  Let('\endfoot',      '\lx@longtable@endfoot');
+  Let('\endlastfoot',  '\lx@longtable@endlastfoot');
+  Let('\caption',      '\lx@longtable@caption');
+  Let('\label',        '\lx@longtable@label');
+  Let('\kill',         '\lx@longtable@kill@marker');
+  AssignValue(LONGTABLE_LABEL         => undef, 'global');    # Clear these vars.
+  AssignValue(LONGTABLE_CAPTIONS      => undef, 'global');
+  AssignValue(LONGTABLE_HEAD_CAPTIONS => undef, 'global');
+  AssignValue(LONGTABLE_FOOT_CAPTIONS => undef, 'global');
+  AssignValue(LONGTABLE_HEAD          => undef, 'global');
+  AssignValue(LONGTABLE_FOOT          => undef, 'global');
+  ## properties happen too late!!!
+  AssignValue(LONGTABLE_PROPERTIES => { RefStepCounter('table') }, 'global');
+
+  return; }
+
+#======================================================================
+# These macros appear within the longtable, at the beginning.
+# They cut of the previous lines to be used as headers or footers.
+
+DefMacro('\lx@longtable@endfirsthead', '\crcr\noalign{\lx@longtable@grab{FIRSTHEAD}}');
+DefMacro('\lx@longtable@endhead',      '\crcr\noalign{\lx@longtable@grab{HEAD}}');
+DefMacro('\lx@longtable@endfoot',      '\crcr\noalign{\lx@longtable@grab{FOOT}}');
+DefMacro('\lx@longtable@endlastfoot',  '\crcr\noalign{\lx@longtable@grab{LASTFOOT}}');
+DefMacro('\lx@longtable@kill',         '\crcr\noalign{\lx@longtable@kill@marker}');
+
+DefPrimitive('\lx@longtable@grab{}', sub {
+    my ($stomach, $name) = @_;
+    $name = ToString($name);
+    my $alignment = LookupValue('Alignment');
+    # Remove all preceding rows.
+    my @rows = ();
+    while (my $row = $alignment->removeRow) {
+      map { $$_{thead}{column} = 1; } $row->columns;
+      unshift(@rows, $row); }
+    if (($name eq 'FIRSTHEAD') || (($name eq 'HEAD') && !LookupValue('LONGTABLE_HEAD'))) {
+      AssignValue(LONGTABLE_HEAD => [@rows], 'global');
+      if (my $caption = LookupValue('LONGTABLE_CAPTIONS')) {
+        AssignValue(LONGTABLE_CAPTIONS      => undef,    'global');
+        AssignValue(LONGTABLE_HEAD_CAPTIONS => $caption, 'global'); } }
+    elsif (($name eq 'LASTFOOT') || (($name eq 'FOOT') && !LookupValue('LONGTABLE_FOOT'))) {
+      AssignValue(LONGTABLE_FOOT => [@rows], 'global');
+      if (my $caption = LookupValue('LONGTABLE_CAPTIONS')) {
+        AssignValue(LONGTABLE_CAPTIONS      => undef,    'global');
+        AssignValue(LONGTABLE_FOOT_CAPTIONS => $caption, 'global'); } }
+    return; });
+
+DefConstructor('\lx@longtable@kill@marker', '', reversion => '\kill',
+  afterDigest => sub { LookupValue('Alignment')->removeRow; return; });
+
+#======================================================================
+# Caption gets redefined.  We'll need to grab it and make it part
+# of the table, rather than the tabular.
+DefMacro('\lx@longtable@caption[]{}',
+  '\lx@longtable@caption@{\lx@format@toctitle@@{table}{\ifx.#1.#2\else#1\fi}}'
+    . '{\lx@format@title@@{table}{#2}}');
+DefPrimitive('\lx@longtable@caption@{}{}', sub {
+    AssignValue(LONGTABLE_CAPTIONS => [DigestText($_[1]), DigestText($_[2])], 'global');
+    return; });
+DefPrimitive('\lx@longtable@label Semiverbatim', sub {
+    AssignValue(LONGTABLE_LABEL => CleanLabel(ToString($_[1])), 'global');
+    return; });
+
+#======================================================================
+# Not used, but must be defined.
+DefRegister('\LTleft'      => Glue('0pt plus 1fill'));
+DefRegister('\LTright'     => Glue('0pt plus 1fill'));
+DefRegister('\LTpre'       => Glue('12pt plus 4pt minus 4pt'));
+DefRegister('\LTpost'      => Glue('12pt plus 4pt minus 4pt'));
+DefRegister('\LTcapwidth'  => Dimension('4in'));
+DefRegister('\LTchunksize' => Number(200));
+DefRegister('\LT@cols'     => Number(0));
+DefRegister('\LT@rows'     => Number(0));
+Let('\c@LTchunksize', '\LTchunksize');
+RawTeX(<<'EOL');
+\newbox\LT@head
+\newbox\LT@firsthead
+\newbox\LT@foot
+\newbox\LT@lastfoot
+\newbox\LT@gbox
+EOL
+Let('\setlongtables', '\relax');
+#======================================================================
+1;

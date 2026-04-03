@@ -163,7 +163,7 @@
   </xsl:template>
 
   <xsl:template match="ltx:listingline">
-    <xsl:apply-templates/>
+    <xsl:value-of select="."/>
     <xsl:text>&#x0A;</xsl:text>
   </xsl:template>
 
