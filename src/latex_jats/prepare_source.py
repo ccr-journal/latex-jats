@@ -19,9 +19,10 @@ import argparse
 import logging
 import subprocess
 import sys
+import unicodedata
 from pathlib import Path
 
-from latex_jats.fix_input import _collect_tex_files, fix_file
+from latex_jats.fix_input import UNICODE_BREAKERS, _collect_tex_files, fix_file
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +76,54 @@ def validate_structure(latex_dir: Path) -> list[str]:
     return warnings
 
 
+def _normalize_bbl(latex_dir: Path) -> None:
+    """Apply Unicode NFC normalization to main.bbl if it exists.
+
+    Bibtex/biber can emit decomposed Unicode (e.g. combining accents) that
+    pdflatex cannot handle. NFC normalization recombines decomposed sequences
+    into their precomposed equivalents. Any remaining combining marks that
+    NFC cannot resolve are warned about.
+    """
+    bbl = latex_dir / "main.bbl"
+    if not bbl.exists():
+        return
+    text = bbl.read_text(encoding="utf-8")
+    normalized = unicodedata.normalize("NFC", text)
+    if normalized != text:
+        bbl.write_text(normalized, encoding="utf-8")
+        logger.info("Normalized main.bbl to Unicode NFC (fixed combining characters)")
+    # Warn about any remaining combining marks that NFC couldn't resolve
+    for lineno, line in enumerate(normalized.splitlines(), 1):
+        for ch in line:
+            if unicodedata.category(ch).startswith("M"):
+                logger.warning(
+                    "main.bbl:%d: remaining combining mark U+%04X (%s) after "
+                    "NFC normalization — this will likely break pdflatex. "
+                    "Fix the .bib source entry manually.",
+                    lineno, ord(ch), unicodedata.name(ch, "UNKNOWN"),
+                )
+
+
+def _warn_unicode_issues(main_tex: Path) -> None:
+    """Warn about Unicode characters that will break pdflatex."""
+    for path in _collect_tex_files(main_tex):
+        if path.suffix == '.bib':
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+        for lineno, line in enumerate(text.splitlines(), 1):
+            for char, (replacement, desc) in UNICODE_BREAKERS.items():
+                if char in line:
+                    logger.warning(
+                        "%s:%d: Unicode %s (U+%04X) will break pdflatex — "
+                        "use --fix-simple-problems to auto-fix, or replace "
+                        "with '%s' in the source.",
+                        path.name, lineno, desc, ord(char), replacement,
+                    )
+
+
 def compile_latex(latex_dir: Path, log_dir: Path | None = None) -> bool:
     """Run pdflatex → biber/bibtex → pdflatex → pdflatex.
 
@@ -100,6 +149,8 @@ def compile_latex(latex_dir: Path, log_dir: Path | None = None) -> bool:
             bbl.unlink()
             logger.info("Removed stale main.bbl (newer .bib found)")
 
+    _normalize_bbl(latex_dir)
+
     if not _run(pdflatex, latex_dir, pdflatex_log):
         return False
 
@@ -114,6 +165,8 @@ def compile_latex(latex_dir: Path, log_dir: Path | None = None) -> bool:
 
     if not bib_ok:
         return False
+
+    _normalize_bbl(latex_dir)
 
     if not _run(pdflatex, latex_dir, pdflatex_log):
         return False
@@ -154,6 +207,9 @@ def prepare(source: Path, fix_problems: bool = False, force: bool = False,
 
     if "main.tex not found" in validate_structure(latex_dir):
         return False
+
+    # Warn about Unicode characters that will break pdflatex
+    _warn_unicode_issues(main_tex)
 
     # Optional source fixes
     fixed = 0

@@ -122,9 +122,34 @@ def fix_stray_after_includegraphics(lines: list[str], filename: str) -> list[str
     return out
 
 
+# Unicode characters that break pdflatex, mapped to (replacement, description).
+# NB: smart quotes, en/em dashes, etc. are handled fine by inputenc and are NOT
+# included here — only characters that actually cause compilation failures.
+UNICODE_BREAKERS: dict[str, tuple[str, str]] = {
+    '\u2212': ('-', 'MINUS SIGN'),
+}
+
+
+def fix_unicode_text_chars(lines: list[str], filename: str) -> list[str]:
+    """Replace Unicode characters that break pdflatex with ASCII equivalents."""
+    out = []
+    for lineno, line in enumerate(lines, 1):
+        new_line = line
+        for char, (replacement, desc) in UNICODE_BREAKERS.items():
+            if char in new_line:
+                new_line = new_line.replace(char, replacement)
+                logger.warning(
+                    "fix Unicode %s (U+%04X): %s:%d",
+                    desc, ord(char), filename, lineno,
+                )
+        out.append(new_line)
+    return out
+
+
 ALL_FIXES = [
     fix_bare_angle_brackets,
     fix_stray_after_includegraphics,
+    fix_unicode_text_chars,
 ]
 
 
@@ -148,8 +173,31 @@ def fix_bib_ampersands(lines: list[str], filename: str) -> list[str]:
     return out
 
 
+def fix_bib_dotless_i_accent(lines: list[str], filename: str) -> list[str]:
+    r"""Replace {\'\i} with {\'i} in .bib files.
+
+    The LaTeX {\'\i} (accent on dotless-i) is technically correct, but bibtex
+    expands it to decomposed Unicode (U+0131 + U+0301) that pdflatex cannot
+    handle. Using {\'i} instead produces the same visual output and avoids
+    the problem.
+    """
+    out = []
+    for lineno, line in enumerate(lines, 1):
+        new_line = line.replace(r"{\'\i}", r"{\'i}")
+        # Also handle the form without outer braces: \'\i → \'i
+        new_line = new_line.replace(r"\'\i", r"\'i")
+        if new_line != line:
+            logger.warning(
+                r"fix {\'\i} → {\'i} (avoids bibtex decomposed Unicode): %s:%d",
+                filename, lineno,
+            )
+        out.append(new_line)
+    return out
+
+
 BIB_FIXES = [
     fix_bib_ampersands,
+    fix_bib_dotless_i_accent,
 ]
 
 

@@ -1,4 +1,9 @@
-from latex_jats.fix_input import fix_bare_angle_brackets, fix_stray_after_includegraphics
+from latex_jats.fix_input import (
+    fix_bare_angle_brackets,
+    fix_bib_dotless_i_accent,
+    fix_stray_after_includegraphics,
+    fix_unicode_text_chars,
+)
 
 
 class TestFixBareAngleBrackets:
@@ -57,3 +62,32 @@ class TestFixStrayAfterIncludegraphics:
         lines = ["\\includegraphics{img.png}.\n"]
         result = fix_stray_after_includegraphics(lines, "test.tex")
         assert result == ["\\includegraphics{img.png}\n"]
+
+
+class TestFixUnicodeTextChars:
+    def test_replaces_unicode_minus(self):
+        lines = ["value = \u22120.041\n"]
+        result = fix_unicode_text_chars(lines, "test.tex")
+        assert result == ["value = -0.041\n"]
+
+    def test_no_unicode_unchanged(self):
+        lines = ["value = -0.041\n"]
+        result = fix_unicode_text_chars(lines, "test.tex")
+        assert result == lines
+
+    def test_multiple_on_same_line(self):
+        lines = ["\u22120.5 to \u22121.0\n"]
+        result = fix_unicode_text_chars(lines, "test.tex")
+        assert result == ["-0.5 to -1.0\n"]
+
+
+class TestFixBibDotlessIAccent:
+    def test_replaces_braced_form(self):
+        lines = [r"  author={Mach{\'\i}o-Regidor, Francisco}," + "\n"]
+        result = fix_bib_dotless_i_accent(lines, "test.bib")
+        assert result == [r"  author={Mach{\'i}o-Regidor, Francisco}," + "\n"]
+
+    def test_no_dotless_i_unchanged(self):
+        lines = [r"  author={Garc{\'i}a, Juan}," + "\n"]
+        result = fix_bib_dotless_i_accent(lines, "test.bib")
+        assert result == lines
