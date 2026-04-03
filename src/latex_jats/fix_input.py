@@ -58,6 +58,7 @@ def fix_bare_angle_brackets(lines: list[str], filename: str) -> list[str]:
     """
     out = []
     in_math_env = False
+    in_verbatim_env = False
     for lineno, line in enumerate(lines, 1):
         stripped = re.sub(r'(?<!\\)%.*', '', line)
 
@@ -66,7 +67,14 @@ def fix_bare_angle_brackets(lines: list[str], filename: str) -> list[str]:
         if re.search(r'\\end\{(equation|align|math|displaymath|eqnarray)', stripped):
             in_math_env = False
 
-        if in_math_env:
+        if re.search(r'\\begin\{(lstlisting|minted|verbatim)', stripped):
+            in_verbatim_env = True
+        if re.search(r'\\end\{(lstlisting|minted|verbatim)', stripped):
+            in_verbatim_env = False
+            out.append(line)
+            continue
+
+        if in_math_env or in_verbatim_env:
             out.append(line)
             continue
 
@@ -146,7 +154,60 @@ def fix_unicode_text_chars(lines: list[str], filename: str) -> list[str]:
     return out
 
 
+# Map minted language names to listings language names where they differ.
+# Languages not listed here are passed through as-is (listings handles many
+# language names identically to Pygments/minted).
+_MINTED_TO_LISTINGS_LANG: dict[str, str] = {
+    "pycon": "Python",
+    "python3": "Python",
+    "js": "Java",  # listings has no JS — Java is a rough fallback
+}
+
+
+def fix_minted_to_listings(lines: list[str], filename: str) -> list[str]:
+    r"""Replace minted environments and package with listings equivalents.
+
+    Converts \usepackage{minted} → \usepackage{listings}, removes
+    \usemintedstyle{...}, and converts \begin{minted}[opts]{lang} →
+    \begin{lstlisting}[language=Lang].
+    """
+    out = []
+    for lineno, line in enumerate(lines, 1):
+        # \usepackage{minted} → \usepackage{listings}
+        if re.match(r'\s*\\usepackage\{minted\}', line):
+            new_line = re.sub(r'\\usepackage\{minted\}', r'\\usepackage{listings}', line)
+            logger.info("fix minted→listings (usepackage): %s:%d", filename, lineno)
+            out.append(new_line)
+            continue
+
+        # Remove \usemintedstyle{...} lines entirely
+        if re.match(r'\s*\\usemintedstyle\{', line):
+            logger.info("fix minted→listings (remove usemintedstyle): %s:%d", filename, lineno)
+            continue
+
+        # \begin{minted}[opts]{lang} → \begin{lstlisting}[language=Lang]
+        m = re.match(r'(\s*)\\begin\{minted\}(?:\[[^\]]*\])?\{(\w+)\}(.*)', line)
+        if m:
+            indent, lang, rest = m.groups()
+            lang_listings = _MINTED_TO_LISTINGS_LANG.get(lang, lang.capitalize() if lang.islower() else lang)
+            new_line = f"{indent}\\begin{{lstlisting}}[language={lang_listings}]{rest}\n"
+            logger.info("fix minted→listings (begin): %s:%d", filename, lineno)
+            out.append(new_line)
+            continue
+
+        # \end{minted} → \end{lstlisting}
+        if re.match(r'\s*\\end\{minted\}', line):
+            new_line = re.sub(r'\\end\{minted\}', r'\\end{lstlisting}', line)
+            logger.info("fix minted→listings (end): %s:%d", filename, lineno)
+            out.append(new_line)
+            continue
+
+        out.append(line)
+    return out
+
+
 ALL_FIXES = [
+    fix_minted_to_listings,
     fix_bare_angle_brackets,
     fix_stray_after_includegraphics,
     fix_unicode_text_chars,

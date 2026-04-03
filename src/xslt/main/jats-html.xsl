@@ -2395,6 +2395,9 @@ or pipeline) parameterized.
     </pre>
   </xsl:template>
 
+  <xsl:template match="code"><pre class="code"><code><xsl:apply-templates/></code></pre>
+  </xsl:template>
+
 
   <xsl:template match="alternatives | name-alternatives | collab-alternatives | aff-alternatives">
     <xsl:apply-templates/>

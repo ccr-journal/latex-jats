@@ -210,11 +210,107 @@ DefMacro('\citeyearpar OptionalMatch:* [][] Semiverbatim', sub {
 
 DefMacro('\makecell OptionalMatch:* []{}', '<td style="text-align:#1;">#2</td>');
 
-# TODO: These require custom parsing code, deferred.
-#DefMacro('\parencites []{}[][]{}[][]{}','');
-#DefMacro('\cites ...','');
-#DefMacro('\autocites ...','');
-#DefMacro('\Autocites ...','');
+# -- Multicite commands: \parencites, \textcites, \autocites, etc. ----------
+# These accept repeated [pre][post]{keys} groups.  We greedily read groups
+# from the gullet, build a \@@bibref for each, and join them with semicolons.
+
+sub _read_multicite_groups {
+    my ($gullet) = @_;
+    my @groups;
+    while (1) {
+        # Peek ahead — if the next non-space token is not '[' or '{', stop.
+        $gullet->skipSpaces;
+        my $next = $gullet->readToken;
+        last unless $next;
+        my $cc = $next->getCatcode;
+        # CC_BEGIN (1) = '{', CC_OTHER (12) for '[' matched below
+        if ($cc == CC_BEGIN) {    # found '{' — keys group with no optional args
+            $gullet->unread($next);
+            my $keys = $gullet->readArg;          # reads {keys}
+            push @groups, [undef, undef, $keys];
+        } elsif (ToString($next) eq '[') {        # optional arg starts
+            $gullet->unread($next);
+            my $opt1 = $gullet->readOptional;
+            my $opt2 = $gullet->readOptional;
+            my $keys = $gullet->readArg;
+            my ($pre, $post);
+            if ($opt2) { ($pre, $post) = ($opt1, $opt2); }
+            else       { ($pre, $post) = (undef, $opt1); }
+            $pre  = undef if $pre  && IsEmpty($pre);
+            $post = undef if $post && IsEmpty($post);
+            push @groups, [$pre, $post, $keys];
+        } else {
+            $gullet->unread($next);               # not ours — put it back
+            last;
+        }
+    }
+    return @groups;
+}
+
+sub _multicite_parenthetical {
+    my ($gullet, $star) = @_;
+    my @groups = _read_multicite_groups($gullet);
+    # Fall back: if no groups were found, return empty
+    return () unless @groups;
+    my ($ns, $ay) = map { LookupValue($_) } qw(CITE_NOTE_SEPARATOR CITE_AY_SEPARATOR);
+    my $author = ($star ? "FullAuthors" : "Authors");
+    my @parts;
+    for my $g (@groups) {
+        my ($pre, $post, $keys) = @$g;
+        my @toks;
+        push @toks, $pre, T_SPACE if $pre;
+        push @toks, Invocation(T_CS('\@@bibref'),
+            Tokens(Explode("${author}Phrase1Year")),
+            $keys,
+            Invocation(T_CS('\@@citephrase'), Tokens($ay->unlist, T_SPACE)),
+            undef);
+        push @toks, $ns, T_SPACE, $post if $post;
+        push @parts, \@toks;
+    }
+    # Join groups with "; "
+    my @body;
+    for my $i (0 .. $#parts) {
+        push @body, T_OTHER(';'), T_SPACE if $i > 0;
+        push @body, @{$parts[$i]};
+    }
+    Invocation(T_CS('\@@cite'),
+        Tokens(Explode('citep')),
+        Tokens(T_OTHER('('), @body, T_OTHER(')'))); }
+
+sub _multicite_textual {
+    my ($gullet, $star) = @_;
+    my @groups = _read_multicite_groups($gullet);
+    return () unless @groups;
+    my ($open, $close, $ns) = map { LookupValue($_) } qw(CITE_OPEN CITE_CLOSE CITE_NOTE_SEPARATOR);
+    my $author = ($star ? "FullAuthors" : "Authors");
+    my @parts;
+    for my $g (@groups) {
+        my ($pre, $post, $keys) = @$g;
+        my @toks;
+        push @toks, $pre, T_SPACE if $pre;
+        push @toks, Invocation(T_CS('\@@bibref'),
+            Tokens(Explode("$author Phrase1YearPhrase2")),
+            $keys,
+            Invocation(T_CS('\@@citephrase'), Tokens(T_SPACE)),
+            undef);
+        push @toks, $ns, T_SPACE, $post if $post;
+        push @parts, \@toks;
+    }
+    my @body;
+    for my $i (0 .. $#parts) {
+        push @body, T_OTHER(';'), T_SPACE if $i > 0;
+        push @body, @{$parts[$i]};
+    }
+    Invocation(T_CS('\@@cite'),
+        Tokens(Explode('citet')),
+        Tokens(@body)); }
+
+DefMacro('\parencites OptionalMatch:*', sub { _multicite_parenthetical($_[0], $_[1]); });
+DefMacro('\Parencites OptionalMatch:*', sub { _multicite_parenthetical($_[0], $_[1]); });
+DefMacro('\autocites  OptionalMatch:*', sub { _multicite_parenthetical($_[0], $_[1]); });
+DefMacro('\Autocites  OptionalMatch:*', sub { _multicite_parenthetical($_[0], $_[1]); });
+DefMacro('\textcites  OptionalMatch:*', sub { _multicite_textual($_[0], $_[1]); });
+DefMacro('\Textcites  OptionalMatch:*', sub { _multicite_textual($_[0], $_[1]); });
 
 DefMacro('\unspace',                '\relax');     # ?
 DefMacro('\blx@imc@resetpunctfont', '\relax');     # ?

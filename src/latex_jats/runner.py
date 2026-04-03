@@ -54,6 +54,15 @@ def find_examples(specific: str | None = None) -> list[Path]:
         # Fall back to treating it as a folder name under EXAMPLES_DIR
         candidate = EXAMPLES_DIR / as_path.name
         if not candidate.is_dir():
+            # Try suffix match (e.g. "WEDE" matches "CCR2026.1.3.WEDE")
+            suffix = as_path.name.upper()
+            matches = [d for d in EXAMPLES_DIR.iterdir()
+                       if d.is_dir() and d.name.upper().endswith(suffix)]
+            if len(matches) == 1:
+                return [matches[0]]
+            if len(matches) > 1:
+                names = ', '.join(d.name for d in sorted(matches))
+                raise FileNotFoundError(f"Ambiguous example suffix {specific!r}: {names}")
             raise FileNotFoundError(f"Example not found: {candidate}")
         return [candidate]
     return sorted(p for p in EXAMPLES_DIR.iterdir() if p.is_dir() and p.name.startswith("CCR") and (p / "main.tex").exists())
@@ -159,6 +168,9 @@ def run_prepare(example_dir: Path, output_dir: Path, force: bool = False,
                 fix: bool = False) -> StepResult:
     """Run the prepare-source step and copy PDF to output tree."""
     prepare_dir = output_dir / "prepare"
+    runner_log = prepare_dir / "runner.log"
+    old_log = runner_log.read_text(encoding="utf-8") if runner_log.exists() else None
+
     result = _capture_step(
         "prepare",
         output_dir,
@@ -168,6 +180,11 @@ def run_prepare(example_dir: Path, output_dir: Path, force: bool = False,
         force=force,
         log_dir=prepare_dir,
     )
+
+    # If prepare() skipped compilation (files up to date), restore the old
+    # runner.log so the detailed output from the actual compile run is preserved.
+    if old_log and result.success and "skipping compilation" in runner_log.read_text(encoding="utf-8", errors="replace"):
+        runner_log.write_text(old_log, encoding="utf-8")
     # Copy PDF from source dir to output as <article-id>.pdf
     if result.success:
         pdf_src = example_dir / "main.pdf"
@@ -177,12 +194,34 @@ def run_prepare(example_dir: Path, output_dir: Path, force: bool = False,
     return result
 
 
+def _pdf_page_count(pdf_path: Path) -> int | None:
+    """Return the number of pages in a PDF using pdfinfo, or None on failure."""
+    import shutil
+    import subprocess
+    if not shutil.which("pdfinfo"):
+        return None
+    result = subprocess.run(["pdfinfo", str(pdf_path)], capture_output=True, text=True)
+    for line in result.stdout.splitlines():
+        if line.startswith("Pages:"):
+            try:
+                return int(line.split(":", 1)[1].strip())
+            except ValueError:
+                pass
+    return None
+
+
 def run_convert(example_dir: Path, output_dir: Path, force: bool = False) -> StepResult:
     """Run the JATS conversion step."""
     main_tex = example_dir / "main.tex"
     doi_suffix = get_doi_suffix(main_tex)
     convert_dir = output_dir / "convert"
     output_xml = convert_dir / f"{doi_suffix}.xml"
+
+    # Derive lastpage from the PDF produced in the prepare step
+    lastpage = None
+    pdf_files = list((output_dir / "prepare").glob("*.pdf"))
+    if pdf_files:
+        lastpage = _pdf_page_count(pdf_files[0])
 
     result = _capture_step(
         "convert",
@@ -191,6 +230,7 @@ def run_convert(example_dir: Path, output_dir: Path, force: bool = False) -> Ste
         main_tex,
         output_xml,
         html=True,
+        lastpage=lastpage,
     )
 
     return result
@@ -293,7 +333,7 @@ def generate_index(output_root: Path):
         "<title>CCR Preview</title>",
         "<style>",
         "body { font-family: sans-serif; max-width: 900px; margin: 2em auto; }",
-        ".ok { color: green; } .warn { color: orange; } .fail { color: red; } .skip { color: gray; }",
+        ".ok { color: green; } .note { color: #b8860b; } .warn { color: orange; } .fail { color: red; } .skip { color: gray; }",
         "table { border-collapse: collapse; width: 100%; }",
         "th, td { border: 1px solid #ccc; padding: 6px 10px; text-align: left; white-space: nowrap; }",
         "</style>",
@@ -334,8 +374,27 @@ def generate_index(output_root: Path):
                 success = data.get("success")
             except (json.JSONDecodeError, KeyError):
                 success = None
-            css = "ok" if success else ("fail" if success is False else "skip")
-            label = "ok" if success else ("failed" if success is False else "?")
+            runner_log = step_dir / "runner.log"
+            n_errors = n_warnings = 0
+            if success and runner_log.exists():
+                for line in runner_log.read_text(errors="replace").splitlines():
+                    if not line.startswith("WARNING:"):
+                        continue
+                    if "WARNING: LaTeXML: Error:" in line:
+                        n_errors += 1
+                    else:
+                        n_warnings += 1
+            if not success:
+                css, label = ("fail" if success is False else "skip"), ("failed" if success is False else "?")
+            elif n_errors:
+                parts = [f"{n_errors} error{'s' if n_errors != 1 else ''}"]
+                if n_warnings:
+                    parts.append(f"{n_warnings} warning{'s' if n_warnings != 1 else ''}")
+                css, label = "warn", ", ".join(parts)
+            elif n_warnings:
+                css, label = "note", f"{n_warnings} warning{'s' if n_warnings != 1 else ''}"
+            else:
+                css, label = "ok", "ok"
             result = f'<span class="{css}">{label}</span>'
             log_links = []
             for log_file in sorted(step_dir.rglob("*.log")):

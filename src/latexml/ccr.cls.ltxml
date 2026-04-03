@@ -24,6 +24,22 @@ RequirePackage('etoolbox');
 RequirePackage('csquotes');
 RequirePackage('biblatex');
 
+# Override the 'list' environment to avoid a bgroup mismatch when the second argument
+# contains \setlength (the \begingroup it introduces conflicts with \lx@list's boxing bgroup).
+# Using DefEnvironment intercepts \begin{list} without affecting biblatex's direct \list{field}{n}{val}
+# macro calls in .bbl files. Label format and spacing are discarded (irrelevant for JATS output).
+DefEnvironment('{list}{}{}',
+  "<ltx:itemize xml:id='#id'>#body</ltx:itemize>",
+  beforeDigestEnd => sub { Digest('\par'); },
+  mode => 'text');
+# DefEnvironment installs a 2-arg \list fallback that overwrites biblatex's locked 3-arg
+# \list{field}{count}{value} used in .bbl files. Restore biblatex's definition explicitly.
+DefMacro('\list{}{}{}', sub {
+    my ($gullet, $fieldname, $count, $value) = @_;
+    my $entry = LookupValue('biblatex_entry');
+    $$entry{ ToString($fieldname) } = Expand($value) if $entry;
+    return (); });
+
 # Define macros from ccr.cls
 DefMacro('\shorttitle', '');
 DefMacro('\show@shorttitle', '\textbf{Short Title Placeholder}');

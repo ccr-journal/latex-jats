@@ -137,8 +137,12 @@ def compile_latex(latex_dir: Path, log_dir: Path | None = None) -> bool:
     """
     import shutil
 
-    pdflatex = ["pdflatex", "-interaction=nonstopmode", "-halt-on-error", "main.tex"]
+    pdflatex = [
+        "pdflatex", "-interaction=nonstopmode",
+        r"\pdfminorversion=7\input{main.tex}",
+    ]
     pdflatex_log = log_dir / "pdflatex.log" if log_dir else None
+    pdf_path = latex_dir / "main.pdf"
 
     # Remove stale .bbl if .bib is newer, so pdflatex doesn't choke on it
     bbl = latex_dir / "main.bbl"
@@ -152,7 +156,9 @@ def compile_latex(latex_dir: Path, log_dir: Path | None = None) -> bool:
     _normalize_bbl(latex_dir)
 
     if not _run(pdflatex, latex_dir, pdflatex_log):
-        return False
+        if not pdf_path.exists():
+            return False
+        logger.warning("pdflatex exited with errors but produced a PDF — continuing")
 
     if (latex_dir / "main.bcf").exists():
         logger.info("Detected biblatex/biber (.bcf present)")
@@ -169,9 +175,13 @@ def compile_latex(latex_dir: Path, log_dir: Path | None = None) -> bool:
     _normalize_bbl(latex_dir)
 
     if not _run(pdflatex, latex_dir, pdflatex_log):
-        return False
+        if not pdf_path.exists():
+            return False
+        logger.warning("pdflatex exited with errors but produced a PDF — continuing")
     if not _run(pdflatex, latex_dir, pdflatex_log):
-        return False
+        if not pdf_path.exists():
+            return False
+        logger.warning("pdflatex exited with errors but produced a PDF — continuing")
 
     # Copy TeX's own detailed log files into log_dir
     if log_dir:
