@@ -1,0 +1,57 @@
+# -*- mode: Perl -*-
+# Minimal LaTeXML binding for the tabu package.
+#
+# The tabu environment extends tabular with:
+#   \begin{tabu}[pos] to <dimen> {cols}   -- stretch to width
+#   \begin{tabu}[pos] spread <dimen> {cols} -- spread by amount
+#   \begin{tabu}[pos] {cols}               -- like tabular
+#
+# We ignore the width specification and delegate to standard tabular,
+# loading tabularx first so the X column type is available.
+package LaTeXML::Package::Pool;
+use strict;
+use warnings;
+use LaTeXML::Package;
+
+RequirePackage('tabularx');    # provides the X stretch column type
+
+# DefColumnType for X is already done by tabularx; no need to repeat it.
+
+# \begin{tabu} ... {cols} body \end{tabu}
+# The begin macro consumes any "to <dimen>" or "spread <dimen>" prefix
+# before the braced column spec, then expands to standard tabular.
+DefMacro('\tabu', sub {
+    my ($gullet) = @_;
+    $gullet->skipSpaces;
+    # Consume tokens until we reach the { opening the column spec.
+    while (1) {
+        my $tok = $gullet->readToken;
+        last unless defined $tok;
+        if ($tok->getCatcode == CC_BEGIN) {
+            # Put the opening brace back so \tabu@body can read {cols}.
+            $gullet->unread($tok);
+            last;
+        }
+        # Discard tokens belonging to "to \linewidth", "spread 10pt", etc.
+    }
+    return T_CS('\tabu@body');
+});
+
+# \tabu@body takes an optional [pos] (which tabu never actually emits before
+# the { we left in the stream, so it will be empty) and the {cols} spec.
+DefMacro('\tabu@body []{}',
+    '\@tabular@bindings{#2}[vattach=#1]\@@tabular[#1]{#2}\@start@alignment');
+DefMacro('\endtabu', '\@finish@alignment\@end@tabular');
+
+# tabu* is the same as tabu.
+Let('\csname tabu*\endcsname',    '\tabu');
+Let('\csname endtabu*\endcsname', '\endtabu');
+
+# tabu line commands (treat as \hline / no-ops).
+DefMacro('\tabucline OptionalKeyVals {}', '\hline');
+DefMacro('\firsthline',                  '\hline');
+DefMacro('\lasthline',                   '\hline');
+DefMacro('\everyrow {}',                 '');
+DefMacro('\tabulinesep',                 '');
+
+1;

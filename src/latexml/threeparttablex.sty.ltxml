@@ -1,0 +1,24 @@
+# -*- mode: Perl -*-
+# Minimal LaTeXML binding for the threeparttablex package.
+#
+# threeparttablex adapts the threeparttable interface (TableNotes / \tnote)
+# for use with longtable and tabu.  For JATS output we simply suppress the
+# note markers (\tnote) and ignore the TableNotes block.
+package LaTeXML::Package::Pool;
+use strict;
+use warnings;
+use LaTeXML::Package;
+
+# TableNotes environment: ignore its content.
+DefEnvironment('{TableNotes}[]', '');
+
+# \tnote{label} — superscript note marker; suppress.
+DefMacro('\tnote {}', '');
+
+# \TPTnoteSettings — configuration hook; no-op.
+DefMacro('\TPTnoteSettings', '');
+
+# \TPTminimum — length register; define as a no-op.
+DefRegister('\TPTminimum' => Dimension('0pt'));
+
+1;

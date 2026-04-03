@@ -37,6 +37,7 @@ def _warn_bare_greater_than(tex_path):
         except UnicodeDecodeError:
             lines = fpath.read_text(encoding="latin-1").splitlines()
         in_math_env = False
+        in_verbatim_env = False
         for lineno, line in enumerate(lines, 1):
             stripped = re.sub(r'(?<!\\)%.*', '', line)  # remove comments (but not \%)
             # track math environments (simple heuristic)
@@ -44,14 +45,45 @@ def _warn_bare_greater_than(tex_path):
                 in_math_env = True
             if re.search(r'\\end\{(equation|align|math|displaymath|eqnarray)', stripped):
                 in_math_env = False
-            if in_math_env:
+            if re.search(r'\\begin\{(lstlisting|minted|verbatim)', stripped):
+                in_verbatim_env = True
+            if re.search(r'\\end\{(lstlisting|minted|verbatim)', stripped):
+                in_verbatim_env = False
+            if in_math_env or in_verbatim_env:
                 continue
-            # strip inline math ($...$) before checking
+            # skip tabular/array column specs like >{\raggedright...}
+            if re.search(r'>\s*\{\\', stripped):
+                continue
+            # strip inline math ($...$) and arabtex insertions (\<...>) before checking
             text_only = re.sub(r'\$[^$]*\$', '', stripped)
+            text_only = re.sub(r'\\<[^>]*>', '', text_only)
             if re.search(r'[<>]', text_only):
                 logger.warning(f'bare > or < in text mode ({fpath.name}:{lineno}): '
                                f'LaTeXML will render this as ¿ or ¡. '
                                f'Use $\\ge$, $\\le$, $>$, or $<$ instead.')
+
+
+def _warn_transliteration_packages(tex_path):
+    """Warn when transliteration packages (arabtex, cjhebrew) are used.
+
+    These packages use custom transliteration schemes that cannot be converted
+    to Unicode in the JATS/HTML output. Authors should use Unicode text directly
+    (which requires XeLaTeX or LuaLaTeX).
+    """
+    try:
+        preamble = tex_path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        preamble = tex_path.read_text(encoding="latin-1")
+    packages = {"arabtex": "Arabic", "cjhebrew": "Hebrew"}
+    for pkg, lang in packages.items():
+        if re.search(rf'\\usepackage\{{({pkg})\}}', preamble):
+            logger.warning(
+                "%s uses %s for %s transliteration. "
+                "Non-Latin text will appear as romanized transliteration in "
+                "the JATS/HTML output. Consider using Unicode %s text with "
+                "XeLaTeX instead.",
+                tex_path.name, pkg, lang, lang,
+            )
 
 
 def _warn_title_in_table(tex_path):
@@ -131,7 +163,33 @@ def convert_to_html(xml_file, html_file):
         f.write(etree.tostring(result, pretty_print=True))
     _move_keywords_to_front(html_file)
     _reformat_article_info_cell(html_file)
+    _fix_pre_code_whitespace(html_file)
     shutil.copy2(CSS_SRC, Path(html_file).parent / "jats-preview.css")
+
+
+def _fix_pre_code_whitespace(html_file):
+    """Remove pretty-printer whitespace between <pre> and its <code> child."""
+    from lxml import html as lxml_html
+
+    tree = lxml_html.parse(html_file)
+    root = tree.getroot()
+    changed = False
+    for pre in root.xpath('//pre[code]'):
+        code = pre.find('code')
+        if pre.text and not pre.text.strip():
+            pre.text = None
+            changed = True
+        if code is not None and code.tail and not code.tail.strip():
+            code.tail = None
+            changed = True
+    if changed:
+        doctype = (
+            b'<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"'
+            b' "http://www.w3.org/TR/html4/loose.dtd">\n'
+        )
+        with open(html_file, "wb") as f:
+            f.write(doctype)
+            f.write(lxml_html.tostring(root, pretty_print=True))
 
 
 def _move_keywords_to_front(html_file):
@@ -345,6 +403,37 @@ def fix_listing_data(latexml_xml_path):
         tree.write(latexml_xml_path, encoding="unicode", xml_declaration=True)
 
 
+_LATEXML_NOISE = {
+    # latexmlpost always reports this when the intermediate XML doesn't have a schema
+    "Error:malformed:document",
+    # graphics not found during post-processing is expected (images not always present)
+    "Warning:expected:source",
+    "Warning:expected:schema",
+    # \linewidth/\textwidth used as tabularx/adjustbox width — print-layout hint,
+    # irrelevant for JATS; tables are still converted correctly
+    "Warning:expected:<number>",
+    # csquotes warns when inputenc is not loaded before it, but ccr.cls controls the
+    # load order and the warning is harmless — csquotes works correctly regardless
+    "Warning:latex:(csquotes)",
+}
+
+
+def _report_latexml_issues(log_path: Path):
+    """Parse a LaTeXML log file and emit logging.warning() for Error/Warning lines.
+
+    Skips known-noisy entries that occur on every run regardless of source quality.
+    Emitted lines are prefixed with "LaTeXML: " so the runner can distinguish them
+    from other pipeline warnings.
+    """
+    for line in log_path.read_text(errors="replace").splitlines():
+        if not (line.startswith("Error:") or line.startswith("Warning:")):
+            continue
+        category = line.split(" ", 1)[0]  # e.g. "Error:malformed:document"
+        if category in _LATEXML_NOISE:
+            continue
+        logger.warning("LaTeXML: %s", line)
+
+
 def run_latexmlc(input_tex, output_xml, log_dir=None):
     """Runs latexmlc to convert a LaTeX file to JATS XML.
 
@@ -378,6 +467,9 @@ def run_latexmlc(input_tex, output_xml, log_dir=None):
             latexmlc_cmd.append(f"--log={latexml_log}")
         subprocess.run(latexmlc_cmd, check=True)
 
+        if latexml_log and Path(latexml_log).exists():
+            _report_latexml_issues(Path(latexml_log))
+
         fix_listing_data(str(latexml_path))
 
         post_cmd = ["latexmlpost", f"--stylesheet={xsl_path}", "--format=jats",
@@ -385,6 +477,9 @@ def run_latexmlc(input_tex, output_xml, log_dir=None):
         if post_log:
             post_cmd.append(f"--log={post_log}")
         subprocess.run(post_cmd, check=True)
+
+        if post_log and Path(post_log).exists():
+            _report_latexml_issues(Path(post_log))
     finally:
         latexml_path.unlink(missing_ok=True)
         xsl_path.unlink(missing_ok=True)
@@ -494,7 +589,7 @@ def _warn_stray_text_after_includegraphics(tex_path):
             lines = fpath.read_text(encoding="latin-1").splitlines()
         for lineno, line in enumerate(lines, 1):
             stripped = re.sub(r'(?<!\\)%.*', '', line)
-            m = re.search(r'\\includegraphics(?:\[[^\]]*\])?\{[^}]+\}\s*([^\s%\\])', stripped)
+            m = re.search(r'\\includegraphics(?:\[[^\]]*\])?\{[^}]+\}\s*([^\s%\\}])', stripped)
             if m:
                 logger.warning(
                     r'Stray text after \includegraphics (%s:%d): %r — '
@@ -1245,7 +1340,9 @@ def fix_references(jats_file, bbl_file):
         flat_text = ''.join(mc.itertext())
         authors = entry.get('authors', [])
         first_family = authors[0]['family'] if authors else ''
-        if first_family and first_family not in flat_text:
+        def _letters(s):
+            return ''.join(c for c in s if c.isalpha()).lower()
+        if first_family and _letters(first_family) not in _letters(flat_text):
             logger.warning(f"bbl key {entry['key']!r}: "
                           f"family name {first_family!r} not in ref text; skipping")
             continue
@@ -1348,7 +1445,7 @@ def fix_xref_ref_types(jats_file):
     tree.write(jats_file, encoding="unicode")
 
 
-def fix_metadata(jats_file, tex_file):
+def fix_metadata(jats_file, tex_file, lastpage=None):
     """Replaces journal-meta with a constant CCR block and injects article metadata
     (doi, publisher-id, volume, issue, fpage, pub-date) extracted from the LaTeX preamble."""
     ET.register_namespace("xlink", "http://www.w3.org/1999/xlink")
@@ -1425,14 +1522,13 @@ def fix_metadata(jats_file, tex_file):
         issue = ET.Element("issue")
         issue.text = pubnumber_val
         new_elems.append(issue)
-    if firstpage_val:
-        fpage = ET.Element("fpage")
-        fpage.text = firstpage_val
-        new_elems.append(fpage)
-    lastpage_val = _get("lastpage")
+    fpage = ET.Element("fpage")
+    fpage.text = firstpage_val or "1"
+    new_elems.append(fpage)
+    lastpage_val = _get("lastpage") or lastpage
     if lastpage_val:
         lpage = ET.Element("lpage")
-        lpage.text = lastpage_val
+        lpage.text = str(lastpage_val)
         new_elems.append(lpage)
     else:
         logger.warning("No \\lastpage in LaTeX preamble; <lpage> will be missing from JATS output")
@@ -1495,6 +1591,65 @@ _ROOT_ATTRS = {
 }
 
 
+def _convert_pdf_figures(jats_file, latex_dir):
+    """Convert PDF figures referenced in JATS to SVG using inkscape.
+
+    After fix_pdf_graphic_refs rewrites ``<graphic href="fig.pdf"/>`` to
+    ``<graphic href="fig.svg"/>``, the SVG files need to exist.  For each
+    ``.svg`` href whose source ``.pdf`` exists in latex_dir, this function
+    converts it with inkscape.  Skips silently if inkscape is not installed
+    (the broken reference will remain; the author should supply SVG/PNG files).
+    """
+    if not shutil.which("inkscape"):
+        # Collect PDF-sourced hrefs to warn about
+        XLINK = "http://www.w3.org/1999/xlink"
+        tree = ET.parse(jats_file)
+        root = tree.getroot()
+        pdf_srcs = []
+        for el in root.iter("graphic"):
+            href = el.get(f"{{{XLINK}}}href", "")
+            if href.lower().endswith(".svg"):
+                pdf_src = latex_dir / (href[:-4] + ".pdf")
+                if pdf_src.exists():
+                    pdf_srcs.append(href)
+        if pdf_srcs:
+            logger.warning(
+                "inkscape not installed — PDF figures cannot be converted to SVG: %s. "
+                "Install inkscape or supply SVG/PNG files instead.",
+                ", ".join(pdf_srcs),
+            )
+        return
+
+    XLINK = "http://www.w3.org/1999/xlink"
+    tree = ET.parse(jats_file)
+    root = tree.getroot()
+    output_dir = Path(jats_file).parent
+
+    for el in root.iter("graphic"):
+        href = el.get(f"{{{XLINK}}}href", "")
+        if not href.lower().endswith(".svg"):
+            continue
+        svg_dest = output_dir / href
+        pdf_src = latex_dir / (href[:-4] + ".pdf")
+        if not pdf_src.exists():
+            continue
+        if svg_dest.exists() and svg_dest.stat().st_mtime >= pdf_src.stat().st_mtime:
+            continue
+        svg_dest.parent.mkdir(parents=True, exist_ok=True)
+        result = subprocess.run(
+            ["inkscape", "--export-type=svg", f"--export-filename={svg_dest}", str(pdf_src)],
+            capture_output=True,
+        )
+        if result.returncode == 0:
+            logger.info("Converted PDF figure to SVG: %s", href)
+        else:
+            logger.warning(
+                "inkscape failed to convert %s to SVG (exit %d): %s",
+                pdf_src.name, result.returncode,
+                result.stderr.decode(errors="replace").strip(),
+            )
+
+
 def fix_pdf_graphic_refs(jats_file):
     """Rewrite <graphic xlink:href="...*.pdf"/> to .svg.
 
@@ -1516,6 +1671,78 @@ def fix_pdf_graphic_refs(jats_file):
     if count:
         tree.write(jats_file, encoding="unicode")
         logger.info(f"Rewrote {count} graphic reference(s) from .pdf to .svg")
+
+
+def _read_aux_labels(aux_path):
+    """Parse \\newlabel entries from a LaTeX .aux file.
+
+    Returns a dict mapping label key to its first counter value, e.g.
+    {'line:c1l2': '2', 'tbl-metrics': '3', ...}.
+    """
+    labels = {}
+    try:
+        text = Path(aux_path).read_text(encoding="utf-8", errors="replace")
+    except FileNotFoundError:
+        return labels
+    for m in re.finditer(r'\\newlabel\{([^}]+)\}\{\{([^}]*)\}', text):
+        key, value = m.group(1), m.group(2)
+        if key not in labels:
+            labels[key] = value
+    return labels
+
+
+def fix_lstlisting_labels(jats_file, tex_file):
+    """Fix \\label markers and cross-references inside lstlisting code blocks.
+
+    LaTeXML's lstlisting binding stores verbatim text including escape-char
+    sequences such as ``$\\label{line:c1l2}$`` (where ``$`` is the escapechar).
+    These sequences appear literally in the JATS <code> elements.  This function:
+
+    1. Strips ``$\\label{...}$`` markers from <code> elements (they produce no
+       visible output in the PDF; they are just anchor markers).
+    2. Converts common math-mode escape sequences used for special characters:
+       ``$>$`` → ``>``, ``$<$`` → ``<``.
+    3. Resolves unresolved <xref> elements whose text is ``LABEL:<key>`` by
+       looking up the counter value from the .aux file and replacing the
+       content with the plain number (e.g. ``2``).  Since JATS code blocks have
+       no line-level anchors, the xref becomes plain text (rid is removed).
+    """
+    aux_path = Path(tex_file).with_suffix(".aux")
+    labels = _read_aux_labels(aux_path)
+
+    ET.register_namespace("xlink", "http://www.w3.org/1999/xlink")
+    tree = ET.parse(jats_file)
+    root = tree.getroot()
+    changed = False
+
+    # 1 & 2: clean code block text
+    for code in root.iter("code"):
+        if code.text:
+            new_text = code.text
+            new_text = re.sub(r'\$\\label\{[^}]+\}\$', '', new_text)
+            new_text = new_text.replace('$>$', '>').replace('$<$', '<')
+            if new_text != code.text:
+                code.text = new_text
+                changed = True
+
+    # 3: resolve unresolved label xrefs in text
+    for xref in root.iter("xref"):
+        text = xref.text or ''
+        m = re.match(r'^LABEL:(.+)$', text)
+        if not m:
+            continue
+        label_key = m.group(1)
+        value = labels.get(label_key)
+        if value is not None:
+            xref.text = value
+            # Remove the rid since there is no target element in JATS
+            xref.attrib.pop("rid", None)
+            changed = True
+        else:
+            logger.warning("Unresolved lstlisting label reference: %s", label_key)
+
+    if changed:
+        tree.write(jats_file, encoding="unicode")
 
 
 def fix_ext_links(jats_file):
@@ -1562,7 +1789,7 @@ def resolve_output_path(input_path: Path) -> Path:
     return input_path.parent.parent / "output" / f"{get_doi_suffix(input_path)}.xml"
 
 
-def convert(input_path: Path, output_path: Path, html: bool = False) -> None:
+def convert(input_path: Path, output_path: Path, html: bool = False, lastpage=None) -> None:
     """Convert a LaTeX file to JATS XML (and optionally HTML).
 
     This is the programmatic API used by the runner. Raises on failure.
@@ -1576,6 +1803,7 @@ def convert(input_path: Path, output_path: Path, html: bool = False) -> None:
     _warn_bare_greater_than(input_path)
     _warn_title_in_table(input_path)
     _warn_stray_text_after_includegraphics(input_path)
+    _warn_transliteration_packages(input_path)
 
     # step 1: LaTeX to JATS conversion
     logger.info("Step 1: Converting LaTeX to JATS XML...")
@@ -1585,7 +1813,7 @@ def convert(input_path: Path, output_path: Path, html: bool = False) -> None:
     logger.info("Step 2: Post-processing JATS XML...")
     sanitize_ids(str(output_path))
     fix_citation_ref_types(str(output_path))
-    fix_metadata(str(output_path), str(input_path))
+    fix_metadata(str(output_path), str(input_path), lastpage=lastpage)
     fix_table_in_p(str(output_path))
     fix_table_notes(str(output_path))
     warn_tfoot_notes(str(output_path))
@@ -1601,6 +1829,7 @@ def convert(input_path: Path, output_path: Path, html: bool = False) -> None:
         fix_references(str(output_path), str(bbl_file))
     else:
         logger.warning(f'no .bbl file at {bbl_file}; references will be plain text')
+    fix_lstlisting_labels(str(output_path), str(input_path))
     fix_ext_links(str(output_path))
     fix_pdf_graphic_refs(str(output_path))
     finalize_xml(str(output_path))
@@ -1621,6 +1850,10 @@ def convert(input_path: Path, output_path: Path, html: bool = False) -> None:
                 copied.append(str(rel))
     if copied:
         logger.info(f"Copied {len(copied)} image(s) to output: {', '.join(copied)}")
+
+    # step 2d: convert PDF figures to SVG for any .pdf files referenced as graphics
+    # (fix_pdf_graphic_refs already rewrote the JATS hrefs to .svg)
+    _convert_pdf_figures(output_path, latex_dir)
 
     # step 3 (optional): generate HTML preview
     if html:
