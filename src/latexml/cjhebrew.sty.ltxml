@@ -1,0 +1,14 @@
+package LaTeXML::Package;
+use strict;
+use LaTeXML::Package;
+
+# Minimal binding for cjhebrew: \cjRL{transliteration} renders Hebrew text.
+# We pass the transliteration through as-is since we cannot convert to Unicode
+# Hebrew without a full transliteration table. Authors will see the
+# transliteration in the JATS output.
+DefMacro('\cjRL{}', sub {
+  my ($gullet, $text) = @_;
+  return Invocation(T_CS('\text'), $text);
+});
+
+1;

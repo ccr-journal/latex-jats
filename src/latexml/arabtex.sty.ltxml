@@ -1,0 +1,19 @@
+package LaTeXML::Package;
+use strict;
+use LaTeXML::Package;
+
+# Minimal binding for arabtex.
+# \< starts an Arabic transliteration that reads until >.
+# We pass the transliteration through as-is since we cannot convert
+# to Arabic script without arabtex's full transliteration engine.
+DefMacro('\<', sub {
+  my ($gullet) = @_;
+  my @tokens = ();
+  while (my $tok = $gullet->readToken()) {
+    last if ToString($tok) eq '>';
+    push(@tokens, $tok);
+  }
+  return (T_CS('\textit'), T_BEGIN, @tokens, T_END);
+});
+
+1;

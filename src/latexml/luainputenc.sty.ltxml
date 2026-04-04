@@ -1,0 +1,5 @@
+package LaTeXML::Package;
+use strict;
+# luainputenc is the LuaTeX variant of inputenc; functionally identical for LaTeXML
+RequirePackage('inputenc');
+1;
