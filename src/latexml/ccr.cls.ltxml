@@ -27,6 +27,11 @@ DefMacro('\resizebox OptionalMatch:* {}{}{}', '#3');
 DefMacro('\maxwidth', '\linewidth');
 RequirePackage('etoolbox');
 RequirePackage('csquotes');
+# \MakeOuterQuote{"} makes " an active smart-quote toggle in PDF typesetting.
+# LaTeXML doesn't support this and the unmatched active chars cause cascading
+# "unbalanced groups" errors. Safe to ignore since JATS uses Unicode quotes.
+DefMacro('\MakeOuterQuote{}', '');
+DefMacro('\MakeInnerQuote{}', '');
 RequirePackage('biblatex');
 
 # lstlisting's literate= option exists only for PDF typesetting (e.g. replacing Unicode
