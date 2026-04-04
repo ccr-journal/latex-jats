@@ -21,7 +21,7 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
-from latex_jats.convert import convert, get_doi_suffix, preprocess_for_latexml, validate_jats
+from latex_jats.convert import convert, create_publisher_zip, get_doi_suffix, preprocess_for_latexml, validate_jats
 from latex_jats.prepare_source import compile_latex, prepare_workspace
 
 logger = logging.getLogger(__name__)
@@ -252,6 +252,18 @@ def run_convert(example_dir: Path, output_dir: Path, workspace_dir: Path) -> Ste
         lastpage=lastpage,
     )
 
+    # Create publisher zip after successful conversion
+    if result.success:
+        pdf_path = None
+        pdf_files = list((output_dir / "compile").glob("*.pdf"))
+        if pdf_files:
+            pdf_path = pdf_files[0]
+        zip_path = convert_dir / f"{doi_suffix}.zip"
+        try:
+            create_publisher_zip(output_xml, pdf_path, zip_path)
+        except Exception:
+            logger.exception("Failed to create publisher zip")
+
     return result
 
 
@@ -410,7 +422,7 @@ def generate_index(output_root: Path):
         "</style>",
         "</head><body>",
         "<h1>CCR Article Previews</h1>",
-        "<table><tr><th>Article</th><th>HTML</th><th>XML</th><th>PDF</th><th>Prepare</th><th>Compile</th><th>Convert</th><th>Validate</th></tr>",
+        "<table><tr><th>Article</th><th>HTML</th><th>XML</th><th>PDF</th><th>ZIP</th><th>Prepare</th><th>Compile</th><th>Convert</th><th>Validate</th></tr>",
     ]
 
     for article_dir in articles:
@@ -420,16 +432,20 @@ def generate_index(output_root: Path):
         convert_dir = article_dir / "convert"
         validate_dir = article_dir / "validate"
 
-        # Output links (HTML, XML, PDF) as separate cells
+        # Output links (HTML, XML, PDF, ZIP) as separate cells
         html_link = "-"
         xml_link = "-"
         pdf_link = "-"
+        zip_link = "-"
         if convert_dir.exists():
             for f in convert_dir.glob("*.html"):
                 html_link = f'<a href="{article}/convert/{f.name}">HTML</a>'
                 break
             for f in convert_dir.glob("*.xml"):
                 xml_link = f'<a href="{article}/convert/{f.name}">XML</a>'
+                break
+            for f in convert_dir.glob("*.zip"):
+                zip_link = f'<a href="{article}/convert/{f.name}">ZIP</a>'
                 break
         if compile_dir.exists():
             for f in compile_dir.glob("*.pdf"):
@@ -519,7 +535,7 @@ def generate_index(output_root: Path):
 
         lines.append(
             f"<tr><td><strong>{article}</strong></td>"
-            f"<td>{html_link}</td><td>{xml_link}</td><td>{pdf_link}</td>"
+            f"<td>{html_link}</td><td>{xml_link}</td><td>{pdf_link}</td><td>{zip_link}</td>"
             f"<td>{_step_cell(prepare_dir)}</td>"
             f"<td>{_step_cell(compile_dir)}</td>"
             f"<td>{_step_cell(convert_dir)}</td>"

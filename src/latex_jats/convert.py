@@ -4,6 +4,7 @@ import re
 import shutil
 import subprocess
 import xml.etree.ElementTree as ET
+import zipfile
 from pathlib import Path
 from lxml import etree
 
@@ -1930,6 +1931,45 @@ def resolve_output_path(input_path: Path) -> Path:
     return input_path.parent.parent / "output" / f"{get_doi_suffix(input_path)}.xml"
 
 
+def rename_graphics(jats_file):
+    """Rename graphic files to publisher format (ID_fig1.ext, ID_fig2.ext, ...).
+
+    Renames the actual files in the output directory and rewrites the
+    <graphic xlink:href="..."/> references in the JATS XML to match.
+    """
+    XLINK = "http://www.w3.org/1999/xlink"
+    ET.register_namespace("xlink", XLINK)
+
+    jats_path = Path(jats_file)
+    article_id = jats_path.stem  # e.g. CCR2025.1.2.YAO
+    output_dir = jats_path.parent
+
+    tree = ET.parse(jats_file)
+    root = tree.getroot()
+
+    fig_num = 0
+    changed = False
+    for el in root.iter("graphic"):
+        href = el.get(f"{{{XLINK}}}href", "")
+        if not href or href.startswith("http"):
+            continue
+        src = output_dir / href
+        if not src.exists():
+            logger.warning("Image %s referenced in XML but not found in %s", href, output_dir)
+            continue
+        fig_num += 1
+        new_name = f"{article_id}_fig{fig_num}{src.suffix}"
+        dest = output_dir / new_name
+        if src != dest:
+            src.rename(dest)
+        el.set(f"{{{XLINK}}}href", new_name)
+        changed = True
+
+    if changed:
+        tree.write(jats_file, encoding="unicode")
+        logger.info("Renamed %d graphic(s) to publisher format (%s_fig1..)", fig_num, article_id)
+
+
 def convert(input_path: Path, output_path: Path, html: bool = False, lastpage=None) -> None:
     """Convert a LaTeX file to JATS XML (and optionally HTML).
 
@@ -1991,6 +2031,9 @@ def convert(input_path: Path, output_path: Path, html: bool = False, lastpage=No
     # (fix_pdf_graphic_refs already rewrote the JATS hrefs to .svg)
     _convert_pdf_figures(output_path, latex_dir)
 
+    # step 2e: rename graphics to publisher format (ID_fig1.ext, ID_fig2.ext, ...)
+    rename_graphics(str(output_path))
+
     # step 3 (optional): generate HTML preview
     if html:
         html_path = output_path.with_suffix(".html")
@@ -1998,6 +2041,43 @@ def convert(input_path: Path, output_path: Path, html: bool = False, lastpage=No
         convert_to_html(str(output_path), str(html_path))
         logger.info(f"Saved HTML preview in {html_path}")
 
+
+
+def create_publisher_zip(xml_path: Path, pdf_path: Path | None, zip_path: Path) -> None:
+    """Create a publisher-format zip: ID/ID.xml, ID/ID.pdf, ID/ID_fig1.png, ...
+
+    Graphics should already be renamed by rename_graphics() during conversion.
+    This function simply packages the XML, PDF, and referenced images.
+    """
+    XLINK = "http://www.w3.org/1999/xlink"
+    article_id = xml_path.stem
+    output_dir = xml_path.parent
+
+    tree = ET.parse(xml_path)
+    root = tree.getroot()
+
+    zip_path.parent.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.write(xml_path, f"{article_id}/{article_id}.xml")
+
+        if pdf_path and pdf_path.exists():
+            zf.write(pdf_path, f"{article_id}/{article_id}.pdf")
+        else:
+            logger.warning("No PDF found for publisher zip")
+
+        n_images = 0
+        for el in root.iter("graphic"):
+            href = el.get(f"{{{XLINK}}}href", "")
+            if not href or href.startswith("http"):
+                continue
+            src = output_dir / href
+            if src.exists():
+                zf.write(src, f"{article_id}/{href}")
+                n_images += 1
+            else:
+                logger.warning("Image %s not found for zip", href)
+
+    logger.info("Created publisher zip: %s (%d image(s))", zip_path, n_images)
 
 
 def main():
@@ -2010,6 +2090,7 @@ def main():
     parser.add_argument("input", help="Input LaTeX file")
     parser.add_argument("output", nargs="?", help="Output JATS XML file (default: <article>/output/<doi-suffix>.xml)")
     parser.add_argument("--html", action="store_true", help="Also generate an HTML preview via the NCBI JATS stylesheet")
+    parser.add_argument("--zip", action="store_true", help="Also generate a publisher-format zip (ID/ID.xml, ID/ID.pdf, ID/ID_figN.ext)")
     args = parser.parse_args()
 
     input_path = Path(args.input)
@@ -2022,6 +2103,16 @@ def main():
         preprocess_for_latexml(workspace)
         warn_source_issues(workspace / input_path.name)
         convert(workspace / input_path.name, output_path, html=args.html)
+
+    if args.zip:
+        doi_suffix = output_path.stem
+        pdf_path = output_path.parent / f"{doi_suffix}.pdf"
+        if not pdf_path.exists():
+            compile_pdf = output_path.parent.parent / "compile" / f"{doi_suffix}.pdf"
+            if compile_pdf.exists():
+                pdf_path = compile_pdf
+        zip_path = output_path.with_suffix(".zip")
+        create_publisher_zip(output_path, pdf_path, zip_path)
 
 
 if __name__ == "__main__":
