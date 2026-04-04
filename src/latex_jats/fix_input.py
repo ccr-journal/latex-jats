@@ -146,7 +146,7 @@ def fix_unicode_text_chars(lines: list[str], filename: str) -> list[str]:
         for char, (replacement, desc) in UNICODE_BREAKERS.items():
             if char in new_line:
                 new_line = new_line.replace(char, replacement)
-                logger.warning(
+                logger.info(
                     "fix Unicode %s (U+%04X): %s:%d",
                     desc, ord(char), filename, lineno,
                 )
@@ -248,7 +248,7 @@ def fix_bib_dotless_i_accent(lines: list[str], filename: str) -> list[str]:
         # Also handle the form without outer braces: \'\i → \'i
         new_line = new_line.replace(r"\'\i", r"\'i")
         if new_line != line:
-            logger.warning(
+            logger.info(
                 r"fix {\'\i} → {\'i} (avoids bibtex decomposed Unicode): %s:%d",
                 filename, lineno,
             )

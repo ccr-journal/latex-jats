@@ -507,9 +507,8 @@ def run_latexmlc(input_tex, output_xml, log_dir):
     a patched JATS XSLT (fixes ltx:personname spaces; runs CrossRef internally).
     LaTeXML log files are written to log_dir.
     """
-    # Note [ES]: Adding "--preload=ccr.cls",  throws an error"""
-    # Note [ES]: Adding "--preload=biblatex.sty",  does not in any way change the output"""
-    # WvA: but removing/renaing biblatex.sty does change the output
+    # Do not add --preload=ccr.cls (throws an error) or --preload=biblatex.sty
+    # (no effect on output — LaTeXML picks up biblatex.sty.ltxml automatically).
     import tempfile
     system_jats_xsl = _find_latexml_jats_xsl()
     wrapper_xml = _JATS_XSLT_WRAPPER.read_text().replace("SYSTEM_JATS_XSL_URI", system_jats_xsl.as_uri())
@@ -543,8 +542,7 @@ def run_latexmlc(input_tex, output_xml, log_dir):
                             f"--log={latexml_log}", str(tmp_tex)]
             subprocess.run(latexmlc_cmd, check=True)
 
-            if Path(latexml_log).exists():
-                _report_latexml_issues(Path(latexml_log))
+            _report_latexml_issues(latexml_log)
 
             fix_listing_data(str(latexml_path))
 
@@ -552,8 +550,7 @@ def run_latexmlc(input_tex, output_xml, log_dir):
                         f"--log={post_log}", "--destination", str(output_xml), str(latexml_path)]
             subprocess.run(post_cmd, check=True)
 
-            if Path(post_log).exists():
-                _report_latexml_issues(Path(post_log))
+            _report_latexml_issues(post_log)
     finally:
         latexml_path.unlink(missing_ok=True)
         xsl_path.unlink(missing_ok=True)

@@ -17,8 +17,10 @@ Usage:
 
 import argparse
 import logging
+import shutil
 import subprocess
 import sys
+import tempfile
 import unicodedata
 from pathlib import Path
 
@@ -135,8 +137,6 @@ def compile_latex(latex_dir: Path, log_dir: Path | None = None) -> bool:
 
     Returns True if compilation succeeded.
     """
-    import shutil
-
     pdflatex = [
         "pdflatex", "-interaction=nonstopmode",
         r"\pdfminorversion=7\input{main.tex}",
@@ -218,34 +218,50 @@ def prepare(source: Path, fix_problems: bool = False, force: bool = False,
     if "main.tex not found" in validate_structure(latex_dir):
         return False
 
-    # Warn about Unicode characters that will break pdflatex
-    _warn_unicode_issues(main_tex)
-
-    # Optional source fixes
-    fixed = 0
-    if fix_problems:
-        logger.info("Applying source fixes (--fix-simple-problems)...")
-        for tex_file in _collect_tex_files(main_tex):
-            fixed += fix_file(tex_file, apply=True)
-        if fixed:
-            logger.info("Fixed %d line(s); will recompile.", fixed)
-        else:
-            logger.info("No source fixes needed.")
-
-    # Compilation
-    if not force and not fixed and not _needs_compilation(latex_dir):
+    # Determine whether we need to compile before entering the temp dir,
+    # since fixed count is only known after fixes are applied
+    if not force and not fix_problems and not _needs_compilation(latex_dir):
         logger.info("main.pdf and main.bbl are up to date; skipping compilation "
                     "(use --force to recompile)")
         return True
 
-    logger.info("Compiling LaTeX...")
-    ok = compile_latex(latex_dir, log_dir=log_dir)
-    if ok:
-        logger.info("Compilation succeeded.")
-    else:
-        logger.error("Compilation failed — check the LaTeX log in %s",
-                     log_dir if log_dir else latex_dir)
-    return ok
+    # Work in a temp copy so original source files are never modified
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_latex = Path(tmpdir) / "src"
+        shutil.copytree(latex_dir, tmp_latex)
+        tmp_main_tex = tmp_latex / main_tex.name
+
+        # Apply fixes to the temp copy (if requested)
+        fixed = 0
+        if fix_problems:
+            logger.info("Applying source fixes (--fix-simple-problems)...")
+            for tex_file in _collect_tex_files(tmp_main_tex):
+                fixed += fix_file(tex_file, apply=True)
+            if fixed:
+                logger.info("Fixed %d line(s).", fixed)
+            else:
+                logger.info("No source fixes needed.")
+
+        # Warn about Unicode characters that will break pdflatex (post-fix state)
+        _warn_unicode_issues(tmp_main_tex)
+
+        if not force and not fixed and not _needs_compilation(latex_dir):
+            logger.info("main.pdf and main.bbl are up to date; skipping compilation "
+                        "(use --force to recompile)")
+            return True
+
+        logger.info("Compiling LaTeX...")
+        ok = compile_latex(tmp_latex, log_dir=log_dir)
+        if ok:
+            logger.info("Compilation succeeded.")
+            for name in ("main.pdf", "main.bbl"):
+                src = tmp_latex / name
+                if src.exists():
+                    shutil.copy2(src, latex_dir / name)
+        else:
+            logger.error("Compilation failed — check the LaTeX log in %s",
+                         log_dir if log_dir else latex_dir)
+        return ok
 
 
 def main():
