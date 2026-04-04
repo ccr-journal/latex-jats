@@ -6,8 +6,44 @@
   title attributes that show each element's semantic role on mouseover.
 -->
 <xsl:stylesheet version="1.0"
-    xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+    xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+    xmlns:mml="http://www.w3.org/1998/Math/MathML"
+    exclude-result-prefixes="mml">
   <xsl:import href="main/jats-html.xsl"/>
+
+  <!-- Strip the mml: namespace prefix so browsers recognise MathML in HTML -->
+  <xsl:template match="mml:*">
+    <xsl:element name="{local-name()}">
+      <xsl:copy-of select="@*"/>
+      <xsl:apply-templates/>
+    </xsl:element>
+  </xsl:template>
+
+  <!-- Display equations: show LaTeX source as tooltip -->
+  <xsl:template match="disp-formula | statement">
+    <div class="{local-name()} panel">
+      <xsl:if test=".//mml:math/@alttext">
+        <xsl:attribute name="title">
+          <xsl:value-of select=".//mml:math/@alttext"/>
+        </xsl:attribute>
+      </xsl:if>
+      <xsl:call-template name="named-anchor"/>
+      <xsl:apply-templates select="." mode="label"/>
+      <xsl:apply-templates/>
+    </div>
+  </xsl:template>
+
+  <!-- Inline equations: show LaTeX source as tooltip -->
+  <xsl:template match="inline-formula">
+    <span class="inline-formula">
+      <xsl:if test="mml:math/@alttext">
+        <xsl:attribute name="title">
+          <xsl:value-of select="mml:math/@alttext"/>
+        </xsl:attribute>
+      </xsl:if>
+      <xsl:apply-templates/>
+    </span>
+  </xsl:template>
 
   <!-- Article title -->
   <xsl:template match="title-group/article-title" mode="metadata">

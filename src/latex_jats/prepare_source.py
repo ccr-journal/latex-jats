@@ -102,6 +102,26 @@ def _normalize_bbl(latex_dir: Path) -> None:
                 )
 
 
+def _patch_ccr_cls(workspace_dir: Path):
+    """Patch ccr.cls in the workspace: add \\pdfminorversion=7, drop pstricks."""
+    cls = workspace_dir / "ccr.cls"
+    if not cls.exists():
+        return
+    text = cls.read_text()
+    changed = False
+    # Add \pdfminorversion=7 early so pdflatex produces PDF 1.7
+    if r'\pdfminorversion' not in text:
+        text = r'\pdfminorversion=7' + '\n' + text
+        changed = True
+    # pstricks is unused and can conflict with pdflatex
+    if r'\RequirePackage{pstricks}' in text:
+        text = text.replace(r'\RequirePackage{pstricks}', '% \\RequirePackage{pstricks}  % removed: unused, conflicts with pdflatex')
+        changed = True
+    if changed:
+        cls.write_text(text)
+        logger.info("Patched ccr.cls (pdfminorversion, pstricks)")
+
+
 def prepare_workspace(source_dir: Path, workspace_dir: Path,
                       fix_problems: bool = False) -> Path:
     """Create a workspace copy of the source and apply fixes + warnings.
@@ -117,6 +137,8 @@ def prepare_workspace(source_dir: Path, workspace_dir: Path,
         shutil.rmtree(workspace_dir)
     shutil.copytree(source_dir, workspace_dir)
     main_tex = workspace_dir / "main.tex"
+
+    _patch_ccr_cls(workspace_dir)
 
     # Apply fixes to the workspace copy (if requested)
     if fix_problems:
@@ -148,7 +170,7 @@ def compile_latex(latex_dir: Path, log_dir: Path | None = None) -> bool:
     """
     pdflatex = [
         "pdflatex", "-interaction=nonstopmode",
-        r"\pdfminorversion=7\input{main.tex}",
+        "main.tex",
     ]
     pdflatex_log = log_dir / "pdflatex.log" if log_dir else None
     pdf_path = latex_dir / "main.pdf"
