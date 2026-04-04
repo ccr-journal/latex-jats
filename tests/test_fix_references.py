@@ -379,7 +379,7 @@ def test_yao_references_match_gold(tmp_path):
     )
 
     output = tmp_path / 'output.xml'
-    run_latexmlc(str(YAO_TEX), str(output))
+    run_latexmlc(str(YAO_TEX), str(output), log_dir=tmp_path)
     fix_citation_ref_types(str(output))
     fix_metadata(str(output), str(YAO_TEX))
     fix_table_notes(str(output))

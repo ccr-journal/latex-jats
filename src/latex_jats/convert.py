@@ -38,8 +38,17 @@ def _warn_bare_greater_than(tex_path):
             lines = fpath.read_text(encoding="latin-1").splitlines()
         in_math_env = False
         in_verbatim_env = False
+        in_ignoreforxml = False
         for lineno, line in enumerate(lines, 1):
             stripped = re.sub(r'(?<!\\)%.*', '', line)  # remove comments (but not \%)
+            raw = line.strip()
+            # track #ignoreforxml blocks — content there is never seen by LaTeXML
+            if re.match(r'^\s*%%\s*#ignoreforxml\b', raw):
+                in_ignoreforxml = True
+            elif re.match(r'^\s*%%\s*#endignoreforxml\b', raw):
+                in_ignoreforxml = False
+            if in_ignoreforxml:
+                continue
             # track math environments (simple heuristic)
             if re.search(r'\\begin\{(equation|align|math|displaymath|eqnarray)', stripped):
                 in_math_env = True
@@ -53,6 +62,9 @@ def _warn_bare_greater_than(tex_path):
                 continue
             # skip tabular/array column specs like >{\raggedright...}
             if re.search(r'>\s*\{\\', stripped):
+                continue
+            # skip TeX conditionals where > or < are comparison operators, not text
+            if re.search(r'\\if(?:dim|num|dimen)', stripped):
                 continue
             # strip inline math ($...$) and arabtex insertions (\<...>) before checking
             text_only = re.sub(r'\$[^$]*\$', '', stripped)
@@ -488,12 +500,12 @@ def _preprocess_tex_for_latexml(src_dir: Path, dst_dir: Path) -> int:
     return block_count
 
 
-def run_latexmlc(input_tex, output_xml, log_dir=None):
+def run_latexmlc(input_tex, output_xml, log_dir):
     """Runs latexmlc to convert a LaTeX file to JATS XML.
 
     Two-step process: LaTeXML intermediate XML → latexmlpost --format=jats with
     a patched JATS XSLT (fixes ltx:personname spaces; runs CrossRef internally).
-    If log_dir is given, LaTeXML log files are written there instead of the cwd.
+    LaTeXML log files are written to log_dir.
     """
     # Note [ES]: Adding "--preload=ccr.cls",  throws an error"""
     # Note [ES]: Adding "--preload=biblatex.sty",  does not in any way change the output"""
@@ -502,13 +514,10 @@ def run_latexmlc(input_tex, output_xml, log_dir=None):
     system_jats_xsl = _find_latexml_jats_xsl()
     wrapper_xml = _JATS_XSLT_WRAPPER.read_text().replace("SYSTEM_JATS_XSL_URI", system_jats_xsl.as_uri())
 
-    if log_dir is not None:
-        Path(log_dir).mkdir(parents=True, exist_ok=True)
-        stem = Path(output_xml).stem
-        latexml_log = Path(log_dir) / f"{stem}.latexml.log"
-        post_log = Path(log_dir) / f"{stem}.latexmlpost.log"
-    else:
-        latexml_log = post_log = None
+    Path(log_dir).mkdir(parents=True, exist_ok=True)
+    stem = Path(output_xml).stem
+    latexml_log = Path(log_dir) / f"{stem}.latexml.log"
+    post_log = Path(log_dir) / f"{stem}.latexmlpost.log"
 
     with tempfile.NamedTemporaryFile(suffix=".xml", delete=False) as tmp_latexml, \
          tempfile.NamedTemporaryFile(suffix=".xsl", delete=False) as tmp_xsl:
@@ -530,23 +539,20 @@ def run_latexmlc(input_tex, output_xml, log_dir=None):
                     n_blocks,
                 )
             tmp_tex = tmp_src / tex_name
-            latexmlc_cmd = ["latexmlc", f"--path={LATEXML_DIR}", "--destination", str(latexml_path), "--format=xml", str(tmp_tex)]
-            if latexml_log:
-                latexmlc_cmd.append(f"--log={latexml_log}")
+            latexmlc_cmd = ["latexmlc", f"--path={LATEXML_DIR}", "--destination", str(latexml_path), "--format=xml",
+                            f"--log={latexml_log}", str(tmp_tex)]
             subprocess.run(latexmlc_cmd, check=True)
 
-            if latexml_log and Path(latexml_log).exists():
+            if Path(latexml_log).exists():
                 _report_latexml_issues(Path(latexml_log))
 
             fix_listing_data(str(latexml_path))
 
             post_cmd = ["latexmlpost", f"--stylesheet={xsl_path}", "--format=jats",
-                        "--destination", str(output_xml), str(latexml_path)]
-            if post_log:
-                post_cmd.append(f"--log={post_log}")
+                        f"--log={post_log}", "--destination", str(output_xml), str(latexml_path)]
             subprocess.run(post_cmd, check=True)
 
-            if post_log and Path(post_log).exists():
+            if Path(post_log).exists():
                 _report_latexml_issues(Path(post_log))
     finally:
         latexml_path.unlink(missing_ok=True)
