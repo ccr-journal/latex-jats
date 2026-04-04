@@ -53,6 +53,5 @@ luac.out
 *.hex
 
 /output/
-
-# Local Netlify folder
-.netlify
+/examples/
+.wrangler
