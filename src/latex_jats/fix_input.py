@@ -226,12 +226,44 @@ def fix_title_in_table(lines: list[str], filename: str) -> list[str]:
     return out
 
 
+def fix_ampersand_in_metadata(lines: list[str], filename: str) -> list[str]:
+    r"""Escape bare & in \authorsnames, \authorsaffiliations, \shortauthors.
+
+    These macros contain text, never alignment tabs. A bare & causes LaTeXML
+    to error with "T_ALIGN[&] should never reach Stomach!".
+    """
+    text = ''.join(lines)
+    changed = False
+    for macro in ('authorsnames', 'authorsaffiliations', 'shortauthors'):
+        for m in re.finditer(rf'\\{macro}\{{', text):
+            start = m.end()
+            depth = 1
+            pos = start
+            while pos < len(text) and depth > 0:
+                if text[pos] == '{':
+                    depth += 1
+                elif text[pos] == '}':
+                    depth -= 1
+                pos += 1
+            body = text[start:pos - 1]
+            fixed_body = re.sub(r'(?<!\\)&', r'\\&', body)
+            if fixed_body != body:
+                text = text[:start] + fixed_body + text[pos - 1:]
+                lineno = text[:m.start()].count('\n') + 1
+                logger.info(r"FIXED bare & in \%s: %s:%d", macro, filename, lineno)
+                changed = True
+    if changed:
+        return text.splitlines(keepends=True)
+    return lines
+
+
 ALL_FIXES = [
     fix_minted_to_listings,
     fix_bare_angle_brackets,
     fix_stray_after_includegraphics,
     fix_unicode_text_chars,
     fix_title_in_table,
+    fix_ampersand_in_metadata,
 ]
 
 

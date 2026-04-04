@@ -137,12 +137,48 @@ def _warn_title_in_table(tex_path):
                 )
 
 
+def _warn_bare_ampersand_in_metadata(tex_path):
+    r"""Warn about bare & in \authorsnames, \authorsaffiliations, \shortauthors.
+
+    These macros contain text, never alignment tabs. A bare & will cause
+    LaTeXML to error with "T_ALIGN[&] should never reach Stomach!".
+    Authors should use \& instead.
+    """
+    try:
+        text = tex_path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        text = tex_path.read_text(encoding="latin-1")
+    for macro in (r'authorsnames', r'authorsaffiliations', r'shortauthors'):
+        # Match \macro{ ... } including multi-line arguments (greedy within braces)
+        for m in re.finditer(rf'\\{macro}\{{', text):
+            start = m.end()  # position after the opening {
+            depth = 1
+            pos = start
+            while pos < len(text) and depth > 0:
+                if text[pos] == '{':
+                    depth += 1
+                elif text[pos] == '}':
+                    depth -= 1
+                pos += 1
+            body = text[start:pos - 1]
+            if re.search(r'(?<!\\)&', body):
+                # Find the line number for the macro
+                lineno = text[:m.start()].count('\n') + 1
+                logger.warning(
+                    r'bare & in \%s (%s:%d): LaTeXML will fail with '
+                    r'"T_ALIGN should never reach Stomach". '
+                    r'Use \& instead, or re-run with --fix-simple-problems.',
+                    macro, tex_path.name, lineno,
+                )
+
+
 def warn_source_issues(tex_path):
     """Run all source-quality warnings on a .tex file and its \\input targets."""
     _warn_bare_greater_than(tex_path)
     _warn_title_in_table(tex_path)
     _warn_stray_text_after_includegraphics(tex_path)
     _warn_transliteration_packages(tex_path)
+    _warn_bare_ampersand_in_metadata(tex_path)
 
 
 LATEXML_DIR = Path(__file__).parent.parent / "latexml"
