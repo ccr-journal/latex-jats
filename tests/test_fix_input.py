@@ -2,6 +2,7 @@ from latex_jats.fix_input import (
     fix_bare_angle_brackets,
     fix_bib_dotless_i_accent,
     fix_stray_after_includegraphics,
+    fix_title_in_table,
     fix_unicode_text_chars,
 )
 
@@ -79,6 +80,35 @@ class TestFixUnicodeTextChars:
         lines = ["\u22120.5 to \u22121.0\n"]
         result = fix_unicode_text_chars(lines, "test.tex")
         assert result == ["-0.5 to -1.0\n"]
+
+
+class TestFixTitleInTable:
+    def test_title_replaced_inside_table(self):
+        lines = [
+            "\\begin{table}\n",
+            "\\title{My table}\n",
+            "\\end{table}\n",
+        ]
+        result = fix_title_in_table(lines, "test.tex")
+        assert result == [
+            "\\begin{table}\n",
+            "\\caption{My table}\n",
+            "\\end{table}\n",
+        ]
+
+    def test_title_outside_table_unchanged(self):
+        lines = ["\\title{Document Title}\n"]
+        result = fix_title_in_table(lines, "test.tex")
+        assert result == lines
+
+    def test_title_after_end_table_unchanged(self):
+        lines = [
+            "\\begin{table}\n",
+            "\\end{table}\n",
+            "\\title{Not in table}\n",
+        ]
+        result = fix_title_in_table(lines, "test.tex")
+        assert result == lines
 
 
 class TestFixBibDotlessIAccent:

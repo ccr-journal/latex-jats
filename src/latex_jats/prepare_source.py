@@ -5,9 +5,6 @@ and compiles the LaTeX document (pdflatex + biber/bibtex) to produce:
   - main.pdf  — for the web preview
   - main.bbl  — required by the JATS converter
 
-Compilation is skipped when both main.pdf and main.bbl are already present and
-newer than all .tex files in the directory, unless --force is given.
-
 Usage:
     uv run prepare-source path/to/latex/          # validate + compile if needed
     uv run prepare-source path/to/main.tex        # same, accepts file too
@@ -20,11 +17,10 @@ import logging
 import shutil
 import subprocess
 import sys
-import tempfile
 import unicodedata
 from pathlib import Path
 
-from latex_jats.fix_input import UNICODE_BREAKERS, _collect_tex_files, fix_file
+from latex_jats.fix_input import _collect_tex_files, fix_file
 
 logger = logging.getLogger(__name__)
 
@@ -106,24 +102,37 @@ def _normalize_bbl(latex_dir: Path) -> None:
                 )
 
 
-def _warn_unicode_issues(main_tex: Path) -> None:
-    """Warn about Unicode characters that will break pdflatex."""
-    for path in _collect_tex_files(main_tex):
-        if path.suffix == '.bib':
-            continue
-        try:
-            text = path.read_text(encoding="utf-8")
-        except UnicodeDecodeError:
-            continue
-        for lineno, line in enumerate(text.splitlines(), 1):
-            for char, (replacement, desc) in UNICODE_BREAKERS.items():
-                if char in line:
-                    logger.warning(
-                        "%s:%d: Unicode %s (U+%04X) will break pdflatex — "
-                        "use --fix-simple-problems to auto-fix, or replace "
-                        "with '%s' in the source.",
-                        path.name, lineno, desc, ord(char), replacement,
-                    )
+def prepare_workspace(source_dir: Path, workspace_dir: Path,
+                      fix_problems: bool = False) -> Path:
+    """Create a workspace copy of the source and apply fixes + warnings.
+
+    Copies the source tree into workspace_dir, optionally applies fix_input
+    fixes, and runs all source-quality warnings on the result.
+
+    Returns the path to main.tex in the workspace.
+    """
+    from latex_jats.convert import warn_source_issues
+
+    if workspace_dir.exists():
+        shutil.rmtree(workspace_dir)
+    shutil.copytree(source_dir, workspace_dir)
+    main_tex = workspace_dir / "main.tex"
+
+    # Apply fixes to the workspace copy (if requested)
+    if fix_problems:
+        logger.info("Applying source fixes (--fix-simple-problems)...")
+        fixed = 0
+        for tex_file in _collect_tex_files(main_tex):
+            fixed += fix_file(tex_file, apply=True)
+        if fixed:
+            logger.info("Fixed %d line(s).", fixed)
+        else:
+            logger.info("No source fixes needed.")
+
+    # Warn about source issues (on the post-fix workspace)
+    warn_source_issues(main_tex)
+
+    return main_tex
 
 
 def compile_latex(latex_dir: Path, log_dir: Path | None = None) -> bool:
@@ -196,8 +205,12 @@ def compile_latex(latex_dir: Path, log_dir: Path | None = None) -> bool:
 
 
 def prepare(source: Path, fix_problems: bool = False, force: bool = False,
-            log_dir: Path | None = None) -> bool:
+            log_dir: Path | None = None, workspace_dir: Path | None = None) -> bool:
     """Validate and compile a LaTeX source directory.
+
+    If workspace_dir is provided, the workspace is assumed to already exist
+    (created by prepare_workspace). Otherwise a temporary workspace is created
+    for backward compatibility with the CLI.
 
     Returns True if the source is ready for JATS conversion (main.bbl exists),
     False if a fatal error was encountered.
@@ -218,50 +231,36 @@ def prepare(source: Path, fix_problems: bool = False, force: bool = False,
     if "main.tex not found" in validate_structure(latex_dir):
         return False
 
-    # Determine whether we need to compile before entering the temp dir,
-    # since fixed count is only known after fixes are applied
-    if not force and not fix_problems and not _needs_compilation(latex_dir):
+    if not force and not _needs_compilation(latex_dir):
         logger.info("main.pdf and main.bbl are up to date; skipping compilation "
                     "(use --force to recompile)")
         return True
 
-    # Work in a temp copy so original source files are never modified
-    with tempfile.TemporaryDirectory() as tmpdir:
-        tmp_latex = Path(tmpdir) / "src"
-        shutil.copytree(latex_dir, tmp_latex)
-        tmp_main_tex = tmp_latex / main_tex.name
+    # Use provided workspace or create a temporary one (CLI path)
+    if workspace_dir is not None:
+        ws = workspace_dir
+    else:
+        import tempfile
+        _tmpdir = tempfile.mkdtemp()
+        ws = Path(_tmpdir) / "src"
+        prepare_workspace(latex_dir, ws, fix_problems=fix_problems)
 
-        # Apply fixes to the temp copy (if requested)
-        fixed = 0
-        if fix_problems:
-            logger.info("Applying source fixes (--fix-simple-problems)...")
-            for tex_file in _collect_tex_files(tmp_main_tex):
-                fixed += fix_file(tex_file, apply=True)
-            if fixed:
-                logger.info("Fixed %d line(s).", fixed)
-            else:
-                logger.info("No source fixes needed.")
-
-        # Warn about Unicode characters that will break pdflatex (post-fix state)
-        _warn_unicode_issues(tmp_main_tex)
-
-        if not force and not fixed and not _needs_compilation(latex_dir):
-            logger.info("main.pdf and main.bbl are up to date; skipping compilation "
-                        "(use --force to recompile)")
-            return True
-
+    try:
         logger.info("Compiling LaTeX...")
-        ok = compile_latex(tmp_latex, log_dir=log_dir)
+        ok = compile_latex(ws, log_dir=log_dir)
         if ok:
             logger.info("Compilation succeeded.")
-            for name in ("main.pdf", "main.bbl"):
-                src = tmp_latex / name
+            for name in ("main.pdf", "main.bbl", "main.aux"):
+                src = ws / name
                 if src.exists():
                     shutil.copy2(src, latex_dir / name)
         else:
             logger.error("Compilation failed — check the LaTeX log in %s",
                          log_dir if log_dir else latex_dir)
         return ok
+    finally:
+        if workspace_dir is None:
+            shutil.rmtree(Path(_tmpdir), ignore_errors=True)
 
 
 def main():

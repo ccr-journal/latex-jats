@@ -137,6 +137,14 @@ def _warn_title_in_table(tex_path):
                 )
 
 
+def warn_source_issues(tex_path):
+    """Run all source-quality warnings on a .tex file and its \\input targets."""
+    _warn_bare_greater_than(tex_path)
+    _warn_title_in_table(tex_path)
+    _warn_stray_text_after_includegraphics(tex_path)
+    _warn_transliteration_packages(tex_path)
+
+
 LATEXML_DIR = Path(__file__).parent.parent / "latexml"
 JATS_XSL = Path(__file__).parent.parent / "xslt" / "jats-html-wrapper.xsl"
 CSS_SRC = Path(__file__).parent.parent / "css" / "jats-preview.css"
@@ -446,8 +454,8 @@ def _report_latexml_issues(log_path: Path):
         logger.warning("LaTeXML: %s", line)
 
 
-def _preprocess_tex_for_latexml(src_dir: Path, dst_dir: Path) -> int:
-    """Copy src_dir to dst_dir and process #ignoreforxml / #onlyforxml markers.
+def preprocess_for_latexml(workspace_dir: Path) -> int:
+    """Process #ignoreforxml / #onlyforxml markers in-place.
 
     Inside a ``%% #ignoreforxml`` … ``%% #endignoreforxml`` block, each line of
     real LaTeX code is commented out (prepend ``% ``) so LaTeXML never sees it.
@@ -459,9 +467,8 @@ def _preprocess_tex_for_latexml(src_dir: Path, dst_dir: Path) -> int:
     Line counts are preserved so LaTeXML error messages keep accurate line numbers.
     Returns the number of blocks processed.
     """
-    shutil.copytree(src_dir, dst_dir)
     block_count = 0
-    for tex_file in dst_dir.rglob("*.tex"):
+    for tex_file in workspace_dir.rglob("*.tex"):
         try:
             lines = tex_file.read_text(encoding="utf-8").splitlines(keepends=True)
         except UnicodeDecodeError:
@@ -500,12 +507,33 @@ def _preprocess_tex_for_latexml(src_dir: Path, dst_dir: Path) -> int:
     return block_count
 
 
+
+def _latexmlc_pipeline(tex_path, latexml_path, xsl_path, latexml_log, post_log, output_xml):
+    """Run latexmlc → fix_listing_data → latexmlpost."""
+    latexmlc_cmd = ["latexmlc", f"--path={LATEXML_DIR}", "--destination", str(latexml_path), "--format=xml",
+                    f"--log={latexml_log}", str(tex_path)]
+    subprocess.run(latexmlc_cmd, check=True)
+
+    _report_latexml_issues(latexml_log)
+    fix_listing_data(str(latexml_path))
+
+    post_cmd = ["latexmlpost", f"--stylesheet={xsl_path}", "--format=jats",
+                f"--log={post_log}", "--destination", str(output_xml), str(latexml_path)]
+    subprocess.run(post_cmd, check=True)
+
+    _report_latexml_issues(post_log)
+
+
 def run_latexmlc(input_tex, output_xml, log_dir):
     """Runs latexmlc to convert a LaTeX file to JATS XML.
 
     Two-step process: LaTeXML intermediate XML → latexmlpost --format=jats with
     a patched JATS XSLT (fixes ltx:personname spaces; runs CrossRef internally).
     LaTeXML log files are written to log_dir.
+
+    The caller is responsible for providing a working copy of the source
+    (with any preprocessing/fixes already applied). This function does not
+    copy or modify the source directory.
     """
     # Do not add --preload=ccr.cls (throws an error) or --preload=biblatex.sty
     # (no effect on output — LaTeXML picks up biblatex.sty.ltxml automatically).
@@ -524,33 +552,8 @@ def run_latexmlc(input_tex, output_xml, log_dir):
         xsl_path = Path(tmp_xsl.name)
         tmp_xsl.write(wrapper_xml.encode())
     try:
-        src_dir = Path(input_tex).parent
-        tex_name = Path(input_tex).name
-        # Keep the temp dir alive through latexmlpost: the Graphics post-processor
-        # resolves figure paths relative to the source directory recorded in the
-        # intermediate XML, which points into tmp_src.
-        with tempfile.TemporaryDirectory() as tmpdir:
-            tmp_src = Path(tmpdir) / "src"
-            n_blocks = _preprocess_tex_for_latexml(src_dir, tmp_src)
-            if n_blocks:
-                logger.info(
-                    "Preprocessed %d #ignoreforxml/#onlyforxml block(s) before LaTeXML conversion",
-                    n_blocks,
-                )
-            tmp_tex = tmp_src / tex_name
-            latexmlc_cmd = ["latexmlc", f"--path={LATEXML_DIR}", "--destination", str(latexml_path), "--format=xml",
-                            f"--log={latexml_log}", str(tmp_tex)]
-            subprocess.run(latexmlc_cmd, check=True)
-
-            _report_latexml_issues(latexml_log)
-
-            fix_listing_data(str(latexml_path))
-
-            post_cmd = ["latexmlpost", f"--stylesheet={xsl_path}", "--format=jats",
-                        f"--log={post_log}", "--destination", str(output_xml), str(latexml_path)]
-            subprocess.run(post_cmd, check=True)
-
-            _report_latexml_issues(post_log)
+        _latexmlc_pipeline(Path(input_tex), latexml_path, xsl_path,
+                           latexml_log, post_log, output_xml)
     finally:
         latexml_path.unlink(missing_ok=True)
         xsl_path.unlink(missing_ok=True)
@@ -1420,7 +1423,7 @@ def fix_references(jats_file, bbl_file):
         ref_warnings = []
         new_mc = _build_mixed_citation(entry, warnings=ref_warnings)
         for w in ref_warnings:
-            logger.info(w)
+            logger.warning(w)
         attrib = dict(mc.attrib)
         mc.clear()
         mc.attrib.update(attrib)
@@ -1894,18 +1897,13 @@ def resolve_output_path(input_path: Path) -> Path:
 def convert(input_path: Path, output_path: Path, html: bool = False, lastpage=None) -> None:
     """Convert a LaTeX file to JATS XML (and optionally HTML).
 
-    This is the programmatic API used by the runner. Raises on failure.
+    The caller is responsible for providing a working copy of the source
+    (with any preprocessing/fixes already applied).
     """
     output_path.parent.mkdir(parents=True, exist_ok=True)
     log_dir = output_path.parent / "logs"
 
     logger.info(f"Will convert {input_path} -> {output_path}")
-
-    # step 0: warn about known LaTeX pitfalls
-    _warn_bare_greater_than(input_path)
-    _warn_title_in_table(input_path)
-    _warn_stray_text_after_includegraphics(input_path)
-    _warn_transliteration_packages(input_path)
 
     # step 1: LaTeX to JATS conversion
     logger.info("Step 1: Converting LaTeX to JATS XML...")
@@ -1966,9 +1964,9 @@ def convert(input_path: Path, output_path: Path, html: bool = False, lastpage=No
 
 
 
-# here it all comes together
 def main():
     import argparse
+    import tempfile
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
@@ -1981,7 +1979,13 @@ def main():
     input_path = Path(args.input)
     output_path = Path(args.output) if args.output else resolve_output_path(input_path)
 
-    convert(input_path, output_path, html=args.html)
+    # Create a workspace copy with preprocessing for the CLI path
+    with tempfile.TemporaryDirectory() as tmpdir:
+        workspace = Path(tmpdir) / "workspace"
+        shutil.copytree(input_path.parent, workspace)
+        preprocess_for_latexml(workspace)
+        warn_source_issues(workspace / input_path.name)
+        convert(workspace / input_path.name, output_path, html=args.html)
 
 
 if __name__ == "__main__":

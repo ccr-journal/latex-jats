@@ -1,4 +1,4 @@
-"""Run the prepare-source and convert steps for example articles.
+"""Run the prepare → compile → convert → validate pipeline for example articles.
 
 Provides incremental builds: each step is skipped if its output is already
 up-to-date. Results and logs are written to a centralized output/ tree at the
@@ -21,8 +21,8 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
-from latex_jats.convert import convert, get_doi_suffix, validate_jats
-from latex_jats.prepare_source import _needs_compilation, prepare
+from latex_jats.convert import convert, get_doi_suffix, preprocess_for_latexml, validate_jats
+from latex_jats.prepare_source import compile_latex, prepare_workspace
 
 logger = logging.getLogger(__name__)
 
@@ -74,10 +74,10 @@ def _newest_tex_mtime(example_dir: Path) -> float:
     return max((f.stat().st_mtime for f in tex_files), default=0)
 
 
-def needs_prepare(example_dir: Path, output_dir: Path) -> bool:
-    """Check if the prepare step needs to run."""
-    prepare_dir = output_dir / "prepare"
-    status_file = prepare_dir / "status.json"
+def needs_compile(example_dir: Path, output_dir: Path) -> bool:
+    """Check if the compile step needs to run."""
+    compile_dir = output_dir / "compile"
+    status_file = compile_dir / "status.json"
     if not status_file.exists():
         return True
     try:
@@ -87,10 +87,10 @@ def needs_prepare(example_dir: Path, output_dir: Path) -> bool:
     except (json.JSONDecodeError, KeyError):
         return True
     # Check that PDF exists in the output tree
-    if not list(prepare_dir.glob("*.pdf")):
+    if not list(compile_dir.glob("*.pdf")):
         return True
     # Check if any .tex file is newer than the PDF
-    pdf_mtime = max(f.stat().st_mtime for f in prepare_dir.glob("*.pdf"))
+    pdf_mtime = max(f.stat().st_mtime for f in compile_dir.glob("*.pdf"))
     if _newest_tex_mtime(example_dir) > pdf_mtime:
         return True
     return False
@@ -164,33 +164,41 @@ def _capture_step(step_name: str, output_dir: Path, func, *args, **kwargs) -> St
     return step_result
 
 
-def run_prepare(example_dir: Path, output_dir: Path, force: bool = False,
-                fix: bool = False) -> StepResult:
-    """Run the prepare-source step and copy PDF to output tree."""
-    prepare_dir = output_dir / "prepare"
-    runner_log = prepare_dir / "runner.log"
-    old_log = runner_log.read_text(encoding="utf-8") if runner_log.exists() else None
+def _compile_in_workspace(workspace_dir: Path, source_dir: Path,
+                          log_dir: Path) -> bool:
+    """Compile LaTeX in the workspace and copy outputs back to source."""
+    logger.info("Compiling LaTeX...")
+    ok = compile_latex(workspace_dir, log_dir=log_dir)
+    if ok:
+        logger.info("Compilation succeeded.")
+        for name in ("main.pdf", "main.bbl", "main.aux"):
+            src = workspace_dir / name
+            if src.exists():
+                shutil.copy2(src, source_dir / name)
+    else:
+        logger.error("Compilation failed — check the LaTeX log in %s", log_dir)
+    return ok
+
+
+def run_compile(example_dir: Path, output_dir: Path, workspace_dir: Path) -> StepResult:
+    """Run the compile step in the workspace and copy PDF to output tree."""
+    compile_dir = output_dir / "compile"
 
     result = _capture_step(
-        "prepare",
+        "compile",
         output_dir,
-        prepare,
+        _compile_in_workspace,
+        workspace_dir,
         example_dir,
-        fix_problems=fix,
-        force=force,
-        log_dir=prepare_dir,
+        compile_dir,
     )
 
-    # If prepare() skipped compilation (files up to date), restore the old
-    # runner.log so the detailed output from the actual compile run is preserved.
-    if old_log and result.success and "skipping compilation" in runner_log.read_text(encoding="utf-8", errors="replace"):
-        runner_log.write_text(old_log, encoding="utf-8")
     # Copy PDF from source dir to output as <article-id>.pdf
     if result.success:
         pdf_src = example_dir / "main.pdf"
         if pdf_src.exists():
             article_id = example_dir.name
-            shutil.copy2(pdf_src, prepare_dir / f"{article_id}.pdf")
+            shutil.copy2(pdf_src, compile_dir / f"{article_id}.pdf")
     return result
 
 
@@ -210,24 +218,35 @@ def _pdf_page_count(pdf_path: Path) -> int | None:
     return None
 
 
-def run_convert(example_dir: Path, output_dir: Path, force: bool = False) -> StepResult:
-    """Run the JATS conversion step."""
-    main_tex = example_dir / "main.tex"
-    doi_suffix = get_doi_suffix(main_tex)
+def _preprocess_and_convert(workspace_tex: Path, output_xml: Path, **kwargs):
+    """Apply LaTeXML preprocessing to the workspace, then convert."""
+    n_blocks = preprocess_for_latexml(workspace_tex.parent)
+    if n_blocks:
+        logger.info(
+            "Preprocessed %d #ignoreforxml/#onlyforxml block(s) before LaTeXML conversion",
+            n_blocks,
+        )
+    convert(workspace_tex, output_xml, **kwargs)
+
+
+def run_convert(example_dir: Path, output_dir: Path, workspace_dir: Path) -> StepResult:
+    """Run the JATS conversion step using the workspace."""
+    workspace_tex = workspace_dir / "main.tex"
+    doi_suffix = get_doi_suffix(workspace_tex)
     convert_dir = output_dir / "convert"
     output_xml = convert_dir / f"{doi_suffix}.xml"
 
-    # Derive lastpage from the PDF produced in the prepare step
+    # Derive lastpage from the PDF produced in the compile step
     lastpage = None
-    pdf_files = list((output_dir / "prepare").glob("*.pdf"))
+    pdf_files = list((output_dir / "compile").glob("*.pdf"))
     if pdf_files:
         lastpage = _pdf_page_count(pdf_files[0])
 
     result = _capture_step(
         "convert",
         output_dir,
-        convert,
-        main_tex,
+        _preprocess_and_convert,
+        workspace_tex,
         output_xml,
         html=True,
         lastpage=lastpage,
@@ -256,28 +275,60 @@ def run_validate(example_dir: Path, output_dir: Path) -> StepResult:
 
 def run_article(example_dir: Path, force: bool = False, force_convert: bool = False,
                 fix: bool = False) -> list[StepResult]:
-    """Run prepare then convert for one article. Stop on first failure."""
+    """Run prepare → compile → convert → validate for one article."""
     article_id = example_dir.name
     output_dir = OUTPUT_DIR / article_id
     results = []
 
-    # Step 1: prepare
-    if force or needs_prepare(example_dir, output_dir):
+    do_compile = force or needs_compile(example_dir, output_dir)
+    do_convert = force or force_convert or needs_convert(example_dir, output_dir)
+
+    # Step 1: prepare workspace (shared by compile and convert)
+    workspace_dir = output_dir / "workspace"
+    if do_compile:
+        # Source changed — recreate workspace from scratch
         logger.info("--- %s: prepare ---", article_id)
-        result = run_prepare(example_dir, output_dir, force=force, fix=fix)
+        result = _capture_step(
+            "prepare", output_dir,
+            prepare_workspace, example_dir, workspace_dir, fix_problems=fix,
+        )
         results.append(result)
         if not result.success:
             logger.error("FAILED (prepare): %s", article_id)
             _write_article_status(output_dir, results)
             return results
         logger.info("OK (prepare): %s (%.1fs)", article_id, result.duration_s)
+    elif do_convert and not workspace_dir.exists():
+        # Convert needed but no workspace yet (e.g. first run with --force-convert)
+        logger.info("--- %s: prepare ---", article_id)
+        result = _capture_step(
+            "prepare", output_dir,
+            prepare_workspace, example_dir, workspace_dir, fix_problems=fix,
+        )
+        results.append(result)
+        if not result.success:
+            logger.error("FAILED (prepare): %s", article_id)
+            _write_article_status(output_dir, results)
+            return results
+        logger.info("OK (prepare): %s (%.1fs)", article_id, result.duration_s)
+
+    # Step 2: compile
+    if do_compile:
+        logger.info("--- %s: compile ---", article_id)
+        result = run_compile(example_dir, output_dir, workspace_dir)
+        results.append(result)
+        if not result.success:
+            logger.error("FAILED (compile): %s", article_id)
+            _write_article_status(output_dir, results)
+            return results
+        logger.info("OK (compile): %s (%.1fs)", article_id, result.duration_s)
     else:
-        logger.info("--- %s: prepare (up to date, skipping) ---", article_id)
+        logger.info("--- %s: compile (up to date, skipping) ---", article_id)
 
     # Step 2: convert
-    if force or force_convert or needs_convert(example_dir, output_dir):
+    if do_convert:
         logger.info("--- %s: convert ---", article_id)
-        result = run_convert(example_dir, output_dir, force=force or force_convert)
+        result = run_convert(example_dir, output_dir, workspace_dir)
         results.append(result)
         if not result.success:
             logger.error("FAILED (convert): %s", article_id)
@@ -332,20 +383,41 @@ def generate_index(output_root: Path):
         '<!DOCTYPE html><html><head><meta charset="utf-8">',
         "<title>CCR Preview</title>",
         "<style>",
-        "body { font-family: sans-serif; max-width: 900px; margin: 2em auto; }",
-        ".ok { color: green; } .note { color: #b8860b; } .warn { color: orange; } .fail { color: red; } .skip { color: gray; }",
+        "body { font-family: sans-serif; max-width: 1100px; margin: 2em auto; }",
+        ".ok { color: green; } .note { color: green; } .warn { color: #b8860b; } .errors { color: #d94000; } .fail { color: red; } .skip { color: gray; }",
         "table { border-collapse: collapse; width: 100%; }",
         "th, td { border: 1px solid #ccc; padding: 6px 10px; text-align: left; white-space: nowrap; }",
+        "button.status-btn { background: none; border: none; cursor: pointer; font: inherit;"
+        " border-bottom: 1px dotted currentColor; padding: 0; }",
+        # Modal styles
+        ".modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 100;"
+        " justify-content: center; align-items: center; }",
+        ".modal-overlay.open { display: flex; }",
+        ".modal { background: #1a1a2e; color: #e0e0e0; border-radius: 6px; width: 90vw; max-width: 900px;"
+        " max-height: 80vh; display: flex; flex-direction: column; box-shadow: 0 4px 24px rgba(0,0,0,.5); }",
+        ".modal-header { display: flex; justify-content: space-between; align-items: center;"
+        " padding: 10px 16px; border-bottom: 1px solid #444; }",
+        ".modal-header h3 { margin: 0; font-size: 14px; }",
+        ".modal-close { background: none; border: none; color: #e0e0e0; font-size: 20px; cursor: pointer; padding: 0 4px; }",
+        ".modal-tabs { display: flex; gap: 0; border-bottom: 1px solid #444; padding: 0 16px; }",
+        ".modal-tabs button { background: none; border: none; color: #999; padding: 8px 14px; cursor: pointer;"
+        " font: 12px/1.4 monospace; border-bottom: 2px solid transparent; margin-bottom: -1px; }",
+        ".modal-tabs button.active { color: #e0e0e0; border-bottom-color: #7c8aff; }",
+        ".modal-body { overflow: auto; flex: 1; }",
+        ".modal-body pre { margin: 0; padding: 12px 16px; white-space: pre-wrap; word-break: break-all;"
+        " font: 12px/1.4 monospace; }",
+        ".tab-panel { display: none; } .tab-panel.active { display: block; }",
         "</style>",
         "</head><body>",
         "<h1>CCR Article Previews</h1>",
-        "<table><tr><th>Article</th><th>HTML</th><th>XML</th><th>PDF</th><th>Prepare</th><th>Convert</th><th>Validate</th></tr>",
+        "<table><tr><th>Article</th><th>HTML</th><th>XML</th><th>PDF</th><th>Prepare</th><th>Compile</th><th>Convert</th><th>Validate</th></tr>",
     ]
 
     for article_dir in articles:
         article = article_dir.name
-        convert_dir = article_dir / "convert"
         prepare_dir = article_dir / "prepare"
+        compile_dir = article_dir / "compile"
+        convert_dir = article_dir / "convert"
         validate_dir = article_dir / "validate"
 
         # Output links (HTML, XML, PDF) as separate cells
@@ -359,9 +431,9 @@ def generate_index(output_root: Path):
             for f in convert_dir.glob("*.xml"):
                 xml_link = f'<a href="{article}/convert/{f.name}">XML</a>'
                 break
-        if prepare_dir.exists():
-            for f in prepare_dir.glob("*.pdf"):
-                pdf_link = f'<a href="{article}/prepare/{f.name}">PDF</a>'
+        if compile_dir.exists():
+            for f in compile_dir.glob("*.pdf"):
+                pdf_link = f'<a href="{article}/compile/{f.name}">PDF</a>'
                 break
 
         # Per-step log links + status
@@ -375,49 +447,102 @@ def generate_index(output_root: Path):
             except (json.JSONDecodeError, KeyError):
                 success = None
             runner_log = step_dir / "runner.log"
-            n_errors = n_warnings = 0
-            if success and runner_log.exists():
-                for line in runner_log.read_text(errors="replace").splitlines():
-                    if not line.startswith("WARNING:"):
-                        continue
-                    if "WARNING: LaTeXML: Error:" in line:
-                        n_errors += 1
-                    else:
-                        n_warnings += 1
+            n_errors = n_warnings = n_fixes = 0
+            runner_text = ""
+            if runner_log.exists():
+                runner_text = runner_log.read_text(errors="replace")
+                if success:
+                    for line in runner_text.splitlines():
+                        if line.startswith("INFO: FIXED"):
+                            n_fixes += 1
+                        elif line.startswith("WARNING:"):
+                            if "WARNING: LaTeXML: Error:" in line:
+                                n_errors += 1
+                            else:
+                                n_warnings += 1
             if not success:
                 css, label = ("fail" if success is False else "skip"), ("failed" if success is False else "?")
             elif n_errors:
                 parts = [f"{n_errors} error{'s' if n_errors != 1 else ''}"]
                 if n_warnings:
                     parts.append(f"{n_warnings} warning{'s' if n_warnings != 1 else ''}")
-                css, label = "warn", ", ".join(parts)
-            elif n_warnings:
-                css, label = "note", f"{n_warnings} warning{'s' if n_warnings != 1 else ''}"
+                if n_fixes:
+                    parts.append(f"{n_fixes} fix{'es' if n_fixes != 1 else ''}")
+                css, label = "errors", ", ".join(parts)
+            elif n_warnings or n_fixes:
+                parts = []
+                if n_warnings:
+                    parts.append(f"{n_warnings} warning{'s' if n_warnings != 1 else ''}")
+                if n_fixes:
+                    parts.append(f"{n_fixes} fix{'es' if n_fixes != 1 else ''}")
+                css, label = ("warn" if n_warnings else "note"), ", ".join(parts)
             else:
                 css, label = "ok", "ok"
-            result = f'<span class="{css}">{label}</span>'
-            log_links = []
+            import html as html_mod
+            # Collect all log tabs: runner first, then others
+            tabs: list[tuple[str, str]] = []  # (tab_label, content)
+            if runner_text.strip():
+                tabs.append(("runner", html_mod.escape(runner_text.strip())))
             for log_file in sorted(step_dir.rglob("*.log")):
-                rel = log_file.relative_to(article_dir)
-                # Strip everything before known log names (e.g. CCR2025.1.12.CROS.latexml -> latexml)
+                if log_file.name == "runner.log":
+                    continue
                 stem = log_file.stem
                 for known in ("latexml", "latexmlpost"):
                     if known in stem:
                         stem = stem[stem.index(known):]
                         break
-                log_links.append(f'<a href="{article}/{rel}">{stem}</a>')
-            log_html = " ".join(log_links)
-            return f"{result} [logs: {log_html}]"
+                content = log_file.read_text(errors="replace").strip()
+                if content:
+                    tabs.append((stem, html_mod.escape(content)))
+            if not tabs:
+                return f'<span class="{css}">{label}</span>'
+            modal_id = f"modal-{article}-{step_dir.name}"
+            # Build modal HTML
+            tab_buttons = "".join(
+                f'<button class="{"active" if i == 0 else ""}" data-tab="{modal_id}-{i}">{t[0]}</button>'
+                for i, t in enumerate(tabs)
+            )
+            tab_panels = "".join(
+                f'<div id="{modal_id}-{i}" class="tab-panel {"active" if i == 0 else ""}"><pre>{t[1]}</pre></div>'
+                for i, t in enumerate(tabs)
+            )
+            modal = (
+                f'<div id="{modal_id}" class="modal-overlay" onclick="if(event.target===this)this.classList.remove(\'open\')">'
+                f'<div class="modal"><div class="modal-header">'
+                f"<h3>{article} / {step_dir.name}</h3>"
+                f'<button class="modal-close" onclick="this.closest(\'.modal-overlay\').classList.remove(\'open\')">&times;</button>'
+                f'</div><div class="modal-tabs">{tab_buttons}</div>'
+                f'<div class="modal-body">{tab_panels}</div></div></div>'
+            )
+            btn = f'<button class="status-btn {css}" onclick="document.getElementById(\'{modal_id}\').classList.add(\'open\')">{label}</button>'
+            return btn + modal
 
         lines.append(
             f"<tr><td><strong>{article}</strong></td>"
             f"<td>{html_link}</td><td>{xml_link}</td><td>{pdf_link}</td>"
             f"<td>{_step_cell(prepare_dir)}</td>"
+            f"<td>{_step_cell(compile_dir)}</td>"
             f"<td>{_step_cell(convert_dir)}</td>"
             f"<td>{_step_cell(validate_dir)}</td></tr>"
         )
 
-    lines.append("</table></body></html>")
+    lines.append("</table>")
+    lines.append(
+        "<script>"
+        "document.addEventListener('click',function(e){"
+        "if(!e.target.matches('.modal-tabs button'))return;"
+        "var tabs=e.target.parentElement,body=tabs.nextElementSibling;"
+        "tabs.querySelectorAll('button').forEach(function(b){b.classList.remove('active')});"
+        "body.querySelectorAll('.tab-panel').forEach(function(p){p.classList.remove('active')});"
+        "e.target.classList.add('active');"
+        "document.getElementById(e.target.dataset.tab).classList.add('active');"
+        "});"
+        "document.addEventListener('keydown',function(e){"
+        "if(e.key==='Escape'){var m=document.querySelector('.modal-overlay.open');if(m)m.classList.remove('open');}"
+        "});"
+        "</script>"
+    )
+    lines.append("</body></html>")
     (output_root / "index.html").write_text("\n".join(lines), encoding="utf-8")
     logger.info("Generated %s", output_root / "index.html")
 

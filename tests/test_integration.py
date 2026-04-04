@@ -5,16 +5,25 @@ import pytest
 
 import shutil
 
-from latex_jats.convert import run_latexmlc, validate_jats
+from latex_jats.convert import preprocess_for_latexml, run_latexmlc, validate_jats
 
 FIXTURES = Path(__file__).parent / "fixtures" / "latex"
+
+
+def _prepare_fixture(fixture_tex: Path, tmp_path: Path) -> Path:
+    """Copy a fixture to tmp_path and apply LaTeXML preprocessing. Returns the copied main .tex path."""
+    workspace = tmp_path / "workspace"
+    shutil.copytree(fixture_tex.parent, workspace)
+    preprocess_for_latexml(workspace)
+    return workspace / fixture_tex.name
 
 
 @pytest.mark.integration
 def test_citations_linked(tmp_path):
     """Citations link to bibliography entries and display author-year text."""
     output = tmp_path / "output.xml"
-    run_latexmlc(str(FIXTURES / "citations.tex"), str(output), log_dir=tmp_path)
+    tex = _prepare_fixture(FIXTURES / "citations.tex", tmp_path)
+    run_latexmlc(str(tex), str(output), log_dir=tmp_path)
 
     root = ET.parse(output).getroot()
     ref_ids = {ref.get("id") for ref in root.findall(".//ref-list//ref") if ref.get("id")}
@@ -57,7 +66,8 @@ def test_citations_linked(tmp_path):
 def test_citation_optional_args(tmp_path):
     """Citation commands with optional prenote/postnote arguments render correctly."""
     output = tmp_path / "output.xml"
-    run_latexmlc(str(FIXTURES / "citations.tex"), str(output), log_dir=tmp_path)
+    tex = _prepare_fixture(FIXTURES / "citations.tex", tmp_path)
+    run_latexmlc(str(tex), str(output), log_dir=tmp_path)
 
     root = ET.parse(output).getroot()
 
@@ -102,7 +112,8 @@ def test_citation_optional_args(tmp_path):
 def test_abstract_and_keywords(tmp_path):
     """\\abstract{} and \\keywords{} produce <abstract> and <kwd-group> in JATS."""
     output = tmp_path / "output.xml"
-    run_latexmlc(str(FIXTURES / "authors.tex"), str(output), log_dir=tmp_path)
+    tex = _prepare_fixture(FIXTURES / "authors.tex", tmp_path)
+    run_latexmlc(str(tex), str(output), log_dir=tmp_path)
 
     root = ET.parse(output).getroot()
 
@@ -122,7 +133,8 @@ def test_abstract_and_keywords(tmp_path):
 def test_authors_names_and_affiliations(tmp_path):
     """Authors are split into surname/given-names with spaces preserved."""
     output = tmp_path / "output.xml"
-    run_latexmlc(str(FIXTURES / "authors.tex"), str(output), log_dir=tmp_path)
+    tex = _prepare_fixture(FIXTURES / "authors.tex", tmp_path)
+    run_latexmlc(str(tex), str(output), log_dir=tmp_path)
 
     root = ET.parse(output).getroot()
     contribs = root.findall(".//contrib[@contrib-type='author']")
@@ -143,7 +155,8 @@ def test_authors_names_and_affiliations(tmp_path):
 def test_subfigures_produce_fig_group(tmp_path):
     """\\subfloat inside a figure environment produces <fig-group> with child <fig> elements."""
     output = tmp_path / "output.xml"
-    run_latexmlc(str(FIXTURES / "subfigure.tex"), str(output), log_dir=tmp_path)
+    tex = _prepare_fixture(FIXTURES / "subfigure.tex", tmp_path)
+    run_latexmlc(str(tex), str(output), log_dir=tmp_path)
 
     root = ET.parse(output).getroot()
     fig_groups = root.findall(".//fig-group")
@@ -162,7 +175,8 @@ def test_subfigures_produce_fig_group(tmp_path):
 def test_adjustbox_table_structure(tmp_path):
     """adjustbox inside a table environment should be transparent — <table> is a direct child of <table-wrap>."""
     output = tmp_path / "output.xml"
-    run_latexmlc(str(FIXTURES / "adjustbox_table.tex"), str(output), log_dir=tmp_path)
+    tex = _prepare_fixture(FIXTURES / "adjustbox_table.tex", tmp_path)
+    run_latexmlc(str(tex), str(output), log_dir=tmp_path)
 
     root = ET.parse(output).getroot()
     table_wraps = root.findall(".//table-wrap")
@@ -180,6 +194,7 @@ def test_adjustbox_table_structure(tmp_path):
 def test_jats_validates(tmp_path):
     """Output JATS XML from the authors fixture validates against the JATS Publishing 1.2 RNG schema."""
     output = tmp_path / "output.xml"
-    run_latexmlc(str(FIXTURES / "authors.tex"), str(output), log_dir=tmp_path)
+    tex = _prepare_fixture(FIXTURES / "authors.tex", tmp_path)
+    run_latexmlc(str(tex), str(output), log_dir=tmp_path)
     errors = validate_jats(str(output))
     assert not errors, f"JATS validation errors:\n" + "\n".join(errors)

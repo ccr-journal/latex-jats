@@ -373,13 +373,19 @@ YAO_GOLD = EXAMPLES / 'CCR2025.1.2.YAO' / 'gold' / 'CCR2025.1.2.YAO.xml'
                     reason='YAO example files not found')
 def test_yao_references_match_gold(tmp_path):
     """Full pipeline on YAO article; spot-check ref-list against gold."""
+    import shutil
     from latex_jats.convert import (
         clean_body, fix_citation_ref_types, fix_footnotes, fix_metadata,
-        fix_references, fix_table_notes, run_latexmlc,
+        fix_references, fix_table_notes, preprocess_for_latexml, run_latexmlc,
     )
 
+    workspace = tmp_path / 'workspace'
+    shutil.copytree(YAO_TEX.parent, workspace)
+    preprocess_for_latexml(workspace)
+    workspace_tex = workspace / YAO_TEX.name
+
     output = tmp_path / 'output.xml'
-    run_latexmlc(str(YAO_TEX), str(output), log_dir=tmp_path)
+    run_latexmlc(str(workspace_tex), str(output), log_dir=tmp_path)
     fix_citation_ref_types(str(output))
     fix_metadata(str(output), str(YAO_TEX))
     fix_table_notes(str(output))

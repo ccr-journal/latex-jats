@@ -7,6 +7,7 @@ Usage:
 Fixes applied:
   - bare < and > in text mode  → wrapped in math mode ($<$, $>$)
   - trailing punctuation after \\includegraphics → removed
+  - \\title{} inside table environments → \\caption{}
   - unescaped & in .bib field values → escaped as \\&
 """
 
@@ -112,7 +113,7 @@ def fix_bare_angle_brackets(lines: list[str], filename: str) -> list[str]:
 
         new_line = _replace_in_text(line)
         if new_line != line:
-            logger.info("fix bare </>: %s:%d", filename, lineno)
+            logger.info("FIXED bare </>: %s:%d", filename, lineno)
         out.append(new_line)
 
     return out
@@ -125,7 +126,7 @@ def fix_stray_after_includegraphics(lines: list[str], filename: str) -> list[str
     for lineno, line in enumerate(lines, 1):
         new_line = pattern.sub(r'\1', line)
         if new_line != line:
-            logger.info(r"fix stray text after \includegraphics: %s:%d", filename, lineno)
+            logger.info(r"FIXED stray text after \includegraphics: %s:%d", filename, lineno)
         out.append(new_line)
     return out
 
@@ -147,7 +148,7 @@ def fix_unicode_text_chars(lines: list[str], filename: str) -> list[str]:
             if char in new_line:
                 new_line = new_line.replace(char, replacement)
                 logger.info(
-                    "fix Unicode %s (U+%04X): %s:%d",
+                    "FIXED Unicode %s (U+%04X): %s:%d",
                     desc, ord(char), filename, lineno,
                 )
         out.append(new_line)
@@ -176,13 +177,13 @@ def fix_minted_to_listings(lines: list[str], filename: str) -> list[str]:
         # \usepackage{minted} → \usepackage{listings}
         if re.match(r'\s*\\usepackage\{minted\}', line):
             new_line = re.sub(r'\\usepackage\{minted\}', r'\\usepackage{listings}', line)
-            logger.info("fix minted→listings (usepackage): %s:%d", filename, lineno)
+            logger.info("FIXED minted→listings (usepackage): %s:%d", filename, lineno)
             out.append(new_line)
             continue
 
         # Remove \usemintedstyle{...} lines entirely
         if re.match(r'\s*\\usemintedstyle\{', line):
-            logger.info("fix minted→listings (remove usemintedstyle): %s:%d", filename, lineno)
+            logger.info("FIXED minted→listings (remove usemintedstyle): %s:%d", filename, lineno)
             continue
 
         # \begin{minted}[opts]{lang} → \begin{lstlisting}[language=Lang]
@@ -191,18 +192,37 @@ def fix_minted_to_listings(lines: list[str], filename: str) -> list[str]:
             indent, lang, rest = m.groups()
             lang_listings = _MINTED_TO_LISTINGS_LANG.get(lang, lang.capitalize() if lang.islower() else lang)
             new_line = f"{indent}\\begin{{lstlisting}}[language={lang_listings}]{rest}\n"
-            logger.info("fix minted→listings (begin): %s:%d", filename, lineno)
+            logger.info("FIXED minted→listings (begin): %s:%d", filename, lineno)
             out.append(new_line)
             continue
 
         # \end{minted} → \end{lstlisting}
         if re.match(r'\s*\\end\{minted\}', line):
             new_line = re.sub(r'\\end\{minted\}', r'\\end{lstlisting}', line)
-            logger.info("fix minted→listings (end): %s:%d", filename, lineno)
+            logger.info("FIXED minted→listings (end): %s:%d", filename, lineno)
             out.append(new_line)
             continue
 
         out.append(line)
+    return out
+
+
+def fix_title_in_table(lines: list[str], filename: str) -> list[str]:
+    r"""Replace \title{} with \caption{} inside table environments."""
+    out = []
+    in_table = False
+    for lineno, line in enumerate(lines, 1):
+        stripped = re.sub(r'(?<!\\)%.*', '', line)
+        if re.search(r'\\begin\{table\}', stripped):
+            in_table = True
+        if re.search(r'\\end\{table\}', stripped):
+            in_table = False
+        if in_table and re.search(r'\\title\{', stripped):
+            new_line = re.sub(r'\\title\{', r'\\caption{', line)
+            logger.info(r"FIXED \title{} → \caption{} in table: %s:%d", filename, lineno)
+            out.append(new_line)
+        else:
+            out.append(line)
     return out
 
 
@@ -211,6 +231,7 @@ ALL_FIXES = [
     fix_bare_angle_brackets,
     fix_stray_after_includegraphics,
     fix_unicode_text_chars,
+    fix_title_in_table,
 ]
 
 
@@ -227,7 +248,7 @@ def fix_bib_ampersands(lines: list[str], filename: str) -> list[str]:
         if re.search(r'(?<!\\)&', line) and re.search(r'=\s*\{', line):
             new_line = re.sub(r'(?<!\\)&', r'\\&', line)
             if new_line != line:
-                logger.info("fix unescaped &: %s:%d", filename, lineno)
+                logger.info("FIXED unescaped &: %s:%d", filename, lineno)
             out.append(new_line)
         else:
             out.append(line)
@@ -249,7 +270,7 @@ def fix_bib_dotless_i_accent(lines: list[str], filename: str) -> list[str]:
         new_line = new_line.replace(r"\'\i", r"\'i")
         if new_line != line:
             logger.info(
-                r"fix {\'\i} → {\'i} (avoids bibtex decomposed Unicode): %s:%d",
+                r"FIXED {\'\i} → {\'i} (avoids bibtex decomposed Unicode): %s:%d",
                 filename, lineno,
             )
         out.append(new_line)
