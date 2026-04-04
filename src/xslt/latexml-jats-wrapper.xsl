@@ -9,6 +9,7 @@
 <xsl:stylesheet version="1.0"
     xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
     xmlns:ltx="http://dlmf.nist.gov/LaTeXML"
+    xmlns:xlink="http://www.w3.org/1999/xlink"
     xmlns:str="http://exslt.org/strings"
     extension-element-prefixes="str">
   <xsl:import href="SYSTEM_JATS_XSL_URI"/>
@@ -165,6 +166,25 @@
   <xsl:template match="ltx:listingline">
     <xsl:value-of select="."/>
     <xsl:text>&#x0A;</xsl:text>
+  </xsl:template>
+
+  <!-- Fix: use @imagesrc when LaTeXML has converted the graphic to a different format
+       (e.g. PDF → PNG: @imagesrc = "x1.png", a bare filename with no directory component).
+       For trivial same-format copies (e.g. PNG → PNG), @imagesrc contains a temp-dir
+       relative path inside the output directory; in that case fall back to @graphic,
+       which is the original source-relative path that step 2c copies to the output dir. -->
+  <xsl:template match="ltx:graphics">
+    <xsl:variable name="href">
+      <xsl:choose>
+        <xsl:when test="normalize-space(@imagesrc) != '' and not(contains(@imagesrc, '/'))">
+          <xsl:value-of select="@imagesrc"/>
+        </xsl:when>
+        <xsl:otherwise>
+          <xsl:value-of select="@graphic"/>
+        </xsl:otherwise>
+      </xsl:choose>
+    </xsl:variable>
+    <graphic xlink:href="{$href}"/>
   </xsl:template>
 
   <!-- Fix: nested tabular inside a table cell → flatten to line-break-separated content.

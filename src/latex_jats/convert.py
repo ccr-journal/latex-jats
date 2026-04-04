@@ -434,6 +434,60 @@ def _report_latexml_issues(log_path: Path):
         logger.warning("LaTeXML: %s", line)
 
 
+def _preprocess_tex_for_latexml(src_dir: Path, dst_dir: Path) -> int:
+    """Copy src_dir to dst_dir and process #ignoreforxml / #onlyforxml markers.
+
+    Inside a ``%% #ignoreforxml`` … ``%% #endignoreforxml`` block, each line of
+    real LaTeX code is commented out (prepend ``% ``) so LaTeXML never sees it.
+
+    Inside a ``%% #onlyforxml`` … ``%% #endonlyforxml`` block, each line has its
+    leading ``%% `` stripped (uncommented) so LaTeXML does see it, while pdflatex
+    still ignores it.
+
+    Line counts are preserved so LaTeXML error messages keep accurate line numbers.
+    Returns the number of blocks processed.
+    """
+    shutil.copytree(src_dir, dst_dir)
+    block_count = 0
+    for tex_file in dst_dir.rglob("*.tex"):
+        try:
+            lines = tex_file.read_text(encoding="utf-8").splitlines(keepends=True)
+        except UnicodeDecodeError:
+            lines = tex_file.read_text(encoding="latin-1").splitlines(keepends=True)
+        result = []
+        in_ignore = False
+        in_only = False
+        changed = False
+        for line in lines:
+            stripped = line.rstrip("\n\r")
+            if re.match(r"^\s*%%\s*#ignoreforxml\b", stripped):
+                in_ignore = True
+                block_count += 1
+                result.append(line)
+            elif re.match(r"^\s*%%\s*#endignoreforxml\b", stripped):
+                in_ignore = False
+                result.append(line)
+            elif re.match(r"^\s*%%\s*#onlyforxml\b", stripped):
+                in_only = True
+                block_count += 1
+                result.append(line)
+            elif re.match(r"^\s*%%\s*#endonlyforxml\b", stripped):
+                in_only = False
+                result.append(line)
+            elif in_ignore:
+                result.append("% " + line)
+                changed = True
+            elif in_only:
+                # strip leading "%%" (and optional single space) to uncomment
+                result.append(re.sub(r"^%% ?", "", line, count=1))
+                changed = True
+            else:
+                result.append(line)
+        if changed:
+            tex_file.write_text("".join(result), encoding="utf-8")
+    return block_count
+
+
 def run_latexmlc(input_tex, output_xml, log_dir=None):
     """Runs latexmlc to convert a LaTeX file to JATS XML.
 
@@ -462,24 +516,38 @@ def run_latexmlc(input_tex, output_xml, log_dir=None):
         xsl_path = Path(tmp_xsl.name)
         tmp_xsl.write(wrapper_xml.encode())
     try:
-        latexmlc_cmd = ["latexmlc", f"--path={LATEXML_DIR}", "--destination", str(latexml_path), "--format=xml", input_tex]
-        if latexml_log:
-            latexmlc_cmd.append(f"--log={latexml_log}")
-        subprocess.run(latexmlc_cmd, check=True)
+        src_dir = Path(input_tex).parent
+        tex_name = Path(input_tex).name
+        # Keep the temp dir alive through latexmlpost: the Graphics post-processor
+        # resolves figure paths relative to the source directory recorded in the
+        # intermediate XML, which points into tmp_src.
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_src = Path(tmpdir) / "src"
+            n_blocks = _preprocess_tex_for_latexml(src_dir, tmp_src)
+            if n_blocks:
+                logger.info(
+                    "Preprocessed %d #ignoreforxml/#onlyforxml block(s) before LaTeXML conversion",
+                    n_blocks,
+                )
+            tmp_tex = tmp_src / tex_name
+            latexmlc_cmd = ["latexmlc", f"--path={LATEXML_DIR}", "--destination", str(latexml_path), "--format=xml", str(tmp_tex)]
+            if latexml_log:
+                latexmlc_cmd.append(f"--log={latexml_log}")
+            subprocess.run(latexmlc_cmd, check=True)
 
-        if latexml_log and Path(latexml_log).exists():
-            _report_latexml_issues(Path(latexml_log))
+            if latexml_log and Path(latexml_log).exists():
+                _report_latexml_issues(Path(latexml_log))
 
-        fix_listing_data(str(latexml_path))
+            fix_listing_data(str(latexml_path))
 
-        post_cmd = ["latexmlpost", f"--stylesheet={xsl_path}", "--format=jats",
-                    "--destination", str(output_xml), str(latexml_path)]
-        if post_log:
-            post_cmd.append(f"--log={post_log}")
-        subprocess.run(post_cmd, check=True)
+            post_cmd = ["latexmlpost", f"--stylesheet={xsl_path}", "--format=jats",
+                        "--destination", str(output_xml), str(latexml_path)]
+            if post_log:
+                post_cmd.append(f"--log={post_log}")
+            subprocess.run(post_cmd, check=True)
 
-        if post_log and Path(post_log).exists():
-            _report_latexml_issues(Path(post_log))
+            if post_log and Path(post_log).exists():
+                _report_latexml_issues(Path(post_log))
     finally:
         latexml_path.unlink(missing_ok=True)
         xsl_path.unlink(missing_ok=True)
@@ -1648,6 +1716,37 @@ def _convert_pdf_figures(jats_file, latex_dir):
                 pdf_src.name, result.returncode,
                 result.stderr.decode(errors="replace").strip(),
             )
+
+
+def fix_graphic_hrefs(jats_file, output_dir: Path):
+    """Normalize graphic href paths that don't resolve in the output directory.
+
+    When latexmlc runs in a temp directory, LaTeXML's Graphics post-processor may
+    record @imagesrc paths that are relative to the output XML but point into the
+    (now-deleted) temp dir, e.g. ``tmpXXX/src/pew_mask.png``.  For any such href
+    where the full path doesn't exist but the basename does exist in output_dir
+    (because step 2c already copied the image there), rewrite to the bare basename.
+    """
+    XLINK = "http://www.w3.org/1999/xlink"
+    ET.register_namespace("xlink", XLINK)
+    tree = ET.parse(jats_file)
+    root = tree.getroot()
+    count = 0
+    for el in root.iter("graphic"):
+        href = el.get(f"{{{XLINK}}}href", "")
+        if not href:
+            continue
+        # If the path resolves correctly (relative to output_dir), leave it alone.
+        if (output_dir / href).exists():
+            continue
+        # Fall back to the basename if that exists in output_dir.
+        basename = Path(href).name
+        if basename and (output_dir / basename).exists():
+            el.set(f"{{{XLINK}}}href", basename)
+            count += 1
+    if count:
+        tree.write(jats_file, encoding="unicode")
+        logger.info("Normalized %d graphic href(s) to output-relative basenames", count)
 
 
 def fix_pdf_graphic_refs(jats_file):

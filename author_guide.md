@@ -1,0 +1,254 @@
+# Author Guide: Writing LaTeX for CCR XML Conversion
+
+This guide describes how to write LaTeX that converts cleanly to JATS XML for CCR (Computational Communication Research). The conversion uses LaTeXML and a post-processing pipeline. Most standard LaTeX works fine; this guide covers areas where authors commonly run into problems.
+
+## Quick start
+
+Your article folder should contain at minimum:
+
+```
+main.tex          % metadata: title, authors, abstract, keywords, \doi{}
+body.tex          % article body, figures, tables
+bibliography.bib  % BibTeX references
+```
+
+The `main.tex` preamble must include:
+
+```latex
+\documentclass{ccr}
+\addbibresource{bibliography.bib}
+\doi{10.5117/CCR<year>.<vol>.<num>.<AUTHOR>}
+```
+
+The converter derives the output filename and article metadata from `\doi{}`. This line is provided by the journal.
+
+---
+
+## Citations and references
+
+CCR uses biblatex with APA author-year style. Use these commands:
+
+| Command | Output | Use for |
+|---|---|---|
+| `\textcite{key}` | Author (Year) | Subject of sentence: "Smith (2020) found…" |
+| `\parencite{key}` | (Author, Year) | Parenthetical: "…has been shown (Smith, 2020)" |
+| `\parencite[p.~12]{key}` | (Author, Year, p. 12) | With page number |
+| `\parencite[see][]{key}` | (see Author, Year) | With prenote |
+| `\citeyear{key}` | Year | Year only: "in Smith's (2020) study" |
+| `\citeauthor{key}` | Author | Author only (when year already mentioned) |
+
+**Multiple citations:** Use a comma-separated key list — `\parencite{smith2020, jones2021}`.
+
+**Do not use** `\cite{}` for parenthetical references; in APA style it produces bare "Author, Year" without parentheses. Use `\parencite{}` instead.
+
+**Bibliography:** Include `\addbibresource{bibliography.bib}` in the preamble and `\printbibliography` at the end. Do not load biblatex separately — it is loaded by the `ccr` class.
+
+---
+
+## Figures
+
+### Supported image formats
+
+PNG, JPG, and PDF figures are all supported.
+
+- **PNG and JPG** are used directly in the XML/HTML output.
+- **PDF figures** are automatically converted to PNG during the XML conversion. Supply the actual `.pdf` file in your article folder; the converter handles the rest.
+- Always include the file extension in `\includegraphics{fig.pdf}` — LaTeX can find files without extensions but the converter cannot.
+
+### Figure structure
+
+```latex
+\begin{figure}
+  \centering
+  \includegraphics[width=\linewidth]{my_figure.pdf}
+  \caption{Caption text goes here.\label{fig:label}}
+\end{figure}
+```
+
+**Rules:**
+- Put `\label{}` inside `\caption{}`, not on a separate line.
+- Do not put text or punctuation after `\includegraphics{...}` on the same line. A trailing period or comma ends up as stray text in the XML output.
+- Use `\linewidth` or a fraction thereof (`0.8\linewidth`) for width — not absolute units like `8cm`.
+- Subfigures using `\subfig` or `subcaption` are supported.
+
+### Figures in subdirectories
+
+If your figures are in a subfolder, include the relative path with extension:
+
+```latex
+\includegraphics[width=\linewidth]{figures/fig1.pdf}
+```
+
+---
+
+## Tables
+
+### Recommended structure
+
+Use `tabular` or `tabularx` inside a `table` float:
+
+```latex
+\begin{table}
+  \caption{Table caption.\label{tab:label}}
+  \begin{tabular}{lrr}
+    \toprule
+    Column A & Column B & Column C \\
+    \midrule
+    ...
+    \bottomrule
+  \end{tabular}
+\end{table}
+```
+
+Use `\toprule`, `\midrule`, `\bottomrule` from `booktabs` — they map cleanly to JATS horizontal rules.
+
+### Table notes
+
+Notes (significance stars, standard error descriptions, etc.) must go **outside** the `tabular` environment but **inside** the `table` float:
+
+```latex
+\begin{table}
+  \caption{...}
+  \begin{tabular}{...}
+    ...
+    \bottomrule
+  \end{tabular}
+  \smallskip
+  \textit{Note.} $p < .05$. Standard errors in parentheses.
+\end{table}
+```
+
+Notes placed after `\bottomrule` but still inside `\begin{tabular}...\end{tabular}` (as a `\tfoot` row) will produce a warning and render incorrectly in the XML.
+
+### What to avoid in tables
+
+- Do not use `\title{}` inside a table — use `\caption{}`. LaTeXML wraps `\title{}` in a paragraph, which produces invalid JATS.
+- Avoid nested `tabular` environments inside cells when possible. If you need multi-line cell content, use `\\` linebreaks inside a `p{width}` column rather than a nested tabular.
+- `longtable`, `tabularx`, `booktabs`, and `threeparttablex` are all supported.
+- `tabu` is supported but deprecated; `tabularx` is preferred.
+
+---
+
+## Code listings
+
+Use the `listings` package with `lstlisting`:
+
+```latex
+\begin{lstlisting}[language=R, caption={My code}, label={lst:code}]
+x <- c(1, 2, 3)
+mean(x)
+\end{lstlisting}
+```
+
+**Rules:**
+- `lstlisting` converts to a `<code>` block in JATS. Language syntax highlighting options are ignored (no color in XML), but the code text is preserved exactly.
+- Line labels for cross-referencing (`\label{line:L1}` inside listing) are supported via `escapechar`.
+- Unicode characters in listings (e.g. `→`, `≥`) work if you use the `literate` option or write them directly as UTF-8.
+- The `minted` package is not supported. Convert `minted` listings to `lstlisting`.
+- Do not use `verbatim` for code you want in the XML output — it renders as a plain text block without semantic `<code>` tagging.
+
+### Floating code listings
+
+A listing with the `float` option is rendered as a figure-like `<fig fig-type="listing">` with label and caption:
+
+```latex
+\begin{lstlisting}[float, caption={Caption}, label={lst:label}]
+...
+\end{lstlisting}
+```
+
+---
+
+## Math
+
+Standard `amsmath` environments (`equation`, `align`, `gather`, etc.) convert to MathML. Inline math (`$...$`) also converts correctly.
+
+**One thing to watch:** do not write bare `>` or `<` in text mode outside of math. LaTeXML renders them as `¿` and `¡` (OT1 encoding artefact). Always use math mode or the explicit commands:
+
+```latex
+% Wrong:
+The score must be > 0.5.
+
+% Right:
+The score must be $> 0.5$.
+% or:
+The score must be greater than 0.5.
+```
+
+---
+
+## Footnotes
+
+`\footnote{}` is supported. Footnotes are collected into an `<fn-group>` in the back matter of the JATS output.
+
+---
+
+## Non-Latin scripts
+
+Unicode text (Arabic, Hebrew, Chinese, etc.) works correctly if you write it directly as UTF-8 in your `.tex` file. Do not use the `arabtex` or `cjhebrew` transliteration packages — they use custom encoding schemes that cannot be converted to Unicode by the XML converter. If your source uses these packages, convert to Unicode and use XeLaTeX or LuaLaTeX.
+
+---
+
+## Appendices
+
+Use the standard `\appendix` command followed by `\section{}` headings. Tables and figures in appendices are automatically relabelled (Table A1, Figure B1, etc.) in the XML output.
+
+---
+
+## Excluding code from XML conversion
+
+Some LaTeX code works correctly for PDF but confuses the XML converter — for example, preamble macros that use internal TeX dimension registers, or print-layout adjustments that have no XML equivalent. You can mark such blocks to be skipped during XML conversion:
+
+```latex
+%% #ignoreforxml
+\makeatletter
+\def\maxwidth{%
+  \ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\makeatother
+%% #endignoreforxml
+```
+
+Lines inside the block are commented out before the XML converter sees them; the original file is never modified.
+
+You can also supply an XML-only replacement using the inverse marker. These lines use `%% ` prefix so pdflatex ignores them:
+
+```latex
+%% #ignoreforxml
+\def\someComplexMacro{... complex pdf-only definition ...}
+%% #endignoreforxml
+
+%% #onlyforxml
+%%  \def\someComplexMacro{simple equivalent for XML}
+%% #endonlyforxml
+```
+
+**Guidelines for using these markers:**
+- Use them only in the preamble, for macro definitions that are clearly PDF-specific.
+- Do not use them to hide content that should appear in the article.
+- Line numbers are preserved so any error messages from the converter still reference the correct source lines.
+
+---
+
+## Packages to avoid
+
+These packages either have no XML equivalent or cause conversion errors:
+
+| Package | Problem | Alternative |
+|---|---|---|
+| `minted` | Not supported by LaTeXML | Use `listings` / `lstlisting` |
+| `arabtex`, `cjhebrew` | Custom encoding, not Unicode-convertible | Write Unicode directly |
+| `pdflscape` / `lscape` | Page rotation is PDF-only | Omit; landscape orientation is irrelevant in XML |
+| `pgf`/`tikz` (complex) | Render as images, not vector markup | Supply figures as PDF/PNG |
+
+---
+
+## Checklist before submission
+
+- [ ] All `\includegraphics` calls include the file extension (`.pdf`, `.png`, `.jpg`)
+- [ ] No bare `>` or `<` in text mode (check with the converter warnings)
+- [ ] Table notes are outside `\begin{tabular}` but inside `\begin{table}`
+- [ ] No `\title{}` inside table environments (use `\caption{}`)
+- [ ] No trailing punctuation immediately after `\includegraphics{...}` on the same line
+- [ ] `\label{}` inside figures is inside `\caption{}`
+- [ ] Any PDF-only preamble code is wrapped in `%% #ignoreforxml` / `%% #endignoreforxml`
+- [ ] Bibliography compiles without errors (`biber` required, not `bibtex`)

@@ -1,0 +1,111 @@
+\documentclass{ccr}\usepackage[]{graphicx}\usepackage[]{xcolor}
+% maxwidth is the original width if it is less than linewidth
+% otherwise use linewidth (to make sure the graphics do not exceed the margin)
+
+%% #ignoreforxml
+\makeatletter
+\def\maxwidth{ %
+  \ifdim\Gin@nat@width>\linewidth
+    \linewidth
+  \else
+    \Gin@nat@width
+  \fi
+}
+\makeatother
+%% #endignoreforxml
+
+
+\definecolor{fgcolor}{rgb}{0.345, 0.345, 0.345}
+\newcommand{\hlnum}[1]{\textcolor[rgb]{0.686,0.059,0.569}{#1}}%
+\newcommand{\hlsng}[1]{\textcolor[rgb]{0.192,0.494,0.8}{#1}}%
+\newcommand{\hlcom}[1]{\textcolor[rgb]{0.678,0.584,0.686}{\textit{#1}}}%
+\newcommand{\hlopt}[1]{\textcolor[rgb]{0,0,0}{#1}}%
+\newcommand{\hldef}[1]{\textcolor[rgb]{0.345,0.345,0.345}{#1}}%
+\newcommand{\hlkwa}[1]{\textcolor[rgb]{0.161,0.373,0.58}{\textbf{#1}}}%
+\newcommand{\hlkwb}[1]{\textcolor[rgb]{0.69,0.353,0.396}{#1}}%
+\newcommand{\hlkwc}[1]{\textcolor[rgb]{0.333,0.667,0.333}{#1}}%
+\newcommand{\hlkwd}[1]{\textcolor[rgb]{0.737,0.353,0.396}{\textbf{#1}}}%
+\let\hlipl\hlkwb
+
+\usepackage{framed}
+\makeatletter
+\newenvironment{kframe}{%
+ \def\at@end@of@kframe{}%
+ \ifinner\ifhmode%
+  \def\at@end@of@kframe{\end{minipage}}%
+  \begin{minipage}{\columnwidth}%
+ \fi\fi%
+ \def\FrameCommand##1{\hskip\@totalleftmargin \hskip-\fboxsep
+ \colorbox{shadecolor}{##1}\hskip-\fboxsep
+     % There is no \\@totalrightmargin, so:
+     \hskip-\linewidth \hskip-\@totalleftmargin \hskip\columnwidth}%
+ \MakeFramed {\advance\hsize-\width
+   \@totalleftmargin\z@ \linewidth\hsize
+   \@setminipage}}%
+ {\par\unskip\endMakeFramed%
+ \at@end@of@kframe}
+\makeatother
+
+\definecolor{shadecolor}{rgb}{.97, .97, .97}
+\definecolor{messagecolor}{rgb}{0, 0, 0}
+\definecolor{warningcolor}{rgb}{1, 0, 1}
+\definecolor{errorcolor}{rgb}{1, 0, 0}
+\newenvironment{knitrout}{}{} % an empty environment to be redefined in TeX
+
+\usepackage{alltt} %deleting 'mask' will de-anonymize the paper
+
+%\usepackage[american]{babel}
+\usepackage{csquotes}
+\usepackage{booktabs}
+%\usepackage[style=apa,sortcites=true,sorting=nyt,backend=biber]{biblatex}
+%\usepackage[natbib=true, style=apa, sortcites=true, backend=biber]{biblatex}
+%\usepackage{ifthen}
+\usepackage{longtable}
+\usepackage{pdflscape}
+\usepackage{setspace}
+%\newboolean{with_appendix}
+\usepackage[hidelinks]{hyperref}
+\usepackage{amsmath}
+%\usepackage{ragged2e}
+%\DeclareLanguageMapping{american}{american-apa}
+%\addbibresource{bibliography.bib}
+
+\title{Associations Measured = Stereotypes Conveyed? \\ A Semantic Validation of Word Embedding-Based Measures of Implicit Group Stereotyping in Large Text Corpora}
+\shorttitle{ASSOCIATIONS MEASURED = STEREOTYPES CONVEYED?}
+
+\authorsnames{Philipp Müller, Rainer Freudenthaler, Katharina Ludwig, Chung-hong Chan}
+
+\authorsaffiliations{{Institute for Media and Communication Studies \& Mannheim Centre for European Social Research (MZES), University of Mannheim, Germany}, {Institute for Media and Communication Studies \& Mannheim Centre for European Social Research (MZES), University of Mannheim, Germany}, {Institute for Media and Communication Studies \& Mannheim Centre for European Social Research (MZES), University of Mannheim, Germany}, {GESIS - Leibniz-Institut für Sozialwissenschaften, Cologne, Germany}}
+
+% Short author list for footer
+\shortauthors{Müller \& al.}
+
+\abstract{Word embedding-based measures are increasingly being used in computational communication research to assess how entities (such as individuals or social groups) are implicitly contextualized within mediated discourse. We argue that these corpus-level metrics, yet, lack a demonstration of their semantic validity and point out several challenges that preclude researchers from using the traditional ``gold-standard'' coding for its establishment. In this study, we propose and apply an alternative avenue, namely, to use the experimental survey logic to test a causal conjecture between human-perceived context and the implicit associations measured using word embeddings. We report the results of an application of this approach which uses texts and measures from a previous study investigating the implicit stigmatization of ethnic groups. Results indicate alignment between participants' perceived group contextualization and the respective estimations from a word embedding model across experimental conditions. We interpret this as evidence for semantic validity of word embedding-based measures of implicit stereotypical associations.}
+
+\keywords{validation, word embeddings, implicit association, stereotype, experiment, automated content analysis}
+
+\addbibresource{bibliography.bib}
+
+% The following information is provided by the journal when moving to production
+\volume{7}
+\pubnumber{1}
+\pubyear{2025}
+\firstpage{1}
+\doi{10.5117/CCR2025.1.14.MULL}
+
+%\authornote{
+%  \addORCIDlink{Philipp Müller}{0000-0002-5351-0608}
+%
+%  Correspondence concerning this article should be addressed to Philipp Müller, Institute for Media and Communication Studies, University of Mannheim, B 6, 30–32, Mannheim, Germany.  E-mail: p.mueller@uni-mannheim.de
+%
+%  \textit{Funding statement:} This research was supported by the German Federal Ministry for Family Affairs, Senior Citizens, Women and Youth (BMFSFJ) through a grant to the ``Research Association Discrimination and Racism'' (FoDiRa) of the DeZIM-Research Community (German Center for Integration and Migration Research).
+%
+%  \textit{Disclosure statement:} The authors report there are no competing interests to declare.}
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\begin{document}
+\maketitle
+\input{body}
+
+\printbibliography
+
+\end{document}
