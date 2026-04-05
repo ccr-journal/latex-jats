@@ -173,6 +173,47 @@ def _warn_bare_ampersand_in_metadata(tex_path):
                 )
 
 
+def _warn_input_in_tabular(tex_path):
+    r"""Warn about \input inside \begin{tabular}...\end{tabular}.
+
+    LaTeXML cannot handle file boundaries inside a tabular environment.
+    The fix is to either move \begin{tabular}...\end{tabular} into the
+    input file, or inline the content.
+    """
+    tex_dir = tex_path.parent
+    files = [tex_path]
+    try:
+        main_text = tex_path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        main_text = tex_path.read_text(encoding="latin-1")
+    for m in re.finditer(r'\\(?:input|include)\{([^}]+)\}', main_text):
+        child = tex_dir / m.group(1)
+        if not child.suffix:
+            child = child.with_suffix('.tex')
+        if child.exists() and child not in files:
+            files.append(child)
+    for fpath in files:
+        try:
+            lines = fpath.read_text(encoding="utf-8").splitlines()
+        except UnicodeDecodeError:
+            lines = fpath.read_text(encoding="latin-1").splitlines()
+        in_tabular = False
+        for lineno, line in enumerate(lines, 1):
+            stripped = re.sub(r'(?<!\\)%.*', '', line)
+            if re.search(r'\\begin\{(tabular|tabularx)\}', stripped):
+                in_tabular = True
+            if in_tabular and re.search(r'\\input\b', stripped):
+                logger.warning(
+                    r'\input inside \begin{tabular} (%s:%d): '
+                    r'LaTeXML cannot handle file boundaries inside a tabular. '
+                    r'Move \begin{tabular}...\end{tabular} into the input file, '
+                    r'or inline the content.',
+                    fpath.name, lineno,
+                )
+            if re.search(r'\\end\{(tabular|tabularx)\}', stripped):
+                in_tabular = False
+
+
 def warn_source_issues(tex_path):
     """Run all source-quality warnings on a .tex file and its \\input targets."""
     _warn_bare_greater_than(tex_path)
@@ -180,6 +221,7 @@ def warn_source_issues(tex_path):
     _warn_stray_text_after_includegraphics(tex_path)
     _warn_transliteration_packages(tex_path)
     _warn_bare_ampersand_in_metadata(tex_path)
+    _warn_input_in_tabular(tex_path)
 
 
 LATEXML_DIR = Path(__file__).parent.parent / "latexml"

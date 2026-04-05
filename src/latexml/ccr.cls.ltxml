@@ -18,8 +18,8 @@ RequirePackage('babel');
 
 RequirePackage('fancyhdr');
 RequirePackage('graphicx');
-# Override \resizebox to pass content through — print scaling is irrelevant for JATS
-DefMacro('\resizebox OptionalMatch:* {}{}{}', '#3');
+# \resizebox is stripped during source preprocessing (preprocess_for_latexml).
+# No LaTeXML binding needed — LaTeXML's built-in graphicx handles any leftovers.
 # Provide \maxwidth as a harmless fallback: knitr/R Markdown preambles define it using
 # \Gin@nat@width (not supported by LaTeXML's graphicx binding). Authors should wrap that
 # definition in %% #ignoreforxml ... %% #endignoreforxml so LaTeXML never sees it; this
