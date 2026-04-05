@@ -56,3 +56,4 @@ luac.out
 /examples/
 .wrangler
 /zips/
+/.vscode/

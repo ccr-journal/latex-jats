@@ -115,6 +115,9 @@ def _patch_ccr_cls(workspace_dir: Path, engine: str = "pdflatex"):
     if engine == "pdflatex" and r'\pdfminorversion' not in text:
         text = r'\pdfminorversion=7' + '\n' + text
         changed = True
+    elif engine != "pdflatex" and r'\pdfminorversion' in text:
+        text = re.sub(r'\\pdfminorversion\s*=\s*\d+\s*\n?', '', text)
+        changed = True
     # pstricks is unused and can conflict with pdflatex
     if r'\RequirePackage{pstricks}' in text:
         text = text.replace(r'\RequirePackage{pstricks}', '% \\RequirePackage{pstricks}  % removed: unused, conflicts with pdflatex')
