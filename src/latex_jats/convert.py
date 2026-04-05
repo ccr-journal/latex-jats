@@ -1769,8 +1769,19 @@ def _convert_pdf_figures(jats_file, latex_dir):
         pdf_src = latex_dir / (href[:-4] + ".pdf")
         if not pdf_src.exists():
             continue
-        if svg_dest.exists() and svg_dest.stat().st_mtime >= pdf_src.stat().st_mtime:
-            continue
+        if svg_dest.exists():
+            # Check that the file is actually SVG (starts with '<' or an XML declaration)
+            with open(svg_dest, "rb") as f:
+                header = f.read(16)
+            if not header.lstrip(b"\xef\xbb\xbf").startswith((b"<", b"<?xml")):
+                logger.warning(
+                    "%s is not a valid SVG file (appears to be a different "
+                    "image format mislabelled as .svg) — reconverting from PDF",
+                    href,
+                )
+                svg_dest.unlink()
+            elif svg_dest.stat().st_mtime >= pdf_src.stat().st_mtime:
+                continue
         svg_dest.parent.mkdir(parents=True, exist_ok=True)
         result = subprocess.run(
             ["inkscape", "--export-type=svg", f"--export-filename={svg_dest}", str(pdf_src)],

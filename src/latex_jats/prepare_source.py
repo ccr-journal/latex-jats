@@ -14,6 +14,7 @@ Usage:
 
 import argparse
 import logging
+import re
 import shutil
 import subprocess
 import sys
@@ -102,7 +103,7 @@ def _normalize_bbl(latex_dir: Path) -> None:
                 )
 
 
-def _patch_ccr_cls(workspace_dir: Path):
+def _patch_ccr_cls(workspace_dir: Path, engine: str = "pdflatex"):
     """Patch ccr.cls in the workspace: add \\pdfminorversion=7, drop pstricks."""
     cls = workspace_dir / "ccr.cls"
     if not cls.exists():
@@ -110,7 +111,8 @@ def _patch_ccr_cls(workspace_dir: Path):
     text = cls.read_text()
     changed = False
     # Add \pdfminorversion=7 early so pdflatex produces PDF 1.7
-    if r'\pdfminorversion' not in text:
+    # (xelatex/lualatex handle any PDF version natively)
+    if engine == "pdflatex" and r'\pdfminorversion' not in text:
         text = r'\pdfminorversion=7' + '\n' + text
         changed = True
     # pstricks is unused and can conflict with pdflatex
@@ -138,7 +140,8 @@ def prepare_workspace(source_dir: Path, workspace_dir: Path,
     shutil.copytree(source_dir, workspace_dir)
     main_tex = workspace_dir / "main.tex"
 
-    _patch_ccr_cls(workspace_dir)
+    engine = _detect_tex_engine(main_tex)
+    _patch_ccr_cls(workspace_dir, engine)
 
     # Apply fixes to the workspace copy (if requested)
     if fix_problems:
@@ -157,19 +160,43 @@ def prepare_workspace(source_dir: Path, workspace_dir: Path,
     return main_tex
 
 
-def compile_latex(latex_dir: Path, log_dir: Path | None = None) -> bool:
-    """Run pdflatex → biber/bibtex → pdflatex → pdflatex.
+def _detect_tex_engine(main_tex: Path) -> str:
+    """Detect the TeX engine from a ``% !TeX program = ...`` magic comment.
 
-    Detects biber vs bibtex by checking for main.bcf after the first pdflatex
+    Scans the first 10 lines of the file.  Returns ``"xelatex"``,
+    ``"lualatex"``, or ``"pdflatex"`` (the default).
+    """
+    with open(main_tex) as f:
+        for _, line in zip(range(10), f):
+            m = re.match(r"^\s*%\s*!TeX\s+program\s*=\s*(\S+)", line, re.IGNORECASE)
+            if m:
+                engine = m.group(1).lower()
+                if engine in ("xelatex", "lualatex", "pdflatex"):
+                    return engine
+                logger.warning("Unknown TeX engine %r in magic comment — using pdflatex", engine)
+                return "pdflatex"
+    return "pdflatex"
+
+
+def compile_latex(latex_dir: Path, log_dir: Path | None = None) -> bool:
+    """Run latex → biber/bibtex → latex → latex.
+
+    The LaTeX engine is determined by a ``% !TeX program = xelatex`` magic
+    comment in ``main.tex`` (first 10 lines); defaults to pdflatex.
+
+    Detects biber vs bibtex by checking for main.bcf after the first
     run (biblatex writes a .bcf control file; plain bibtex does not).
 
     If log_dir is given, stdout/stderr of each step is captured there and
-    pdflatex's main.log / biber's main.blg are also copied in.
+    the engine's main.log / biber's main.blg are also copied in.
 
     Returns True if compilation succeeded.
     """
-    pdflatex = [
-        "pdflatex", "-interaction=nonstopmode",
+    engine = _detect_tex_engine(latex_dir / "main.tex")
+    if engine != "pdflatex":
+        logger.info("Using %s (detected from magic comment)", engine)
+    latex_cmd = [
+        engine, "-interaction=nonstopmode",
         "main.tex",
     ]
     pdflatex_log = log_dir / "pdflatex.log" if log_dir else None
@@ -186,7 +213,7 @@ def compile_latex(latex_dir: Path, log_dir: Path | None = None) -> bool:
 
     _normalize_bbl(latex_dir)
 
-    if not _run(pdflatex, latex_dir, pdflatex_log):
+    if not _run(latex_cmd, latex_dir, pdflatex_log):
         if not pdf_path.exists():
             return False
         logger.warning("pdflatex exited with errors but produced a PDF — continuing")
@@ -205,11 +232,11 @@ def compile_latex(latex_dir: Path, log_dir: Path | None = None) -> bool:
 
     _normalize_bbl(latex_dir)
 
-    if not _run(pdflatex, latex_dir, pdflatex_log):
+    if not _run(latex_cmd, latex_dir, pdflatex_log):
         if not pdf_path.exists():
             return False
         logger.warning("pdflatex exited with errors but produced a PDF — continuing")
-    if not _run(pdflatex, latex_dir, pdflatex_log):
+    if not _run(latex_cmd, latex_dir, pdflatex_log):
         if not pdf_path.exists():
             return False
         logger.warning("pdflatex exited with errors but produced a PDF — continuing")

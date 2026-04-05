@@ -1,0 +1,39 @@
+package LaTeXML::Package::Pool;
+use strict;
+use warnings;
+use LaTeXML::Package;
+
+# Override LaTeXML's built-in fontspec bindings.
+# The upstream \newfontfamily discards the defined token, so commands like
+# \hebrewfont are undefined when used later in the document.  We fix this
+# by actually defining the token as a no-op font switch.
+
+RequirePackage('xunicode');
+
+DefMacro('\fontspec[]{}',    undef);
+DefMacro('\setmainfont[]{}', undef);
+DefMacro('\setsansfont[]{}', undef);
+DefMacro('\setmonofont[]{}', undef);
+
+# \newfontfamily\cmd[options]{font} — define \cmd as a no-op
+DefMacro('\newfontfamily DefToken []{}', sub {
+  my ($gullet, $token, $options, $fontname) = @_;
+  DefMacroI($token, undef, sub { return (); });
+  return ();
+});
+
+DefMacro('\newfontface DefToken []{}', sub {
+  my ($gullet, $token, $options, $fontname) = @_;
+  DefMacroI($token, undef, sub { return (); });
+  return ();
+});
+
+DefMacro('\setmathrm[]{}',     undef);
+DefMacro('\setmathsf[]{}',     undef);
+DefMacro('\setmathtt[]{}',     undef);
+DefMacro('\setboldmathrm[]{}', undef);
+
+DefMacro('\defaultfontfeatures[]{}', undef);
+DefMacro('\addfontfeatures[]{}',     undef);
+
+1;
