@@ -393,12 +393,25 @@ def generate_index(output_root: Path):
 
     lines = [
         '<!DOCTYPE html><html><head><meta charset="utf-8">',
+        '<meta name="viewport" content="width=device-width, initial-scale=1">',
         "<title>CCR Preview</title>",
         "<style>",
-        "body { font-family: sans-serif; max-width: 1100px; margin: 2em auto; }",
+        "body { font-family: sans-serif; max-width: 1100px; margin: 2em auto; padding: 0 1em; }",
         ".ok { color: green; } .note { color: green; } .warn { color: #b8860b; } .errors { color: #d94000; } .fail { color: red; } .skip { color: gray; }",
         "table { border-collapse: collapse; width: 100%; }",
         "th, td { border: 1px solid #ccc; padding: 6px 10px; text-align: left; white-space: nowrap; }",
+        "@media screen and (max-width: 800px) {"
+        " table, thead, tbody, tr, th, td { display: block; white-space: normal; }"
+        " thead { display: none; }"
+        " tr { margin-bottom: 1em; border: 1px solid #ccc; border-radius: 4px; padding: 0.5em; }"
+        " td { border: none; padding: 2px 0; }"
+        " td.article-name { font-weight: bold; font-size: 1.1em; margin-bottom: 0.3em; }"
+        " td.output-cell { display: none; }"
+        " td.output-combined { display: block !important; }"
+        " td.output-combined::before { content: 'Output: '; font-weight: 600; }"
+        " td.step-cell::before { content: attr(data-label) ': '; font-weight: 600; }"
+        "}",
+        "td.output-combined { display: none; }",
         "button.status-btn { background: none; border: none; cursor: pointer; font: inherit;"
         " border-bottom: 1px dotted currentColor; padding: 0; }",
         # Modal styles
@@ -422,7 +435,7 @@ def generate_index(output_root: Path):
         "</style>",
         "</head><body>",
         "<h1>CCR Article Previews</h1>",
-        "<table><tr><th>Article</th><th>HTML</th><th>XML</th><th>PDF</th><th>ZIP</th><th>Prepare</th><th>Compile</th><th>Convert</th><th>Validate</th></tr>",
+        "<table><thead><tr><th>Article</th><th>HTML</th><th>XML</th><th>PDF</th><th>ZIP</th><th>Prepare</th><th>Compile</th><th>Convert</th><th>Validate</th></tr></thead><tbody>",
     ]
 
     for article_dir in articles:
@@ -533,16 +546,22 @@ def generate_index(output_root: Path):
             btn = f'<button class="status-btn {css}" onclick="document.getElementById(\'{modal_id}\').classList.add(\'open\')">{label}</button>'
             return btn + modal
 
+        # Combined output links for mobile card view (hidden on desktop)
+        output_parts = [l for l in [html_link, xml_link, pdf_link, zip_link] if l != "-"]
+        output_combined = " | ".join(output_parts) if output_parts else "-"
+
         lines.append(
-            f"<tr><td><strong>{article}</strong></td>"
-            f"<td>{html_link}</td><td>{xml_link}</td><td>{pdf_link}</td><td>{zip_link}</td>"
-            f"<td>{_step_cell(prepare_dir)}</td>"
-            f"<td>{_step_cell(compile_dir)}</td>"
-            f"<td>{_step_cell(convert_dir)}</td>"
-            f"<td>{_step_cell(validate_dir)}</td></tr>"
+            f'<tr><td class="article-name"><strong>{article}</strong></td>'
+            f'<td class="output-cell">{html_link}</td><td class="output-cell">{xml_link}</td>'
+            f'<td class="output-cell">{pdf_link}</td><td class="output-cell">{zip_link}</td>'
+            f'<td class="output-combined">{output_combined}</td>'
+            f'<td class="step-cell" data-label="Prepare">{_step_cell(prepare_dir)}</td>'
+            f'<td class="step-cell" data-label="Compile">{_step_cell(compile_dir)}</td>'
+            f'<td class="step-cell" data-label="Convert">{_step_cell(convert_dir)}</td>'
+            f'<td class="step-cell" data-label="Validate">{_step_cell(validate_dir)}</td></tr>'
         )
 
-    lines.append("</table>")
+    lines.append("</tbody></table>")
     lines.append(
         "<script>"
         "document.addEventListener('click',function(e){"

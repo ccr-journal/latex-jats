@@ -1991,7 +1991,11 @@ def rename_graphics(jats_file):
         changed = True
 
     if changed:
-        tree.write(jats_file, encoding="unicode")
+        xml_body = ET.tostring(root, encoding="unicode")
+        with open(jats_file, "w", encoding="utf-8") as f:
+            f.write(_XML_DECL)
+            f.write(_DOCTYPE)
+            f.write(xml_body)
         logger.info("Renamed %d graphic(s) to publisher format (%s_fig1..)", fig_num, article_id)
 
 
