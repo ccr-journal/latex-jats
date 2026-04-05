@@ -89,7 +89,7 @@ def _warn_transliteration_packages(tex_path):
         preamble = tex_path.read_text(encoding="latin-1")
     packages = {"arabtex": "Arabic", "cjhebrew": "Hebrew"}
     for pkg, lang in packages.items():
-        if re.search(rf'\\usepackage\{{({pkg})\}}', preamble):
+        if re.search(rf'^[^%]*\\usepackage\{{{pkg}\}}', preamble, re.MULTILINE):
             logger.warning(
                 "%s uses %s for %s transliteration. "
                 "Non-Latin text will appear as romanized transliteration in "
