@@ -647,6 +647,43 @@ a[href^="#bib"] {
 }
 
 /* ============================================================
+   RESPONSIVE STYLES
+   On narrow screens, let content flow full-width and reduce
+   padding/indentation while preserving the article look on
+   wider screens.
+   ============================================================ */
+
+@media screen and (max-width: 800px) {
+  :root {
+    --page-width: 100%;
+    --font-size: 11pt;
+  }
+
+  body {
+    padding: 1rem 0.75rem 3rem;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+
+  /* Reduce abstract / keywords indentation */
+  div#article-front .metadata.two-column.table:has(h4.callout-title),
+  div#article-front .kwd-group-inline {
+    padding: 0 1em;
+  }
+
+  h1.document-title {
+    font-size: 17pt;
+  }
+
+  /* Stack subfigures vertically */
+  div.fig-group div.fig.panel {
+    display: block;
+    max-width: 100%;
+    margin: 0.5rem auto;
+  }
+}
+
+/* ============================================================
    PRINT STYLES
    ============================================================ */
 

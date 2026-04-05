@@ -221,6 +221,7 @@ def convert_to_html(xml_file, html_file):
     _move_keywords_to_front(html_file)
     _reformat_article_info_cell(html_file)
     _fix_pre_code_whitespace(html_file)
+    _inject_viewport_meta(html_file)
     shutil.copy2(CSS_SRC, Path(html_file).parent / "jats-preview.css")
 
 
@@ -247,6 +248,30 @@ def _fix_pre_code_whitespace(html_file):
         with open(html_file, "wb") as f:
             f.write(doctype)
             f.write(lxml_html.tostring(root, pretty_print=True))
+
+
+def _inject_viewport_meta(html_file):
+    """Add a viewport meta tag so the page responds to device width."""
+    from lxml import html as lxml_html
+
+    tree = lxml_html.parse(html_file)
+    root = tree.getroot()
+    head = root.find('.//head')
+    if head is None:
+        return
+    # Skip if already present
+    if head.xpath('meta[@name="viewport"]'):
+        return
+    meta = etree.SubElement(head, 'meta')
+    meta.set('name', 'viewport')
+    meta.set('content', 'width=device-width, initial-scale=1')
+    doctype = (
+        b'<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"'
+        b' "http://www.w3.org/TR/html4/loose.dtd">\n'
+    )
+    with open(html_file, "wb") as f:
+        f.write(doctype)
+        f.write(lxml_html.tostring(root, pretty_print=True))
 
 
 def _move_keywords_to_front(html_file):
