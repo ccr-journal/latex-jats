@@ -52,7 +52,7 @@ CCR uses biblatex with APA author-year style. Use these commands:
 PNG, JPG, and PDF figures are all supported.
 
 - **PNG and JPG** are used directly in the XML/HTML output.
-- **PDF figures** are automatically converted to PNG during the XML conversion. Supply the actual `.pdf` file in your article folder; the converter handles the rest.
+- **PDF figures** are automatically converted to SVG during the XML conversion (requires inkscape). Supply the actual `.pdf` file in your article folder; the converter handles the rest.
 - Always include the file extension in `\includegraphics{fig.pdf}` — LaTeX can find files without extensions but the converter cannot.
 
 ### Figure structure
