@@ -646,6 +646,12 @@ a[href^="#bib"] {
   outline-offset: 2px;
 }
 
+/* Code listings: wrap long lines like LaTeX lstlisting does */
+pre.code code {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
 /* ============================================================
    RESPONSIVE STYLES
    On narrow screens, let content flow full-width and reduce
