@@ -71,7 +71,7 @@ def render_quarto(workspace_qmd: Path, log_dir: Path) -> Path:
     log_file = log_dir / "quarto-render.log"
 
     workspace_dir = workspace_qmd.parent
-    cmd = ["quarto", "render", workspace_qmd.name, "--to", "jats"]
+    cmd = ["quarto", "render", workspace_qmd.name, "--to", "jats_publishing"]
     logger.info("Running: %s (cwd=%s)", " ".join(cmd), workspace_dir)
 
     result = subprocess.run(

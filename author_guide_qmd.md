@@ -30,7 +30,6 @@ pubyear: 2026
 firstpage: 1
 bibliography: bibliography.bib
 doi: 10.5117/CCR2026.2.11.AUTHOR
-format: jats_publishing
 execute:
   echo: false
 ---
@@ -56,7 +55,7 @@ The converter derives the output filename and article metadata from the `doi` fi
 | `pubyear` | Publication year | `2026` |
 | `firstpage` | First page number | `1` |
 | `bibliography` | Path to `.bib` file | `bibliography.bib` |
-| `format` | Must be `jats_publishing` | |
+| `format` | Optional; the pipeline forces `jats_publishing` | |
 
 ### Authors and affiliations
 
@@ -363,7 +362,6 @@ JATS-specific content here.
 ## Checklist before submission
 
 - [ ] YAML front matter includes all required fields (`doi`, `volume`, `pubnumber`, `pubyear`, `firstpage`)
-- [ ] `format: jats_publishing` is set
 - [ ] `execute: echo: false` is set (unless code display is intentional)
 - [ ] No `kable_styling()` or other HTML-producing kableExtra functions outside of format guards
 - [ ] No `gt()`, `DT::datatable()`, or other HTML widget packages outside of format guards
