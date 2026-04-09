@@ -2437,6 +2437,145 @@ or pipeline) parameterized.
       <xsl:apply-templates/>
     </p>
   </xsl:template>
+
+  <!-- APA-style element-citation rendering. The default child-dump produces
+       run-on text with no spaces and a duplicated DOI/URL; this template
+       formats authors, year, title, source, volume(issue), pages, and DOI
+       link in the order an author would expect. -->
+  <xsl:template match="ref/element-citation" priority="1">
+    <p class="citation">
+      <xsl:call-template name="named-anchor"/>
+      <xsl:apply-templates select="person-group[@person-group-type='author'][1]
+                                   | person-group[not(@person-group-type)][1]"
+                           mode="apa-authors"/>
+      <xsl:if test="year">
+        <xsl:text> (</xsl:text>
+        <xsl:value-of select="year[1]"/>
+        <xsl:text>). </xsl:text>
+      </xsl:if>
+      <xsl:if test="article-title | chapter-title">
+        <xsl:apply-templates select="(article-title | chapter-title)[1]"/>
+        <xsl:text>. </xsl:text>
+      </xsl:if>
+      <xsl:if test="source">
+        <em>
+          <xsl:apply-templates select="source[1]"/>
+        </em>
+        <xsl:if test="volume or fpage">
+          <xsl:text>, </xsl:text>
+        </xsl:if>
+      </xsl:if>
+      <xsl:if test="volume">
+        <em>
+          <xsl:value-of select="volume"/>
+        </em>
+        <xsl:if test="issue">
+          <xsl:text>(</xsl:text>
+          <xsl:value-of select="issue"/>
+          <xsl:text>)</xsl:text>
+        </xsl:if>
+      </xsl:if>
+      <xsl:if test="fpage">
+        <xsl:if test="volume">
+          <xsl:text>, </xsl:text>
+        </xsl:if>
+        <xsl:value-of select="fpage"/>
+        <xsl:if test="lpage">
+          <xsl:text>&#x2013;</xsl:text>
+          <xsl:value-of select="lpage"/>
+        </xsl:if>
+      </xsl:if>
+      <xsl:if test="publisher-name">
+        <xsl:text>. </xsl:text>
+        <xsl:if test="publisher-loc">
+          <xsl:value-of select="publisher-loc"/>
+          <xsl:text>: </xsl:text>
+        </xsl:if>
+        <xsl:value-of select="publisher-name"/>
+      </xsl:if>
+      <xsl:text>. </xsl:text>
+      <xsl:choose>
+        <xsl:when test="pub-id[@pub-id-type='doi']">
+          <a>
+            <xsl:attribute name="href">
+              <xsl:text>https://doi.org/</xsl:text>
+              <xsl:value-of select="pub-id[@pub-id-type='doi']"/>
+            </xsl:attribute>
+            <xsl:text>https://doi.org/</xsl:text>
+            <xsl:value-of select="pub-id[@pub-id-type='doi']"/>
+          </a>
+        </xsl:when>
+        <xsl:when test="uri">
+          <a href="{uri}">
+            <xsl:value-of select="uri"/>
+          </a>
+        </xsl:when>
+      </xsl:choose>
+    </p>
+  </xsl:template>
+
+  <xsl:template match="person-group" mode="apa-authors">
+    <xsl:variable name="names" select="name | string-name | collab"/>
+    <xsl:variable name="total" select="count($names)"/>
+    <xsl:for-each select="$names">
+      <!-- APA 7th ed.: 21+ authors → first 19, ellipsis, last author -->
+      <xsl:choose>
+        <xsl:when test="$total &gt;= 21 and position() &gt; 19 and position() != $total">
+          <!-- skip authors 20 through second-to-last -->
+          <xsl:if test="position() = 20">
+            <xsl:text> . . . </xsl:text>
+          </xsl:if>
+        </xsl:when>
+        <xsl:otherwise>
+          <xsl:choose>
+            <xsl:when test="self::name">
+              <xsl:value-of select="surname"/>
+              <xsl:if test="given-names">
+                <xsl:text>, </xsl:text>
+                <!-- APA initials: take the first letter of each whitespace-separated token -->
+                <xsl:call-template name="apa-initials">
+                  <xsl:with-param name="text" select="normalize-space(given-names)"/>
+                </xsl:call-template>
+              </xsl:if>
+            </xsl:when>
+            <xsl:otherwise>
+              <xsl:apply-templates select="."/>
+            </xsl:otherwise>
+          </xsl:choose>
+          <xsl:choose>
+            <xsl:when test="position() = last()"/>
+            <xsl:when test="$total &gt;= 21 and position() = 19">
+              <!-- comma before the ellipsis -->
+              <xsl:text>,</xsl:text>
+            </xsl:when>
+            <xsl:when test="position() = last() - 1">
+              <xsl:text>, &amp; </xsl:text>
+            </xsl:when>
+            <xsl:otherwise>
+              <xsl:text>, </xsl:text>
+            </xsl:otherwise>
+          </xsl:choose>
+        </xsl:otherwise>
+      </xsl:choose>
+    </xsl:for-each>
+  </xsl:template>
+
+  <xsl:template name="apa-initials">
+    <xsl:param name="text"/>
+    <xsl:choose>
+      <xsl:when test="contains($text, ' ')">
+        <xsl:value-of select="substring($text, 1, 1)"/>
+        <xsl:text>. </xsl:text>
+        <xsl:call-template name="apa-initials">
+          <xsl:with-param name="text" select="substring-after($text, ' ')"/>
+        </xsl:call-template>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:value-of select="substring($text, 1, 1)"/>
+        <xsl:text>.</xsl:text>
+      </xsl:otherwise>
+    </xsl:choose>
+  </xsl:template>
   
   
   <xsl:template match="ref/note" priority="2">
@@ -2511,10 +2650,15 @@ or pipeline) parameterized.
   
 
 	<xsl:template match="tex-math">
-		<span class="tex-math">
-			<span class="generated">[TeX:] </span>
-			<xsl:apply-templates/>
-		</span>
+		<!-- When the tex-math sits inside an <alternatives> wrapper alongside
+		     a MathML rendering, suppress the raw TeX so the reader sees only
+		     the rendered math (the MathML template below copies it through). -->
+		<xsl:if test="not(parent::alternatives[mml:math])">
+			<span class="tex-math">
+				<span class="generated">[TeX:] </span>
+				<xsl:apply-templates/>
+			</span>
+		</xsl:if>
 	</xsl:template>
 
   
@@ -2586,7 +2730,13 @@ or pipeline) parameterized.
       col | colgroup | tr | th | td">
     <xsl:copy>
       <xsl:apply-templates select="@*" mode="table-copy"/>
-      <xsl:call-template name="named-anchor"/>
+      <!-- Only emit named anchors inside elements that allow <a> as a
+           child in HTML (th, td).  Anchors inside table, colgroup, col,
+           thead, tbody, tfoot or tr are invalid HTML and cause browsers
+           to misrender the table structure. -->
+      <xsl:if test="self::th or self::td">
+        <xsl:call-template name="named-anchor"/>
+      </xsl:if>
       <xsl:apply-templates/>
     </xsl:copy>
   </xsl:template>

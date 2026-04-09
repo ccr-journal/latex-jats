@@ -203,6 +203,47 @@
     </p>
   </xsl:template>
 
+  <!-- Override for element-citation to use APA-style formatting from the
+       imported main stylesheet. Without this, the priority-0 ref/* match
+       above wins because wrapper templates take import precedence. -->
+  <xsl:template match="ref/element-citation" priority="1">
+    <xsl:apply-imports/>
+  </xsl:template>
+
+  <!-- Footnote / affiliation xrefs: render in superscript so the marker is
+       distinguishable from running text. The default metadata-inline
+       template wraps xrefs in [..] brackets, which is overridden here. -->
+  <xsl:template match="xref[@ref-type='fn']">
+    <sup><a href="#{@rid}"><xsl:apply-templates/></a></sup>
+  </xsl:template>
+  <xsl:template match="xref[@ref-type='aff' or @ref-type='fn']" mode="metadata-inline">
+    <xsl:if test="preceding-sibling::node()[1][self::xref[@ref-type='aff' or @ref-type='fn']]">
+      <sup>,</sup>
+    </xsl:if>
+    <sup><a href="#{@rid}"><xsl:apply-templates/></a></sup>
+  </xsl:template>
+
+  <!-- Affiliations in metadata mode: prefix with the corresponding xref
+       label (e.g. "a") so the reader can match author superscripts to
+       affiliations. Quarto-style id-based affiliations have no <label> child;
+       we look up the matching <xref ref-type="aff"> in the front matter and
+       use its text content. -->
+  <xsl:template match="aff" mode="metadata">
+    <xsl:variable name="aff-id" select="@id"/>
+    <xsl:variable name="xref-label"
+                  select="(//xref[@ref-type='aff'][@rid=$aff-id])[1]"/>
+    <p class="metadata-entry">
+      <xsl:call-template name="named-anchor"/>
+      <xsl:if test="$xref-label">
+        <strong class="aff-label">
+          <xsl:value-of select="$xref-label"/>
+        </strong>
+        <xsl:text> </xsl:text>
+      </xsl:if>
+      <xsl:apply-templates/>
+    </p>
+  </xsl:template>
+
   <!-- Appendices -->
   <xsl:template match="app">
     <div class="section app" title="Appendix">

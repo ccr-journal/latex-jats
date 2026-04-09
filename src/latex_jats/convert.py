@@ -1623,126 +1623,140 @@ def fix_xref_ref_types(jats_file):
     tree.write(jats_file, encoding="unicode")
 
 
-def fix_metadata(jats_file, tex_file, lastpage=None):
-    """Replaces journal-meta with a constant CCR block and injects article metadata
-    (doi, publisher-id, volume, issue, fpage, pub-date) extracted from the LaTeX preamble."""
-    ET.register_namespace("xlink", "http://www.w3.org/1999/xlink")
-    tree = ET.parse(jats_file)
-    root = tree.getroot()
-
-    # --- journal-meta: replace entirely with constant block ---
+def apply_journal_meta(root):
+    """Replace any existing <journal-meta> with the CCR constant block."""
     front = root.find(".//front")
-    if front is not None:
-        old_jm = front.find("journal-meta")
-        new_jm = ET.fromstring(_JOURNAL_META_XML)
-        if old_jm is not None:
-            idx = list(front).index(old_jm)
-            front.remove(old_jm)
-            front.insert(idx, new_jm)
-        else:
-            front.insert(0, new_jm)
+    if front is None:
+        return
+    old_jm = front.find("journal-meta")
+    new_jm = ET.fromstring(_JOURNAL_META_XML)
+    if old_jm is not None:
+        idx = list(front).index(old_jm)
+        front.remove(old_jm)
+        front.insert(idx, new_jm)
+    else:
+        front.insert(0, new_jm)
 
-    # --- article-meta: parse preamble and inject fields ---
-    preamble = Path(tex_file).read_text(encoding="utf-8").split(r"\begin{document}")[0]
 
-    def _get(name):
-        m = re.search(r'\\' + name + r'\{([^}]*)\}', preamble)
-        return m.group(1).strip() if m else None
+def apply_article_meta(root, *, doi=None, volume=None, issue=None,
+                       pubyear=None, firstpage=None, lastpage=None):
+    """Inject article-id, article-categories, pub-date, volume, issue, fpage,
+    lpage, permissions, and abstract/keywords titles into <article-meta>.
 
-    doi_val      = _get("doi")
-    volume_val   = _get("volume")
-    pubnumber_val = _get("pubnumber")
-    pubyear_val  = _get("pubyear")
-    firstpage_val = _get("firstpage")
-
+    Used by both the LaTeX (fix_metadata) and Quarto (inject_metadata_from_yaml)
+    pipelines so they produce identical front matter. Values are pre-extracted
+    from whichever source format is being processed.
+    """
     am = root.find(".//article-meta")
     if am is None:
-        tree.write(jats_file, encoding="unicode")
         return
 
-    # Replace old <article-id> placeholder with two typed elements
+    # Replace any old <article-id> placeholders with two typed elements
     for old_id in am.findall("article-id"):
         am.remove(old_id)
 
     insert_pos = 0
-    if doi_val:
-        pub_id = doi_val.split("/", 1)[1] if "/" in doi_val else doi_val
+    if doi:
+        pub_id = doi.split("/", 1)[1] if "/" in doi else doi
         elem_pubid = ET.Element("article-id", {"pub-id-type": "publisher-id"})
         elem_pubid.text = pub_id
         elem_doi = ET.Element("article-id", {"pub-id-type": "doi"})
-        elem_doi.text = doi_val
+        elem_doi.text = doi
         am.insert(insert_pos, elem_doi)
         am.insert(insert_pos, elem_pubid)
         insert_pos += 2
 
-    # (10) Insert <article-categories> after article-id elements
     art_cat = ET.fromstring(
         '<article-categories><subj-group subj-group-type="heading">'
         '<subject>Article</subject></subj-group></article-categories>'
     )
     am.insert(insert_pos, art_cat)
 
-    # Find insertion point: just before <permissions>
+    # Find insertion point: just before <permissions> if present, otherwise
+    # before whichever of <abstract>/<kwd-group>/<contrib-group>/<title-group>
+    # appears first (these all come AFTER pub-date/volume/issue/fpage in JATS).
     children = list(am)
-    perm_idx = next((i for i, e in enumerate(children) if e.tag == "permissions"), len(children))
+    perm_idx = next((i for i, e in enumerate(children) if e.tag == "permissions"), None)
+    if perm_idx is None:
+        # pub-date/volume/issue/fpage/lpage/permissions belong AFTER aff/author-notes
+        # but BEFORE abstract/trans-abstract/kwd-group. Insert before the first
+        # such "after" marker we find.
+        for marker in ("abstract", "trans-abstract", "kwd-group", "funding-group", "support-group", "counts", "custom-meta-group"):
+            perm_idx = next((i for i, e in enumerate(children) if e.tag == marker), None)
+            if perm_idx is not None:
+                break
+    if perm_idx is None:
+        perm_idx = len(children)
 
     new_elems = []
-    if pubyear_val:
+    if pubyear:
         pub_date = ET.Element("pub-date", {"pub-type": "epub"})
         year_elem = ET.SubElement(pub_date, "year")
-        year_elem.text = pubyear_val
+        year_elem.text = str(pubyear)
         new_elems.append(pub_date)
-    if volume_val:
+    if volume:
         vol = ET.Element("volume")
-        vol.text = volume_val
+        vol.text = str(volume)
         new_elems.append(vol)
-    if pubnumber_val:
-        issue = ET.Element("issue")
-        issue.text = pubnumber_val
-        new_elems.append(issue)
+    if issue:
+        iss = ET.Element("issue")
+        iss.text = str(issue)
+        new_elems.append(iss)
     fpage = ET.Element("fpage")
-    fpage.text = firstpage_val or "1"
+    fpage.text = str(firstpage) if firstpage else "1"
     new_elems.append(fpage)
-    lastpage_val = _get("lastpage") or lastpage
-    if lastpage_val:
+    if lastpage:
         lpage = ET.Element("lpage")
-        lpage.text = str(lastpage_val)
+        lpage.text = str(lastpage)
         new_elems.append(lpage)
     else:
-        logger.warning("No \\lastpage in LaTeX preamble; <lpage> will be missing from JATS output")
+        logger.warning("No lastpage available; <lpage> will be missing from JATS output")
 
     for i, elem in enumerate(new_elems):
         am.insert(perm_idx + i, elem)
 
-    # (11) Replace permissions with full copyright + CC BY 4.0 license block
+    # Replace permissions with full copyright + CC BY 4.0 license block
     old_perm = am.find("permissions")
+    copyright_year = str(pubyear) if pubyear else "unknown"
+    perm_xml = (
+        '<permissions>'
+        '<copyright-statement>\u00a9 The authors</copyright-statement>'
+        f'<copyright-year>{copyright_year}</copyright-year>'
+        '<copyright-holder>The authors</copyright-holder>'
+        '<license license-type="open-access">'
+        '<license-p>This is an open access article distributed under the CC BY 4.0 license '
+        '<ext-link xmlns:xlink="http://www.w3.org/1999/xlink" ext-link-type="uri" '
+        'xlink:href="https://creativecommons.org/licenses/by/4.0/">'
+        'https://creativecommons.org/licenses/by/4.0/</ext-link></license-p>'
+        '</license>'
+        '</permissions>'
+    )
+    new_perm = ET.fromstring(perm_xml)
     if old_perm is not None:
         perm_idx_now = list(am).index(old_perm)
         am.remove(old_perm)
-        copyright_year = pubyear_val or "unknown"
-        perm_xml = (
-            '<permissions>'
-            '<copyright-statement>\u00a9 The authors</copyright-statement>'
-            f'<copyright-year>{copyright_year}</copyright-year>'
-            '<copyright-holder>The authors</copyright-holder>'
-            '<license license-type="open-access">'
-            '<license-p>This is an open access article distributed under the CC BY 4.0 license '
-            '<ext-link xmlns:xlink="http://www.w3.org/1999/xlink" ext-link-type="uri" '
-            'xlink:href="https://creativecommons.org/licenses/by/4.0/">'
-            'https://creativecommons.org/licenses/by/4.0/</ext-link></license-p>'
-            '</license>'
-            '</permissions>'
+        am.insert(perm_idx_now, new_perm)
+    else:
+        # Insert before abstract/kwd-group/etc., right after the metadata
+        # block we just inserted (pub-date, volume, issue, fpage, lpage).
+        children = list(am)
+        insert_at = next(
+            (i for i, e in enumerate(children)
+             if e.tag in ("abstract", "trans-abstract", "kwd-group",
+                          "funding-group", "support-group", "counts",
+                          "custom-meta-group")),
+            len(children),
         )
-        am.insert(perm_idx_now, ET.fromstring(perm_xml))
+        am.insert(insert_at, new_perm)
 
-    # (12) Add <title>Abstract</title> to <abstract> if missing
+    # Add <title>Abstract</title> to <abstract> if missing
     abstract = root.find(".//abstract")
     if abstract is not None and abstract.find("title") is None:
         title_elem = ET.Element("title")
         title_elem.text = "Abstract"
         abstract.insert(0, title_elem)
 
-    # (13) Add <title>Keywords:</title> to <kwd-group> if missing
+    # Add <title>Keywords:</title> to <kwd-group> if missing
     kwd_group = root.find(".//kwd-group")
     if kwd_group is not None and kwd_group.find("title") is None:
         title_elem = ET.Element("title")
@@ -1752,6 +1766,33 @@ def fix_metadata(jats_file, tex_file, lastpage=None):
     for kwd in root.findall(".//kwd"):
         if kwd.text:
             kwd.text = kwd.text.strip()
+
+
+def fix_metadata(jats_file, tex_file, lastpage=None):
+    """Replaces journal-meta with a constant CCR block and injects article metadata
+    (doi, publisher-id, volume, issue, fpage, pub-date) extracted from the LaTeX preamble."""
+    ET.register_namespace("xlink", "http://www.w3.org/1999/xlink")
+    tree = ET.parse(jats_file)
+    root = tree.getroot()
+
+    apply_journal_meta(root)
+
+    # Parse the LaTeX preamble for metadata fields
+    preamble = Path(tex_file).read_text(encoding="utf-8").split(r"\begin{document}")[0]
+
+    def _get(name):
+        m = re.search(r'\\' + name + r'\{([^}]*)\}', preamble)
+        return m.group(1).strip() if m else None
+
+    apply_article_meta(
+        root,
+        doi=_get("doi"),
+        volume=_get("volume"),
+        issue=_get("pubnumber"),
+        pubyear=_get("pubyear"),
+        firstpage=_get("firstpage"),
+        lastpage=_get("lastpage") or lastpage,
+    )
 
     tree.write(jats_file, encoding="unicode")
 
@@ -2176,15 +2217,28 @@ def main():
     args = parser.parse_args()
 
     input_path = Path(args.input)
-    output_path = Path(args.output) if args.output else resolve_output_path(input_path)
 
-    # Create a workspace copy with preprocessing for the CLI path
-    with tempfile.TemporaryDirectory() as tmpdir:
-        workspace = Path(tmpdir) / "workspace"
-        shutil.copytree(input_path.parent, workspace)
-        preprocess_for_latexml(workspace)
-        warn_source_issues(workspace / input_path.name)
-        convert(workspace / input_path.name, output_path, html=args.html)
+    # Dispatch on extension: .qmd → quarto pipeline
+    if input_path.suffix.lower() == ".qmd":
+        from latex_jats.quarto import convert_quarto, get_doi_suffix_from_qmd
+        if args.output:
+            output_path = Path(args.output)
+        else:
+            doi_suffix = get_doi_suffix_from_qmd(input_path)
+            output_path = input_path.parent.parent / "output" / f"{doi_suffix}.xml"
+        with tempfile.TemporaryDirectory() as tmpdir:
+            workspace = Path(tmpdir) / "workspace"
+            shutil.copytree(input_path.parent, workspace)
+            convert_quarto(workspace / input_path.name, output_path, html=args.html)
+    else:
+        output_path = Path(args.output) if args.output else resolve_output_path(input_path)
+        # Create a workspace copy with preprocessing for the CLI path
+        with tempfile.TemporaryDirectory() as tmpdir:
+            workspace = Path(tmpdir) / "workspace"
+            shutil.copytree(input_path.parent, workspace)
+            preprocess_for_latexml(workspace)
+            warn_source_issues(workspace / input_path.name)
+            convert(workspace / input_path.name, output_path, html=args.html)
 
     if args.zip:
         doi_suffix = output_path.stem

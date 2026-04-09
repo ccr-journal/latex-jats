@@ -23,6 +23,12 @@ from pathlib import Path
 
 from latex_jats.convert import convert, create_publisher_zip, get_doi_suffix, preprocess_for_latexml, validate_jats
 from latex_jats.prepare_source import compile_latex, prepare_workspace
+from latex_jats.quarto import (
+    convert_quarto,
+    find_qmd,
+    get_doi_suffix_from_qmd,
+    prepare_quarto_workspace,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -65,13 +71,28 @@ def find_examples(specific: str | None = None) -> list[Path]:
                 raise FileNotFoundError(f"Ambiguous example suffix {specific!r}: {names}")
             raise FileNotFoundError(f"Example not found: {candidate}")
         return [candidate]
-    return sorted(p for p in EXAMPLES_DIR.iterdir() if p.is_dir() and p.name.startswith("CCR") and (p / "main.tex").exists())
+    return sorted(
+        p for p in EXAMPLES_DIR.iterdir()
+        if p.is_dir() and p.name.startswith("CCR")
+        and ((p / "main.tex").exists() or any(p.glob("*.qmd")))
+    )
+
+
+def is_quarto_example(example_dir: Path) -> bool:
+    """Return True if this example is a Quarto (.qmd) source rather than LaTeX."""
+    return not (example_dir / "main.tex").exists() and bool(list(example_dir.glob("*.qmd")))
 
 
 def _newest_tex_mtime(example_dir: Path) -> float:
     """Return the newest mtime of any .tex file in the example directory."""
     tex_files = list(example_dir.glob("*.tex")) + list(example_dir.glob("**/*.tex"))
     return max((f.stat().st_mtime for f in tex_files), default=0)
+
+
+def _newest_qmd_mtime(example_dir: Path) -> float:
+    """Return the newest mtime of any .qmd file in the example directory."""
+    qmd_files = list(example_dir.glob("*.qmd")) + list(example_dir.glob("**/*.qmd"))
+    return max((f.stat().st_mtime for f in qmd_files), default=0)
 
 
 def needs_compile(example_dir: Path, output_dir: Path) -> bool:
@@ -113,7 +134,11 @@ def needs_convert(example_dir: Path, output_dir: Path) -> bool:
     if not xml_files:
         return True
     xml_mtime = min(f.stat().st_mtime for f in xml_files)
-    # Stale if .tex or .bbl is newer than the XML
+    # Stale if source (.tex/.qmd) or .bbl is newer than the XML
+    if is_quarto_example(example_dir):
+        if _newest_qmd_mtime(example_dir) > xml_mtime:
+            return True
+        return False
     if _newest_tex_mtime(example_dir) > xml_mtime:
         return True
     bbl = example_dir / "main.bbl"
@@ -285,9 +310,84 @@ def run_validate(example_dir: Path, output_dir: Path) -> StepResult:
     return _capture_step("validate", output_dir, _validate_wrapper, str(xml_file))
 
 
+def run_quarto_article(example_dir: Path, force: bool = False,
+                       force_convert: bool = False) -> list[StepResult]:
+    """Run prepare → convert (render+postprocess) → validate for one Quarto article."""
+    article_id = example_dir.name
+    output_dir = OUTPUT_DIR / article_id
+    workspace_dir = output_dir / "workspace"
+    results: list[StepResult] = []
+
+    do_convert = force or force_convert or needs_convert(example_dir, output_dir)
+
+    # Step 1: prepare workspace (always recreate when we need to render)
+    if do_convert:
+        logger.info("--- %s: prepare ---", article_id)
+        result = _capture_step(
+            "prepare", output_dir,
+            prepare_quarto_workspace, example_dir, workspace_dir,
+        )
+        results.append(result)
+        if not result.success:
+            logger.error("FAILED (prepare): %s", article_id)
+            _write_article_status(output_dir, results)
+            return results
+        logger.info("OK (prepare): %s (%.1fs)", article_id, result.duration_s)
+
+    # Step 2: convert (render + postprocess)
+    if do_convert:
+        logger.info("--- %s: convert ---", article_id)
+        workspace_qmd = find_qmd(workspace_dir)
+        if workspace_qmd is None:
+            logger.error("No .qmd file found in workspace %s", workspace_dir)
+            _write_article_status(output_dir, results)
+            return results
+        doi_suffix = get_doi_suffix_from_qmd(workspace_qmd)
+        convert_dir = output_dir / "convert"
+        output_xml = convert_dir / f"{doi_suffix}.xml"
+        result = _capture_step(
+            "convert", output_dir,
+            convert_quarto, workspace_qmd, output_xml, html=True,
+        )
+        results.append(result)
+        if not result.success:
+            logger.error("FAILED (convert): %s", article_id)
+            _write_article_status(output_dir, results)
+            return results
+        logger.info("OK (convert): %s (%.1fs)", article_id, result.duration_s)
+        ran_convert = True
+    else:
+        logger.info("--- %s: convert (up to date, skipping) ---", article_id)
+        ran_convert = False
+
+    # Step 3: validate
+    validate_status = output_dir / "validate" / "status.json"
+    if ran_convert or not validate_status.exists():
+        logger.info("--- %s: validate ---", article_id)
+        # Find the produced XML
+        convert_dir = output_dir / "convert"
+        xml_files = list(convert_dir.glob("*.xml"))
+        if xml_files:
+            result = _capture_step("validate", output_dir, _validate_wrapper, str(xml_files[0]))
+            results.append(result)
+            if result.success:
+                logger.info("OK (validate): %s", article_id)
+            else:
+                logger.warning("WARN (validate): %s has validation errors", article_id)
+    else:
+        logger.info("--- %s: validate (up to date, skipping) ---", article_id)
+
+    if results:
+        _write_article_status(output_dir, results)
+    return results
+
+
 def run_article(example_dir: Path, force: bool = False, force_convert: bool = False,
                 fix: bool = False) -> list[StepResult]:
     """Run prepare → compile → convert → validate for one article."""
+    if is_quarto_example(example_dir):
+        return run_quarto_article(example_dir, force=force, force_convert=force_convert)
+
     article_id = example_dir.name
     output_dir = OUTPUT_DIR / article_id
     results = []
