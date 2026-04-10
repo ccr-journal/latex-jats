@@ -28,6 +28,7 @@ from latex_jats.quarto import (
     find_qmd,
     get_doi_suffix_from_qmd,
     prepare_quarto_workspace,
+    render_quarto_pdf,
 )
 
 logger = logging.getLogger(__name__)
@@ -334,10 +335,35 @@ def run_quarto_article(example_dir: Path, force: bool = False,
             return results
         logger.info("OK (prepare): %s (%.1fs)", article_id, result.duration_s)
 
-    # Step 2: convert (render + postprocess)
+    # Step 2: compile PDF (for publisher zip and page count)
+    pdf_path = None
+    lastpage = None
+    if do_convert:
+        logger.info("--- %s: compile ---", article_id)
+        workspace_qmd = find_qmd(workspace_dir)
+        if workspace_qmd is None:
+            logger.error("No .qmd file found in workspace %s", workspace_dir)
+            _write_article_status(output_dir, results)
+            return results
+        compile_dir = output_dir / "compile"
+        compile_dir.mkdir(parents=True, exist_ok=True)
+        log_dir = compile_dir
+        try:
+            rendered_pdf = render_quarto_pdf(workspace_qmd, log_dir)
+            pdf_path = compile_dir / f"{workspace_qmd.stem}.pdf"
+            shutil.copy2(rendered_pdf, pdf_path)
+            lastpage = _pdf_page_count(pdf_path)
+            logger.info("OK (compile): %s (PDF: %s pages)", article_id,
+                        lastpage or "unknown")
+        except Exception:
+            logger.warning("PDF compilation failed for %s; continuing without PDF",
+                           article_id)
+
+    # Step 3: convert (render JATS + postprocess)
     if do_convert:
         logger.info("--- %s: convert ---", article_id)
-        workspace_qmd = find_qmd(workspace_dir)
+        if workspace_qmd is None:
+            workspace_qmd = find_qmd(workspace_dir)
         if workspace_qmd is None:
             logger.error("No .qmd file found in workspace %s", workspace_dir)
             _write_article_status(output_dir, results)
@@ -348,6 +374,7 @@ def run_quarto_article(example_dir: Path, force: bool = False,
         result = _capture_step(
             "convert", output_dir,
             convert_quarto, workspace_qmd, output_xml, html=True,
+            lastpage=lastpage,
         )
         results.append(result)
         if not result.success:
@@ -355,6 +382,14 @@ def run_quarto_article(example_dir: Path, force: bool = False,
             _write_article_status(output_dir, results)
             return results
         logger.info("OK (convert): %s (%.1fs)", article_id, result.duration_s)
+
+        # Create publisher zip (with PDF from compile step)
+        zip_path = convert_dir / f"{doi_suffix}.zip"
+        try:
+            create_publisher_zip(output_xml, pdf_path, zip_path)
+        except Exception:
+            logger.exception("Failed to create publisher zip")
+
         ran_convert = True
     else:
         logger.info("--- %s: convert (up to date, skipping) ---", article_id)

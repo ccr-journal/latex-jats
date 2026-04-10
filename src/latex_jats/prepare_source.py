@@ -221,14 +221,20 @@ def compile_latex(latex_dir: Path, log_dir: Path | None = None) -> bool:
             return False
         logger.warning("pdflatex exited with errors but produced a PDF — continuing")
 
+    aux_path = latex_dir / "main.aux"
+    aux_has_citations = aux_path.exists() and "\\citation{" in aux_path.read_text()
+
     if (latex_dir / "main.bcf").exists():
         logger.info("Detected biblatex/biber (.bcf present)")
         bib_log = log_dir / "biber.log" if log_dir else None
         bib_ok = _run(["biber", "main"], latex_dir, bib_log)
-    else:
+    elif aux_has_citations:
         logger.info("Using bibtex")
         bib_log = log_dir / "bibtex.log" if log_dir else None
         bib_ok = _run(["bibtex", "main"], latex_dir, bib_log)
+    else:
+        logger.info("No bibliography commands found in .aux — skipping bibtex")
+        bib_ok = True
 
     if not bib_ok:
         return False

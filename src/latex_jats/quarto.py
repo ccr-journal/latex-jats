@@ -58,20 +58,21 @@ def find_qmd(directory: Path) -> Path | None:
     return qmds[0] if qmds else None
 
 
-def render_quarto(workspace_qmd: Path, log_dir: Path) -> Path:
-    """Run ``quarto render`` on the qmd file inside its workspace.
+def _render_quarto(workspace_qmd: Path, log_dir: Path, fmt: str,
+                   suffix: str, log_name: str) -> Path:
+    """Run ``quarto render`` with the given format.
 
-    Returns the path to the produced .xml file (next to the .qmd in the
-    workspace). Raises CalledProcessError on render failure.
+    Returns the path to the produced output file.
+    Raises CalledProcessError on render failure.
     """
     if not shutil.which("quarto"):
         raise RuntimeError("quarto not installed or not on PATH")
 
     log_dir.mkdir(parents=True, exist_ok=True)
-    log_file = log_dir / "quarto-render.log"
+    log_file = log_dir / log_name
 
     workspace_dir = workspace_qmd.parent
-    cmd = ["quarto", "render", workspace_qmd.name, "--to", "jats_publishing"]
+    cmd = ["quarto", "render", workspace_qmd.name, "--to", fmt]
     logger.info("Running: %s (cwd=%s)", " ".join(cmd), workspace_dir)
 
     result = subprocess.run(
@@ -88,10 +89,22 @@ def render_quarto(workspace_qmd: Path, log_dir: Path) -> Path:
         logger.error("quarto render failed; see %s", log_file)
         raise subprocess.CalledProcessError(result.returncode, cmd, result.stdout, result.stderr)
 
-    rendered_xml = workspace_qmd.with_suffix(".xml")
-    if not rendered_xml.exists():
-        raise FileNotFoundError(f"quarto render produced no XML at {rendered_xml}")
-    return rendered_xml
+    rendered = workspace_qmd.with_suffix(suffix)
+    if not rendered.exists():
+        raise FileNotFoundError(f"quarto render produced no output at {rendered}")
+    return rendered
+
+
+def render_quarto(workspace_qmd: Path, log_dir: Path) -> Path:
+    """Render a .qmd to JATS XML. Returns the path to the produced .xml."""
+    return _render_quarto(workspace_qmd, log_dir, "jats_publishing", ".xml",
+                          "quarto-render.log")
+
+
+def render_quarto_pdf(workspace_qmd: Path, log_dir: Path) -> Path:
+    """Render a .qmd to PDF via the ccr-pdf format. Returns the PDF path."""
+    return _render_quarto(workspace_qmd, log_dir, "ccr-pdf", ".pdf",
+                          "quarto-render-pdf.log")
 
 
 # ---------------------------------------------------------------------------
@@ -160,7 +173,8 @@ def get_doi_suffix_from_qmd(qmd_file: Path) -> str:
 # ---------------------------------------------------------------------------
 
 
-def inject_metadata_from_yaml(jats_file: str, qmd_file: str) -> None:
+def inject_metadata_from_yaml(jats_file: str, qmd_file: str,
+                              lastpage: int | None = None) -> None:
     """Inject CCR journal-meta + article-meta built from the .qmd YAML keys."""
     meta = parse_qmd_frontmatter(Path(qmd_file))
 
@@ -176,7 +190,7 @@ def inject_metadata_from_yaml(jats_file: str, qmd_file: str) -> None:
         issue=meta.get("pubnumber"),
         pubyear=meta.get("pubyear"),
         firstpage=meta.get("firstpage"),
-        lastpage=meta.get("lastpage"),
+        lastpage=meta.get("lastpage") or lastpage,
     )
 
     tree.write(jats_file, encoding="unicode")
@@ -470,7 +484,8 @@ def move_appendix_to_back(jats_file: str) -> None:
 # ---------------------------------------------------------------------------
 
 
-def convert_quarto(input_qmd: Path, output_xml: Path, html: bool = False) -> None:
+def convert_quarto(input_qmd: Path, output_xml: Path, html: bool = False,
+                   lastpage: int | None = None) -> None:
     """Convert a .qmd file to publisher-ready JATS XML.
 
     The caller is responsible for having already prepared the workspace
@@ -490,7 +505,7 @@ def convert_quarto(input_qmd: Path, output_xml: Path, html: bool = False) -> Non
     # Step 2: post-processing
     logger.info("Step 2: Post-processing JATS XML...")
     out_str = str(output_xml)
-    inject_metadata_from_yaml(out_str, str(input_qmd))
+    inject_metadata_from_yaml(out_str, str(input_qmd), lastpage=lastpage)
     fix_empty_history(out_str)
     fix_corresp_xref(out_str)
     unwrap_table_fig(out_str)

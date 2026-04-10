@@ -362,6 +362,7 @@ JATS-specific content here.
 ## Checklist before submission
 
 - [ ] YAML front matter includes all required fields (`doi`, `volume`, `pubnumber`, `pubyear`, `firstpage`)
+- [ ] No `format:` key that would conflict (the pipeline forces `jats_publishing`)
 - [ ] `execute: echo: false` is set (unless code display is intentional)
 - [ ] No `kable_styling()` or other HTML-producing kableExtra functions outside of format guards
 - [ ] No `gt()`, `DT::datatable()`, or other HTML widget packages outside of format guards
