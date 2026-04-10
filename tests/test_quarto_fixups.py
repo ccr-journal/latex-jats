@@ -86,10 +86,10 @@ def test_add_fig_table_labels(xml_file):
     add_fig_table_labels(p)
     root = _parse(p)
     fig = root.find(".//fig")
-    assert fig.find("label").text == "Figure 1"
+    assert fig.find("label").text == "Figure 1:"
     assert fig.find("caption/p").text == "A nice plot"
     tw = root.find(".//table-wrap")
-    assert tw.find("label").text == "Table A2"
+    assert tw.find("label").text == "Table A2:"
     assert tw.find("caption/p").text == "Results"
 
 
