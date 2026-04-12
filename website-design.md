@@ -17,25 +17,25 @@ A web service where editors can create manuscripts linked to OJS submissions, sh
 ## Architecture
 
 ```
-┌─────────────┐      ┌──────────────────────────────┐
-│  Vite/React │─────▶│  FastAPI                     │
-│  SPA        │◀─────│                              │
-│             │ poll  │  /api/manuscripts             │
+┌─────────────┐      ┌───────────────────────────────┐
+│  Vite/React │─────▶│  FastAPI                      │
+│  SPA        │◀─────│                               │
+│             │ poll │  /api/manuscripts             │
 └─────────────┘      │  /api/manuscripts/:id/upload  │
                      │  /api/manuscripts/:id/status  │
-                     │  /api/manuscripts/:id/download │
+                     │  /api/manuscripts/:id/download│
                      │  /api/ojs/import              │
-                     │                              │
-                     │  Background worker (in-proc) │
-                     │  ┌─────────────────────────┐ │
-                     │  │ prepare → convert → zip  │ │
-                     │  └─────────────────────────┘ │
-                     │                              │
-                     │  SQLite    File storage      │
-                     │  (metadata, (uploads/output) │
-                     │   logs,                      │
-                     │   tokens)                    │
-                     └──────────────────────────────┘
+                     │                               │
+                     │  Background worker (in-proc)  │
+                     │  ┌─────────────────────────┐  │
+                     │  │ prepare → convert → zip │  │
+                     │  └─────────────────────────┘  │
+                     │                               │
+                     │  SQLite    File storage       │
+                     │  (metadata, (uploads/output)  │
+                     │   logs,                       │
+                     │   tokens)                     │
+                     └───────────────────────────────┘
 ```
 
 ## Repository structure: monorepo
