@@ -11,7 +11,7 @@ A web service where editors can create manuscripts linked to OJS submissions, sh
 3. **Author** (or editor) uploads LaTeX/QMD source + resources (images, bibliography, etc.)
 4. System runs the conversion pipeline (prepare, convert, package)
 5. Author reviews **compilation/conversion warnings**, checks **PDF and HTML proofs**
-6. Author uploads new versions until satisfied
+6. Author re-uploads if changes are needed
 7. **Editor** downloads the final zip for production (or pushes it back to OJS)
 
 ## Architecture
@@ -88,23 +88,15 @@ The OJS integration is optional — manuscripts can also be created and managed 
 | status | enum | `draft`, `processing`, `ready`, `published` |
 | created_at | datetime | |
 | updated_at | datetime | |
-
-### Version
-
-| Field | Type | Notes |
-|---|---|---|
-| id | UUID | Primary key |
-| manuscript_id | UUID | Foreign key |
-| version_number | int | Auto-incrementing per manuscript |
-| uploaded_at | datetime | |
-| uploaded_by | str | `editor` or `author` |
+| uploaded_at | datetime? | Set when source is uploaded |
+| uploaded_by | str? | `editor` or `author` |
 
 ### ConversionJob
 
 | Field | Type | Notes |
 |---|---|---|
 | id | UUID | Primary key |
-| version_id | UUID | Foreign key |
+| manuscript_id | UUID | Foreign key |
 | status | enum | `queued`, `running`, `completed`, `failed` |
 | started_at | datetime? | |
 | completed_at | datetime? | |
@@ -127,19 +119,17 @@ The OJS integration is optional — manuscripts can also be created and managed 
 storage/
   manuscripts/
     <manuscript-id>/
-      versions/
-        <version-number>/
-          source/            # uploaded files (tex, bib, images, etc.)
-          output/
-            prepare/         # compilation logs, status.json
-            convert/         # JATS XML, HTML, PDF, images, zip
+      source/            # uploaded files (tex, bib, images, etc.)
+      output/
+        prepare/         # compilation logs, status.json
+        convert/         # JATS XML, HTML, PDF, images, zip
 ```
 
 ## Frontend pages
 
 - **Editor dashboard** — list of manuscripts with status indicators
-- **Manuscript detail** — metadata, version history, current status, download link
-- **Upload** — drag-and-drop zip or multi-file upload, with version note
+- **Manuscript detail** — metadata, current status, download link
+- **Upload** — drag-and-drop zip or multi-file upload
 - **Preview** — HTML proof (iframe), PDF link, conversion log with warnings/errors
 - **Author view** — same as manuscript detail but scoped to one manuscript via token
 
