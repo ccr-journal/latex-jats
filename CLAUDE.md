@@ -4,7 +4,7 @@
 
 This tool converts CCR (Computational Communication Research) journal articles from LaTeX to JATS XML for submission to the AUP Online publishing platform. It uses LaTeXML with custom bindings and a Python post-processing pipeline, and can optionally produce an HTML proof preview.
 
-The end goal is to turn this into a web service where authors can upload their LaTeX source and check the conversion status themselves.
+A web service (see `website-design.md`) is being built on top of this pipeline, where editors and authors can upload LaTeX source and check the conversion status. The FastAPI backend skeleton is implemented in `web/backend/`; remaining steps are pipeline integration, frontend, auth, OJS integration, and Docker packaging.
 
 ## Running the tool
 
@@ -27,6 +27,13 @@ uv run latex-jats path/to/main.tex --zip   # also generate publisher-format zip
 
 Pass `--html` to also generate `<doi-suffix>.html` alongside a copy of `jats-preview.css`.
 Pass `--zip` to generate a publisher-format zip (ID/ID.xml, ID/ID.pdf, ID/ID_figN.ext).
+
+**Web service (backend):**
+```sh
+uv run --extra web uvicorn web.backend.app.main:app --reload --port 8000
+```
+
+Install web dependencies first with `uv sync --extra web`. The SQLite database and file storage are created automatically under `storage/` on first startup. Swagger UI is available at `http://localhost:8000/docs`.
 
 **Other CLI tools:**
 ```sh
@@ -112,6 +119,7 @@ tests/
   test_warn_tfoot.py           unit tests for warn_tfoot_notes
   test_warn_fig_paragraphs.py  unit tests for figure paragraph warnings
   test_prepare_source.py       unit tests for prepare_source
+  test_web_api.py              unit tests for the FastAPI backend (uses TestClient + in-memory SQLite)
   test_integration.py          integration tests (full pipeline via latexmlc)
   fixtures/latex/              minimal .tex files used by integration tests
 examples/
@@ -122,6 +130,17 @@ output/                   centralized output tree (gitignored), also the Netlify
     prepare/              compilation logs + status.json
     convert/              JATS XML, HTML, PDF, images + status.json
   index.html              generated preview index with status indicators
+web/
+  backend/
+    app/
+      main.py             FastAPI app, CORS, lifespan
+      deps.py             get_session / get_storage dependency callables
+      models.py           SQLModel tables (Manuscript, ConversionJob, AccessToken)
+      storage.py          file storage abstraction (local filesystem, S3-ready interface)
+      routes/             manuscripts.py, upload.py, status.py, download.py
+    alembic/              database migrations
+    alembic.ini
+storage/                  runtime file storage (gitignored) — manuscripts/<doi_suffix>/source|output
 ```
 
 The `gold/` directory under CCR2025.1.2.YAO contains the JATS XML produced by the professional typesetting company. Use it as a reference when evaluating output quality. It may contain minor imperfections, so it does not need to be matched exactly. See `todo.md` in the project root for a tracked list of discrepancies.
@@ -143,3 +162,4 @@ Integration tests are skipped automatically if `latexmlc` is not installed.
 - Every new Python post-processing function in `convert.py` should have unit tests in a corresponding `tests/test_<function>.py` file, following the pattern in `test_metadata.py` and `test_fix_table_notes.py` (write minimal XML to a temp file, call the function, parse the result, assert on the tree).
 - Every new LaTeXML binding feature (new macro or constructor in `ccr.cls.ltxml` or `biblatex.sty.ltxml`) should have an integration test in `test_integration.py`. Reuse existing fixture `.tex` files where possible, or add a new minimal fixture under `tests/fixtures/latex/`.
 - The `authors.tex` fixture is a good general-purpose base: it exercises authors, affiliations, abstract, keywords, and a bibliography. Use it for tests that need a complete front matter.
+- New FastAPI routes should have tests in `tests/test_web_api.py`, using `TestClient` with dependency overrides for `get_session` (in-memory SQLite with `StaticPool`) and `get_storage` (`tmp_path`). See existing tests there for the pattern.

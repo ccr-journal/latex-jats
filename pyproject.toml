@@ -13,10 +13,18 @@ dependencies = ["lxml", "pyyaml"]
 where = ["src"]
 
 [project.optional-dependencies]
-test = ["pytest"]
+test = ["pytest", "httpx"]
+web = [
+    "fastapi>=0.111",
+    "uvicorn[standard]>=0.29",
+    "sqlmodel>=0.0.18",
+    "alembic>=1.13",
+    "python-multipart>=0.0.9",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
 markers = ["integration: requires latexmlc installed (deselect with -m 'not integration')"]
 
 [project.scripts]
