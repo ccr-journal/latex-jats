@@ -5,12 +5,14 @@ import zipfile
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
 from sqlmodel import Session
 
+from .. import deps
 from ..deps import get_session, get_storage
-from ..models import ConversionJob, JobRead, Manuscript
+from ..models import ManuscriptRead, ManuscriptStatus, Manuscript
 from ..storage import Storage
+from ..worker import run_pipeline
 
 router = APIRouter(prefix="/api/manuscripts", tags=["upload"])
 
@@ -34,9 +36,10 @@ def _safe_extract_zip(data: bytes, dest: Path) -> None:
                 target.write_bytes(zf.read(member))
 
 
-@router.post("/{doi_suffix}/upload", response_model=JobRead, status_code=201)
+@router.post("/{doi_suffix}/upload", response_model=ManuscriptRead, status_code=201)
 async def upload_source(
     doi_suffix: str,
+    background_tasks: BackgroundTasks,
     files: list[UploadFile] = File(...),
     uploaded_by: str = Form("editor"),
     session: Session = Depends(get_session),
@@ -45,6 +48,11 @@ async def upload_source(
     ms = session.get(Manuscript, doi_suffix)
     if not ms:
         raise HTTPException(404, detail=f"Manuscript '{doi_suffix}' not found")
+
+    if ms.status in (ManuscriptStatus.queued, ManuscriptStatus.processing):
+        raise HTTPException(
+            409, detail="A conversion is already in progress for this manuscript"
+        )
 
     source_dir = storage.source_dir(doi_suffix)
     source_dir.mkdir(parents=True, exist_ok=True)
@@ -61,10 +69,11 @@ async def upload_source(
     ms.uploaded_at = now
     ms.uploaded_by = uploaded_by
     ms.updated_at = now
+    ms.status = ManuscriptStatus.queued
     session.add(ms)
-
-    job = ConversionJob(manuscript_id=doi_suffix)
-    session.add(job)
     session.commit()
-    session.refresh(job)
-    return job
+    session.refresh(ms)
+
+    background_tasks.add_task(run_pipeline, doi_suffix, deps._engine, storage)
+
+    return ms

@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import SQLModel, create_engine
 
 from . import deps
-from .models import AccessToken, ConversionJob, Manuscript  # noqa: F401 — registers metadata
+from .models import AccessToken, Manuscript  # noqa: F401 — registers metadata
 from .routes import download, manuscripts, status, upload
 from .storage import Storage
 

@@ -1,4 +1,4 @@
-"""Unit tests for the FastAPI backend skeleton.
+"""Unit tests for the FastAPI backend.
 
 Uses FastAPI's TestClient with dependency overrides so that:
 - get_session uses an in-memory SQLite database
@@ -10,6 +10,7 @@ No real filesystem storage or network calls are made.
 import io
 import zipfile
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -18,7 +19,7 @@ from sqlmodel import Session, SQLModel, create_engine
 
 from web.backend.app import deps
 from web.backend.app.main import app
-from web.backend.app.models import AccessToken, ConversionJob, Manuscript  # noqa: F401
+from web.backend.app.models import AccessToken, Manuscript  # noqa: F401
 from web.backend.app.storage import Storage
 
 
@@ -45,8 +46,10 @@ def client(tmp_path: Path, test_storage: Storage):
 
     app.dependency_overrides[deps.get_session] = override_session
     app.dependency_overrides[deps.get_storage] = override_storage
-    yield TestClient(app)
+    deps._engine = engine
+    yield TestClient(app, raise_server_exceptions=False)
     app.dependency_overrides.clear()
+    deps._engine = None
 
 
 # ── Manuscript CRUD ───────────────────────────────────────────────────────────
@@ -63,6 +66,9 @@ def test_create_manuscript(client):
     assert data["title"] == "Test Article"
     assert data["status"] == "draft"
     assert data["uploaded_at"] is None
+    assert data["job_log"] == ""
+    assert data["job_started_at"] is None
+    assert data["job_completed_at"] is None
 
 
 def test_create_manuscript_duplicate(client):
@@ -102,7 +108,8 @@ def _create(client, doi_suffix="CCR2025.1.1.TEST"):
     return doi_suffix
 
 
-def test_upload_single_file(client, test_storage):
+@patch("web.backend.app.routes.upload.run_pipeline")
+def test_upload_single_file(mock_pipeline, client, test_storage):
     doi = _create(client)
     r = client.post(
         f"/api/manuscripts/{doi}/upload",
@@ -110,11 +117,15 @@ def test_upload_single_file(client, test_storage):
         data={"uploaded_by": "editor"},
     )
     assert r.status_code == 201
-    assert r.json()["status"] == "queued"
+    data = r.json()
+    assert data["status"] == "queued"
+    assert data["doi_suffix"] == doi
     assert (test_storage.source_dir(doi) / "main.tex").exists()
+    mock_pipeline.assert_called_once()
 
 
-def test_upload_zip(client, test_storage):
+@patch("web.backend.app.routes.upload.run_pipeline")
+def test_upload_zip(mock_pipeline, client, test_storage):
     doi = _create(client)
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as zf:
@@ -131,7 +142,8 @@ def test_upload_zip(client, test_storage):
     assert (test_storage.source_dir(doi) / "figures" / "fig1.pdf").exists()
 
 
-def test_upload_zip_slip(client, test_storage):
+@patch("web.backend.app.routes.upload.run_pipeline")
+def test_upload_zip_slip(mock_pipeline, client, test_storage):
     """A zip with a path-traversal entry must not escape the source directory."""
     doi = _create(client)
     buf = io.BytesIO()
@@ -156,19 +168,41 @@ def test_upload_not_found(client):
     assert r.status_code == 404
 
 
+@patch("web.backend.app.routes.upload.run_pipeline")
+def test_upload_rejected_while_processing(mock_pipeline, client):
+    """Upload should be rejected if a conversion is already in progress."""
+    doi = _create(client)
+    # First upload succeeds
+    r = client.post(
+        f"/api/manuscripts/{doi}/upload",
+        files=[("files", ("main.tex", b"x", "text/plain"))],
+    )
+    assert r.status_code == 201
+    assert r.json()["status"] == "queued"
+
+    # Second upload while queued should be rejected
+    r = client.post(
+        f"/api/manuscripts/{doi}/upload",
+        files=[("files", ("main.tex", b"y", "text/plain"))],
+    )
+    assert r.status_code == 409
+
+
 # ── Status ────────────────────────────────────────────────────────────────────
 
 
-def test_status_no_job(client):
+def test_status_draft(client):
     doi = _create(client)
     r = client.get(f"/api/manuscripts/{doi}/status")
     assert r.status_code == 200
     data = r.json()
-    assert data["manuscript_status"] == "draft"
-    assert data["job"] is None
+    assert data["status"] == "draft"
+    assert data["job_log"] == ""
+    assert data["job_started_at"] is None
 
 
-def test_status_queued(client):
+@patch("web.backend.app.routes.upload.run_pipeline")
+def test_status_queued(mock_pipeline, client):
     doi = _create(client)
     client.post(
         f"/api/manuscripts/{doi}/upload",
@@ -177,8 +211,8 @@ def test_status_queued(client):
     r = client.get(f"/api/manuscripts/{doi}/status")
     assert r.status_code == 200
     data = r.json()
-    assert data["job"]["status"] == "queued"
-    assert data["job"]["log"] == ""
+    assert data["status"] == "queued"
+    assert data["job_log"] == ""
 
 
 def test_status_not_found(client):
@@ -198,3 +232,48 @@ def test_download_not_ready(client):
 def test_download_not_found(client):
     r = client.get("/api/manuscripts/DOES-NOT-EXIST/download")
     assert r.status_code == 404
+
+
+# ── Integration: full upload → convert → download ────────────────────────────
+
+FIXTURES = Path(__file__).parent / "fixtures" / "latex"
+
+
+@pytest.mark.integration
+def test_upload_convert_download(client, test_storage):
+    """Full pipeline: upload LaTeX source, run conversion, download zip.
+
+    Requires latexmlc (and pdflatex/biber for compilation). The TestClient
+    runs BackgroundTasks synchronously, so the pipeline completes within the
+    upload request.
+    """
+    # The authors.tex fixture has \doi{10.0000/test}, so get_doi_suffix returns "test"
+    doi = "test"
+    client.post("/api/manuscripts", json={"title": "Integration Test", "doi_suffix": doi})
+
+    # Upload the fixture files
+    fixture_files = ["authors.tex", "ccr.cls", "bibliography.bib"]
+    files = []
+    for name in fixture_files:
+        content = (FIXTURES / name).read_bytes()
+        # authors.tex must be uploaded as main.tex (pipeline expects main.tex)
+        upload_name = "main.tex" if name == "authors.tex" else name
+        files.append(("files", (upload_name, content, "application/octet-stream")))
+
+    r = client.post(f"/api/manuscripts/{doi}/upload", files=files)
+    assert r.status_code == 201
+
+    # Check status — pipeline should have completed
+    r = client.get(f"/api/manuscripts/{doi}/status")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["status"] == "ready", f"Expected ready, got {data['status']}. Log:\n{data['job_log']}"
+    assert data["job_log"] != ""
+    assert data["job_started_at"] is not None
+    assert data["job_completed_at"] is not None
+
+    # Download the zip
+    r = client.get(f"/api/manuscripts/{doi}/download")
+    assert r.status_code == 200
+    assert "application/zip" in r.headers.get("content-type", "")
+    assert len(r.content) > 0

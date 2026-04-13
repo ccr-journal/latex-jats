@@ -13,16 +13,11 @@ from sqlmodel import Field, SQLModel
 
 class ManuscriptStatus(str, Enum):
     draft = "draft"
+    queued = "queued"
     processing = "processing"
     ready = "ready"
-    published = "published"
-
-
-class JobStatus(str, Enum):
-    queued = "queued"
-    running = "running"
-    completed = "completed"
     failed = "failed"
+    published = "published"
 
 
 class TokenRole(str, Enum):
@@ -42,16 +37,9 @@ class Manuscript(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     uploaded_at: Optional[datetime] = None
     uploaded_by: Optional[str] = None  # "editor" | "author"
-
-
-class ConversionJob(SQLModel, table=True):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
-    manuscript_id: str = Field(foreign_key="manuscript.doi_suffix", index=True)
-    status: JobStatus = JobStatus.queued
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    started_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
-    log: str = ""  # accumulates pipeline output
+    job_log: str = ""
+    job_started_at: Optional[datetime] = None
+    job_completed_at: Optional[datetime] = None
 
 
 class AccessToken(SQLModel, table=True):
@@ -81,18 +69,6 @@ class ManuscriptRead(SQLModel):
     updated_at: datetime
     uploaded_at: Optional[datetime]
     uploaded_by: Optional[str]
-
-
-class JobRead(SQLModel):
-    id: str
-    manuscript_id: str
-    status: JobStatus
-    created_at: datetime
-    started_at: Optional[datetime]
-    completed_at: Optional[datetime]
-    log: str
-
-
-class StatusResponse(SQLModel):
-    manuscript_status: ManuscriptStatus
-    job: Optional[JobRead]
+    job_log: str
+    job_started_at: Optional[datetime]
+    job_completed_at: Optional[datetime]
