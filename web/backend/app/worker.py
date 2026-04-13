@@ -89,7 +89,7 @@ def _pdf_page_count(pdf_path) -> int | None:
     return None
 
 
-def run_pipeline(doi_suffix: str, engine: Engine, storage: Storage) -> None:
+def run_pipeline(doi_suffix: str, engine: Engine, storage: Storage, *, fix: bool = False) -> None:
     """Execute the full conversion pipeline for a manuscript.
 
     This function is intended to run as a FastAPI background task.  It creates
@@ -122,7 +122,7 @@ def run_pipeline(doi_suffix: str, engine: Engine, storage: Storage) -> None:
         storage.ensure_dirs(doi_suffix)
 
         # ── Step 1: prepare workspace ────────────────────────────────────
-        workspace_tex = prepare_workspace(source_dir, workspace_dir)
+        workspace_tex = prepare_workspace(source_dir, workspace_dir, fix_problems=fix)
         _append_log(engine, doi_suffix, collector.drain())
 
         # ── Step 2: compile LaTeX ────────────────────────────────────────
@@ -162,8 +162,12 @@ def run_pipeline(doi_suffix: str, engine: Engine, storage: Storage) -> None:
         convert(workspace_tex, output_xml, html=True, lastpage=lastpage)
         _append_log(engine, doi_suffix, collector.drain())
 
-        # ── Step 4: create publisher zip ─────────────────────────────────
+        # Copy PDF to convert output for web preview
         pdf_path = source_dir / "main.pdf" if (source_dir / "main.pdf").exists() else None
+        if pdf_path:
+            shutil.copy2(pdf_path, convert_output / f"{article_id}.pdf")
+
+        # ── Step 4: create publisher zip ─────────────────────────────────
         zip_path = convert_output / f"{article_id}.zip"
         create_publisher_zip(output_xml, pdf_path, zip_path)
         _append_log(engine, doi_suffix, collector.drain())

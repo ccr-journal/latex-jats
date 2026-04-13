@@ -52,6 +52,13 @@ luac.out
 *.x86_64
 *.hex
 
+# Frontend
+node_modules/
+web/frontend/dist/
+
+# Runtime storage
+/storage/
+
 /output/
 /examples/
 .wrangler

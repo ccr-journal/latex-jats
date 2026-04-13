@@ -4,7 +4,7 @@
 
 This tool converts CCR (Computational Communication Research) journal articles from LaTeX to JATS XML for submission to the AUP Online publishing platform. It uses LaTeXML with custom bindings and a Python post-processing pipeline, and can optionally produce an HTML proof preview.
 
-A web service (see `website-design.md`) is being built on top of this pipeline, where editors and authors can upload LaTeX source and check the conversion status. The FastAPI backend skeleton is implemented in `web/backend/`; remaining steps are pipeline integration, frontend, auth, OJS integration, and Docker packaging.
+A web service (see `website-design.md`) is built on top of this pipeline, where editors and authors can upload LaTeX source and check the conversion status. The FastAPI backend is in `web/backend/` (with pipeline integration), and a React frontend is in `web/frontend/`. Remaining steps are auth, OJS integration, and Docker packaging.
 
 ## Running the tool
 
@@ -28,12 +28,14 @@ uv run latex-jats path/to/main.tex --zip   # also generate publisher-format zip
 Pass `--html` to also generate `<doi-suffix>.html` alongside a copy of `jats-preview.css`.
 Pass `--zip` to generate a publisher-format zip (ID/ID.xml, ID/ID.pdf, ID/ID_figN.ext).
 
-**Web service (backend):**
+**Web service:**
 ```sh
-uv run --extra web uvicorn web.backend.app.main:app --reload --port 8000
+npm start                            # start both backend and frontend (requires npm install first)
+npm run start:api                    # backend only (FastAPI on port 8000)
+npm run start:web                    # frontend only (Vite dev server on port 5173)
 ```
 
-Install web dependencies first with `uv sync --extra web`. The SQLite database and file storage are created automatically under `storage/` on first startup. Swagger UI is available at `http://localhost:8000/docs`.
+Install dependencies: `uv sync --extra web` for the backend, `npm install` in root (for concurrently) and `npm run install:frontend` for the React frontend. The SQLite database and file storage are created automatically under `storage/` on first startup. Swagger UI is available at `http://localhost:8000/docs`.
 
 **Other CLI tools:**
 ```sh
@@ -135,11 +137,18 @@ web/
     app/
       main.py             FastAPI app, CORS, lifespan
       deps.py             get_session / get_storage dependency callables
-      models.py           SQLModel tables (Manuscript, ConversionJob, AccessToken)
+      models.py           SQLModel tables (Manuscript, AccessToken)
       storage.py          file storage abstraction (local filesystem, S3-ready interface)
-      routes/             manuscripts.py, upload.py, status.py, download.py
+      worker.py           background pipeline runner (prepare → convert → zip)
+      routes/             manuscripts.py, upload.py, status.py, download.py, output.py
     alembic/              database migrations
     alembic.ini
+  frontend/               Vite + React + TypeScript + shadcn/ui SPA
+    src/
+      api/                typed API client (client.ts, types.ts)
+      pages/              DashboardPage, ManuscriptPage, PreviewPage
+      components/         Layout, StatusBadge, UploadZone, LogViewer, CreateManuscriptDialog
+      components/ui/      shadcn/ui primitives (badge, button, card, dialog, input, label, table)
 storage/                  runtime file storage (gitignored) — manuscripts/<doi_suffix>/source|output
 ```
 

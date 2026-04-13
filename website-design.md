@@ -24,6 +24,7 @@ A web service where editors can create manuscripts linked to OJS submissions, sh
 └─────────────┘      │  /api/manuscripts/:id/upload  │
                      │  /api/manuscripts/:id/status  │
                      │  /api/manuscripts/:id/download│
+                     │  /api/manuscripts/:id/output/ │
                      │  /api/ojs/import              │
                      │                               │
                      │  Background worker (in-proc)  │
@@ -79,28 +80,21 @@ The OJS integration is optional — manuscripts can also be created and managed 
 
 ### Manuscript
 
-| Field             | Type      | Notes                                       |
-| ----------------- | --------- | ------------------------------------------- |
-| doi_suffix        | str       | Primary key, e.g. `CCR2025.1.2.YAO`        |
-| title             | str       | From OJS or manually entered                |
-| ojs_submission_id | int?      | Optional link to OJS                        |
-| status            | enum      | `draft`, `processing`, `ready`, `published` |
-| created_at        | datetime  |                                             |
-| updated_at        | datetime  |                                             |
-| uploaded_at       | datetime? | Set when source is uploaded                 |
-| uploaded_by       | str?      | `editor` or `author`                        |
+| Field             | Type      | Notes                                                        |
+| ----------------- | --------- | ------------------------------------------------------------ |
+| doi_suffix        | str       | Primary key, e.g. `CCR2025.1.2.YAO`                         |
+| title             | str       | From OJS or manually entered                                 |
+| ojs_submission_id | int?      | Optional link to OJS                                         |
+| status            | enum      | `draft`, `queued`, `processing`, `ready`, `failed`, `published` |
+| created_at        | datetime  |                                                              |
+| updated_at        | datetime  |                                                              |
+| uploaded_at       | datetime? | Set when source is uploaded                                  |
+| uploaded_by       | str?      | `editor` or `author`                                         |
+| job_log           | text      | Conversion log output (warnings, errors)                     |
+| job_started_at    | datetime? | When pipeline started                                        |
+| job_completed_at  | datetime? | When pipeline finished                                       |
 
-### ConversionJob
-
-| Field         | Type      | Notes                                      |
-| ------------- | --------- | ------------------------------------------ |
-| id            | UUID      | Primary key                                |
-| manuscript_id | str       | Foreign key → Manuscript.doi_suffix        |
-| status        | enum      | `queued`, `running`, `completed`, `failed` |
-| created_at    | datetime  |                                            |
-| started_at    | datetime? |                                            |
-| completed_at  | datetime? |                                            |
-| log           | text      | Conversion log output (warnings, errors)   |
+No separate ConversionJob table — conversion state is on the Manuscript directly (see step 2 design decisions below).
 
 ### AccessToken
 
@@ -141,37 +135,39 @@ Status polling (not websockets) — the frontend polls `/api/manuscripts/:id/sta
 
 ```
 web/
-  frontend/              # Vite + React SPA (step 3)
+  frontend/              # Vite + React + TypeScript + shadcn/ui SPA
     src/
-      pages/
-      components/
-      api/               # typed API client
+      api/               # typed API client (client.ts, types.ts)
+      pages/             # DashboardPage, ManuscriptPage, PreviewPage
+      components/        # Layout, StatusBadge, UploadZone, LogViewer, CreateManuscriptDialog
+      components/ui/     # shadcn/ui primitives (badge, button, card, dialog, input, label, table)
   backend/
     app/
-      main.py            # FastAPI app, CORS, lifespan
+      main.py            # FastAPI app, CORS, lifespan, static file serving
       deps.py            # get_session / get_storage dependency callables
       models.py          # SQLModel table definitions
       storage.py         # file storage abstraction
-      worker.py          # background job runner (step 2)
-      ojs.py             # OJS API client (step 5)
+      worker.py          # background job runner
+      ojs.py             # OJS API client (step 5, planned)
       routes/
         manuscripts.py   # GET+POST /api/manuscripts, GET /api/manuscripts/:id
         upload.py        # POST /api/manuscripts/:id/upload
         status.py        # GET /api/manuscripts/:id/status
         download.py      # GET /api/manuscripts/:id/download
+        output.py        # GET /api/manuscripts/:id/output/{path} (serves HTML/PDF/images)
     alembic/             # database migrations
 src/                     # existing latex_jats package (unchanged)
-Dockerfile
-docker-compose.yml
+Dockerfile               # (step 6, planned)
+docker-compose.yml       # (step 6, planned)
 ```
 
-The existing `src/latex_jats/` package stays unchanged. The backend imports and calls `convert()` directly.
+The existing `src/latex_jats/` package stays unchanged. The backend imports and calls `convert()` directly. In production, FastAPI serves the built frontend SPA from `web/frontend/dist/`.
 
 ## Implementation plan
 
 1. **Backend skeleton** — FastAPI app with manuscript CRUD, file upload, SQLite models [Done]
-2. **Pipeline integration** — background worker calls existing `convert()`, stores logs in DB [Planned, not started]
-3. **Frontend** — upload flow, status polling, proof preview (HTML iframe + PDF link)
+2. **Pipeline integration** — background worker calls existing `convert()`, stores logs in DB [Done]
+3. **Frontend** — Vite/React/shadcn/ui SPA with upload flow, status polling, HTML/PDF proof preview [Done]
 4. **Secure author links** — token-based access to individual manuscripts
 5. **OJS integration** — import metadata, push zip back
 6. **Docker packaging** — Dockerfile with TeX Live, latexmlc, inkscape, app

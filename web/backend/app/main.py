@@ -5,11 +5,12 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlmodel import SQLModel, create_engine
 
 from . import deps
 from .models import AccessToken, Manuscript  # noqa: F401 — registers metadata
-from .routes import download, manuscripts, status, upload
+from .routes import download, manuscripts, output, status, upload
 from .storage import Storage
 
 _PROJECT_ROOT = Path(__file__).parents[3]
@@ -18,6 +19,9 @@ _DATABASE_URL = f"sqlite:///{_PROJECT_ROOT / 'storage' / 'latex_jats.db'}"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    storage_root = _PROJECT_ROOT / "storage"
+    storage_root.mkdir(parents=True, exist_ok=True)
+
     engine = create_engine(
         _DATABASE_URL,
         connect_args={"check_same_thread": False},
@@ -25,9 +29,6 @@ async def lifespan(app: FastAPI):
     # Dev convenience: create tables if they don't exist.
     # In production, tables are created by `alembic upgrade head` before startup.
     SQLModel.metadata.create_all(engine)
-
-    storage_root = _PROJECT_ROOT / "storage"
-    storage_root.mkdir(parents=True, exist_ok=True)
 
     deps._engine = engine
     deps._storage = Storage(storage_root)
@@ -47,3 +48,9 @@ app.include_router(manuscripts.router)
 app.include_router(upload.router)
 app.include_router(status.router)
 app.include_router(download.router)
+app.include_router(output.router)
+
+# Serve frontend in production (dist/ built by Vite)
+_FRONTEND_DIST = Path(__file__).parents[2] / "frontend" / "dist"
+if _FRONTEND_DIST.exists():
+    app.mount("/", StaticFiles(directory=_FRONTEND_DIST, html=True), name="frontend")

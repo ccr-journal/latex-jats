@@ -20,20 +20,30 @@ router = APIRouter(prefix="/api/manuscripts", tags=["upload"])
 def _safe_extract_zip(data: bytes, dest: Path) -> None:
     """Extract a zip archive into dest, guarding against zip-slip attacks.
 
-    Preserves relative subdirectory structure (needed by the pipeline) but
-    drops any path components that would escape the destination directory.
+    If the zip contains a single top-level directory that wraps all files,
+    that directory is stripped so files land directly in dest.  Preserves
+    relative subdirectory structure otherwise.
     """
     with zipfile.ZipFile(io.BytesIO(data)) as zf:
+        names = [n for n in zf.namelist() if not n.endswith("/")]
+
+        # Detect single top-level directory wrapper
+        prefix = ""
+        top_dirs = {n.split("/")[0] for n in names if "/" in n}
+        root_files = [n for n in names if "/" not in n]
+        if len(top_dirs) == 1 and not root_files:
+            prefix = top_dirs.pop() + "/"
+
         for member in zf.namelist():
-            # Resolve the target path and reject anything outside dest
-            target = (dest / member).resolve()
+            # Strip the single wrapper directory if present
+            rel = member[len(prefix):] if prefix and member.startswith(prefix) else member
+            if not rel or rel.endswith("/"):
+                continue
+            target = (dest / rel).resolve()
             if not target.is_relative_to(dest.resolve()):
                 continue
-            if member.endswith("/"):
-                target.mkdir(parents=True, exist_ok=True)
-            else:
-                target.parent.mkdir(parents=True, exist_ok=True)
-                target.write_bytes(zf.read(member))
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(zf.read(member))
 
 
 @router.post("/{doi_suffix}/upload", response_model=ManuscriptRead, status_code=201)
@@ -42,6 +52,7 @@ async def upload_source(
     background_tasks: BackgroundTasks,
     files: list[UploadFile] = File(...),
     uploaded_by: str = Form("editor"),
+    fix: bool = Form(False),
     session: Session = Depends(get_session),
     storage: Storage = Depends(get_storage),
 ):
@@ -70,10 +81,13 @@ async def upload_source(
     ms.uploaded_by = uploaded_by
     ms.updated_at = now
     ms.status = ManuscriptStatus.queued
+    ms.job_log = ""
+    ms.job_started_at = None
+    ms.job_completed_at = None
     session.add(ms)
     session.commit()
     session.refresh(ms)
 
-    background_tasks.add_task(run_pipeline, doi_suffix, deps._engine, storage)
+    background_tasks.add_task(run_pipeline, doi_suffix, deps._engine, storage, fix=fix)
 
     return ms

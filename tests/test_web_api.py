@@ -143,6 +143,26 @@ def test_upload_zip(mock_pipeline, client, test_storage):
 
 
 @patch("web.backend.app.routes.upload.run_pipeline")
+def test_upload_zip_single_wrapper_dir(mock_pipeline, client, test_storage):
+    """A zip with a single top-level directory should have that prefix stripped."""
+    doi = _create(client)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("CCR2025.1.2.YAO/main.tex", "\\documentclass{article}")
+        zf.writestr("CCR2025.1.2.YAO/figures/fig1.pdf", b"\x00\x01\x02")
+    buf.seek(0)
+    r = client.post(
+        f"/api/manuscripts/{doi}/upload",
+        files=[("files", ("source.zip", buf.read(), "application/zip"))],
+    )
+    assert r.status_code == 201
+    assert (test_storage.source_dir(doi) / "main.tex").exists()
+    assert (test_storage.source_dir(doi) / "figures" / "fig1.pdf").exists()
+    # The wrapper directory itself should not appear
+    assert not (test_storage.source_dir(doi) / "CCR2025.1.2.YAO").exists()
+
+
+@patch("web.backend.app.routes.upload.run_pipeline")
 def test_upload_zip_slip(mock_pipeline, client, test_storage):
     """A zip with a path-traversal entry must not escape the source directory."""
     doi = _create(client)
@@ -231,6 +251,43 @@ def test_download_not_ready(client):
 
 def test_download_not_found(client):
     r = client.get("/api/manuscripts/DOES-NOT-EXIST/download")
+    assert r.status_code == 404
+
+
+# ── Output file serving ──────────────────────────────────────────────────────
+
+
+def test_output_file(client, test_storage):
+    doi = _create(client)
+    output_dir = test_storage.convert_output_dir(doi)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / "test.html").write_text("<html>proof</html>")
+
+    r = client.get(f"/api/manuscripts/{doi}/output/test.html")
+    assert r.status_code == 200
+    assert "proof" in r.text
+
+
+def test_output_file_not_found(client):
+    doi = _create(client)
+    r = client.get(f"/api/manuscripts/{doi}/output/nonexistent.html")
+    assert r.status_code == 404
+
+
+def test_output_file_manuscript_not_found(client):
+    r = client.get("/api/manuscripts/DOES-NOT-EXIST/output/test.html")
+    assert r.status_code == 404
+
+
+def test_output_file_path_traversal(client, test_storage):
+    """Path traversal attempts must not escape the output directory."""
+    doi = _create(client)
+    output_dir = test_storage.convert_output_dir(doi)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    # Write a file outside the output dir
+    (output_dir.parent / "secret.txt").write_text("secret")
+
+    r = client.get(f"/api/manuscripts/{doi}/output/../secret.txt")
     assert r.status_code == 404
 
 
