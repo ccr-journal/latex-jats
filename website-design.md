@@ -49,15 +49,15 @@ The web service lives in the same repository as the `latex_jats` conversion pipe
 
 ## Technology choices
 
-| Layer | Choice | Rationale |
-|---|---|---|
-| Frontend | Vite + React | Simple SPA, no SSR needed |
-| Backend | FastAPI (Python) | Directly imports existing `latex_jats` pipeline; avoids shelling out |
-| Database | SQLite (via SQLModel) | Zero infrastructure, sufficient for expected volume |
-| File storage | Local filesystem | Abstracted behind a storage interface for future S3 migration |
-| Job processing | In-process background tasks | Low concurrency expected; avoids Redis/Celery overhead |
-| Deployment | Docker on VPS | Pipeline requires TeX Live, latexmlc, inkscape — too heavy for serverless |
-| Migrations | Alembic | Standard SQLModel/SQLAlchemy migration tool |
+| Layer          | Choice                      | Rationale                                                                 |
+| -------------- | --------------------------- | ------------------------------------------------------------------------- |
+| Frontend       | Vite + React                | Simple SPA, no SSR needed                                                 |
+| Backend        | FastAPI (Python)            | Directly imports existing `latex_jats` pipeline; avoids shelling out      |
+| Database       | SQLite (via SQLModel)       | Zero infrastructure, sufficient for expected volume                       |
+| File storage   | Local filesystem            | Abstracted behind a storage interface for future S3 migration             |
+| Job processing | In-process background tasks | Low concurrency expected; avoids Redis/Celery overhead                    |
+| Deployment     | Docker on VPS               | Pipeline requires TeX Live, latexmlc, inkscape — too heavy for serverless |
+| Migrations     | Alembic                     | Standard SQLModel/SQLAlchemy migration tool                               |
 
 ## Authentication and access model
 
@@ -79,46 +79,46 @@ The OJS integration is optional — manuscripts can also be created and managed 
 
 ### Manuscript
 
-| Field | Type | Notes |
-|---|---|---|
-| id | UUID | Primary key |
-| title | str | From OJS or manually entered |
-| doi_suffix | str | e.g. `CCR2025.1.2.YAO` |
-| ojs_submission_id | int? | Optional link to OJS |
-| status | enum | `draft`, `processing`, `ready`, `published` |
-| created_at | datetime | |
-| updated_at | datetime | |
-| uploaded_at | datetime? | Set when source is uploaded |
-| uploaded_by | str? | `editor` or `author` |
+| Field             | Type      | Notes                                       |
+| ----------------- | --------- | ------------------------------------------- |
+| doi_suffix        | str       | Primary key, e.g. `CCR2025.1.2.YAO`        |
+| title             | str       | From OJS or manually entered                |
+| ojs_submission_id | int?      | Optional link to OJS                        |
+| status            | enum      | `draft`, `processing`, `ready`, `published` |
+| created_at        | datetime  |                                             |
+| updated_at        | datetime  |                                             |
+| uploaded_at       | datetime? | Set when source is uploaded                 |
+| uploaded_by       | str?      | `editor` or `author`                        |
 
 ### ConversionJob
 
-| Field | Type | Notes |
-|---|---|---|
-| id | UUID | Primary key |
-| manuscript_id | UUID | Foreign key |
-| status | enum | `queued`, `running`, `completed`, `failed` |
-| started_at | datetime? | |
-| completed_at | datetime? | |
-| log | text | Conversion log output (warnings, errors) |
+| Field         | Type      | Notes                                      |
+| ------------- | --------- | ------------------------------------------ |
+| id            | UUID      | Primary key                                |
+| manuscript_id | str       | Foreign key → Manuscript.doi_suffix        |
+| status        | enum      | `queued`, `running`, `completed`, `failed` |
+| created_at    | datetime  |                                            |
+| started_at    | datetime? |                                            |
+| completed_at  | datetime? |                                            |
+| log           | text      | Conversion log output (warnings, errors)   |
 
 ### AccessToken
 
-| Field | Type | Notes |
-|---|---|---|
-| id | UUID | Primary key |
-| manuscript_id | UUID | Foreign key |
-| token | str | Random token or JWT |
-| role | enum | `editor`, `author` |
-| created_at | datetime | |
-| expires_at | datetime? | Optional expiry |
+| Field         | Type      | Notes                      |
+| ------------- | --------- | -------------------------- |
+| id            | UUID      | Primary key                |
+| manuscript_id | str       | Foreign key → Manuscript.doi_suffix |
+| token         | str       | Random token or JWT        |
+| role          | enum      | `editor`, `author`         |
+| created_at    | datetime  |                            |
+| expires_at    | datetime? | Optional expiry            |
 
 ## File storage layout
 
 ```
 storage/
   manuscripts/
-    <manuscript-id>/
+    <doi_suffix>/
       source/            # uploaded files (tex, bib, images, etc.)
       output/
         prepare/         # compilation logs, status.json
@@ -141,7 +141,7 @@ Status polling (not websockets) — the frontend polls `/api/manuscripts/:id/sta
 
 ```
 web/
-  frontend/              # Vite + React SPA
+  frontend/              # Vite + React SPA (step 3)
     src/
       pages/
       components/
@@ -149,11 +149,16 @@ web/
   backend/
     app/
       main.py            # FastAPI app, CORS, lifespan
-      routes/            # manuscripts, upload, download, ojs
+      deps.py            # get_session / get_storage dependency callables
       models.py          # SQLModel table definitions
-      worker.py          # background job runner
       storage.py         # file storage abstraction
-      ojs.py             # OJS API client
+      worker.py          # background job runner (step 2)
+      ojs.py             # OJS API client (step 5)
+      routes/
+        manuscripts.py   # GET+POST /api/manuscripts, GET /api/manuscripts/:id
+        upload.py        # POST /api/manuscripts/:id/upload
+        status.py        # GET /api/manuscripts/:id/status
+        download.py      # GET /api/manuscripts/:id/download
     alembic/             # database migrations
 src/                     # existing latex_jats package (unchanged)
 Dockerfile
@@ -164,9 +169,21 @@ The existing `src/latex_jats/` package stays unchanged. The backend imports and 
 
 ## Implementation plan
 
-1. **Backend skeleton** — FastAPI app with manuscript CRUD, file upload, SQLite models
-2. **Pipeline integration** — background worker calls existing `convert()`, stores logs in DB
+1. **Backend skeleton** — FastAPI app with manuscript CRUD, file upload, SQLite models [Done]
+2. **Pipeline integration** — background worker calls existing `convert()`, stores logs in DB [Planned, not started]
 3. **Frontend** — upload flow, status polling, proof preview (HTML iframe + PDF link)
 4. **Secure author links** — token-based access to individual manuscripts
 5. **OJS integration** — import metadata, push zip back
 6. **Docker packaging** — Dockerfile with TeX Live, latexmlc, inkscape, app
+
+## Step 2 design decisions
+
+- **No separate `ConversionJob` table** — conversion state collapses into `Manuscript` directly (1:1; no job history needed).
+- **Single status enum** on `Manuscript` covering the full lifecycle:
+  `draft` → `queued` → `processing` → `ready` / `failed` → `published`
+- **Job detail fields** added to `Manuscript`: `job_log` (text), `job_started_at`, `job_completed_at`.
+- **`ManuscriptRead`** response schema includes the three job fields; `StatusResponse` is removed — `/status` returns `ManuscriptRead` directly.
+- **Background tasks** via FastAPI `BackgroundTasks` (in-process; no Redis/Celery).
+- **Log capture** via a custom `logging.Handler` attached to `logging.getLogger("latex_jats")`, flushed to `job_log` after each pipeline step (prepare → convert → zip) so the polling endpoint returns partial progress.
+- **Worker** lives in `web/backend/app/worker.py`; called from the upload route after commit.
+- **No Alembic migration** needed — DB is gitignored and auto-created on startup.
