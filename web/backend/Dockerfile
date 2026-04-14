@@ -1,10 +1,12 @@
-FROM texlive/texlive:latest
+FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# System packages (TeX Live is already in the base image)
+# System packages: TeX Live (2023 from Ubuntu repos), LaTeXML, inkscape
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    # LaTeXML (0.8.8 from Debian repos — includes all Perl dependencies)
+    # TeX Live (full — CCR articles use arbitrary packages)
+    texlive-full \
+    # LaTeXML (0.8.7 from Ubuntu repos — includes all Perl dependencies)
     latexml \
     # PDF figure conversion
     inkscape \
