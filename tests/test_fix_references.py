@@ -364,8 +364,8 @@ def test_count_mismatch_no_crash(tmp_path):
 # ---------------------------------------------------------------------------
 
 PROJECT_ROOT = Path(__file__).parent.parent
-EXAMPLES = PROJECT_ROOT / 'examples'
-YAO_TEX = EXAMPLES / 'CCR2025.1.2.YAO' / 'main.tex'
+FIXTURES = Path(__file__).parent / 'fixtures' / 'latex'
+YAO_TEX = FIXTURES / 'CCR2025.1.2.YAO' / 'main.tex'
 YAO_GOLD = PROJECT_ROOT / 'CCR2025.1.2.YAO_gold' / 'CCR2025.1.2.YAO.xml'
 
 

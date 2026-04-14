@@ -1,0 +1,49 @@
+\begin{tabular}{l*{3}{c}}
+\toprule
+                    &\multicolumn{1}{c}{(1)}&\multicolumn{1}{c}{(2)}&\multicolumn{1}{c}{(3)}\\
+                    &\multicolumn{1}{c}{Mask\_picturing}&\multicolumn{1}{c}{Mask\_picturing}&\multicolumn{1}{c}{Mask\_picturing}\\
+\midrule
+Woman &       0.275         &       0.148         &       0.154         \\
+                    &     (0.447)         &     (0.456)         &     (0.454)         \\
+Republican    &      -0.528         &      -0.900\sym{*}  &      -0.970\sym{*}  \\
+                    &     (0.445)         &     (0.454)         &     (0.453)         \\
+Woman $\times$ Republican&      -0.022         &       0.204         &       0.237         \\
+                    &     (0.730)         &     (0.742)         &     (0.741)         \\
+Rurality      &      -0.161         &      -0.236         &      -0.232         \\
+                    &     (0.164)         &     (0.167)         &     (0.166)         \\
+Incumbent                   &       0.641         &       0.707         &       0.678         \\
+                    &     (0.362)         &     (0.369)         &     (0.368)         \\
+Open race                   &       0.038         &      -0.383         &      -0.480         \\
+                    &     (0.518)         &     (0.533)         &     (0.532)         \\
+Senate              &       0.681         &       0.883\sym{*}  &       0.840         \\
+                    &     (0.439)         &     (0.447)         &     (0.445)         \\
+Competitiveness &      -0.404\sym{**} &      -0.287\sym{*}  &      -0.279\sym{*}  \\
+                    &     (0.132)         &     (0.134)         &     (0.133)         \\
+Trump vote share              &      -0.012         &      -0.004         &      -0.003         \\
+                    &     (0.020)         &     (0.020)         &     (0.020)         \\
+Goal\_donate              &                     &      -1.923\sym{***}&      -1.908\sym{***}\\
+                    &                     &     (0.078)         &     (0.079)         \\
+Goal\_GOTV                &                     &      -1.650\sym{***}&      -1.492\sym{***}\\
+                    &                     &     (0.198)         &     (0.199)         \\
+Goal\_Learnmore           &                     &      -2.748\sym{***}&      -2.713\sym{***}\\
+                    &                     &     (0.164)         &     (0.165)         \\
+Goal\_Other               &                     &      -4.716\sym{***}&      -4.553\sym{***}\\
+                    &                     &     (0.240)         &     (0.240)         \\
+Tone\_contrast            &                     &       0.732\sym{***}&       0.629\sym{***}\\
+                    &                     &     (0.179)         &     (0.180)         \\
+Tone\_support             &                     &       0.605\sym{***}&       0.599\sym{***}\\
+                    &                     &     (0.165)         &     (0.166)         \\
+No. of face          &                     &                     &       0.100\sym{***}\\
+                    &                     &                     &     (0.007)         \\
+Constant            &      -3.182\sym{***}&      -3.055\sym{**} &      -3.280\sym{***}\\
+                    &     (0.954)         &     (0.989)         &     (0.986)         \\
+\midrule
+/                   &                     &                     &                     \\
+var(\_cons[candidate\_fecid])&       5.837\sym{***}&       5.931\sym{***}&       5.784\sym{***}\\
+                    &     (0.973)         &     (0.994)         &     (0.970)         \\
+\midrule
+Observations        &       47668         &       47668         &       47668         \\
+\bottomrule
+\multicolumn{4}{l}{\footnotesize Standard errors in parentheses}\\
+\multicolumn{4}{l}{\footnotesize \sym{*} \(p<0.05\), \sym{**} \(p<0.01\), \sym{***} \(p<0.001\)}\\
+\end{tabular}

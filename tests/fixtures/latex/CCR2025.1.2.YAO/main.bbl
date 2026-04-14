@@ -1,0 +1,2911 @@
+% $ biblatex auxiliary file $
+% $ biblatex bbl format version 3.2 $
+% Do not modify the above lines!
+%
+% This is an auxiliary file used by the 'biblatex' package.
+% This file may safely be deleted. It will be recreated by
+% biber as required.
+%
+\begingroup
+\makeatletter
+\@ifundefined{ver@biblatex.sty}
+  {\@latex@error
+     {Missing 'biblatex' package}
+     {The bibliography requires the 'biblatex' package.}
+      \aftergroup\endinput}
+  {}
+\endgroup
+
+
+\refsection{0}
+  \datalist[entry]{nyt/global//global/global}
+    \entry{barry_guns_2020}{article}{}
+      \name{author}{7}{}{%
+        {{un=0,uniquepart=base,hash=0b35479e837033b4118e3265c44b792a}{%
+           family={Barry},
+           familyi={B\bibinitperiod},
+           given={Colleen\bibnamedelima L.},
+           giveni={C\bibinitperiod\bibinitdelim L\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=0ca5780081eb5e40512f2c89af8a1899}{%
+           family={Bandara},
+           familyi={B\bibinitperiod},
+           given={Sachini},
+           giveni={S\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=0662cf0be90cec0bf1cb37b99707db96}{%
+           family={Fowler},
+           familyi={F\bibinitperiod},
+           given={Erika\bibnamedelima Franklin},
+           giveni={E\bibinitperiod\bibinitdelim F\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=014f7b3dd75147b70096481819ac0119}{%
+           family={Baum},
+           familyi={B\bibinitperiod},
+           given={Laura},
+           giveni={L\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=0b7ec0fce685a0a8cea5644214e0bbad}{%
+           family={Gollust},
+           familyi={G\bibinitperiod},
+           given={Sarah\bibnamedelima E.},
+           giveni={S\bibinitperiod\bibinitdelim E\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=7f65711dfc2bbeafcec749ecd1e98d92}{%
+           family={Niederdeppe},
+           familyi={N\bibinitperiod},
+           given={Jeff},
+           giveni={J\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=57088dde341b8b98dc4465141a6b67d9}{%
+           family={Kennedy-Hendricks},
+           familyi={K\bibinithyphendelim H\bibinitperiod},
+           given={Alene},
+           giveni={A\bibinitperiod},
+           givenun=0}}%
+      }
+      \strng{namehash}{19ac7c7ef14e0637cdc26a1ca4cb9aae}
+      \strng{fullhash}{d1bdfeb932ea551a3d74d02e9cb2253f}
+      \strng{bibnamehash}{d1bdfeb932ea551a3d74d02e9cb2253f}
+      \strng{authorbibnamehash}{d1bdfeb932ea551a3d74d02e9cb2253f}
+      \strng{authornamehash}{19ac7c7ef14e0637cdc26a1ca4cb9aae}
+      \strng{authorfullhash}{d1bdfeb932ea551a3d74d02e9cb2253f}
+      \field{sortinit}{B}
+      \field{sortinithash}{d7095fff47cda75ca2589920aae98399}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{abstract}{Gun-related deaths are on the rise in the US and, following recent mass shootings, gun policy has emerged as an issue in the 2020 election. Political advertising is an increasingly important tool for candidates seeking office to communicate their policy priorities. Over \$6 billion was spent on political ads in the 2016 election and spending in the 2020 election is expected to be even higher. Tracking gun-related political advertising over time can offer critical insights about how candidates view the salience of gun policy in the context of the 2020 election and beyond. We analyzed coverage of guns in over 14 million candidate-related television ad airings for presidential, congressional, gubernatorial and state legislative races over four election cycles: 2012, 2014, 2016 and 2018. The share of candidate-related ad airings referencing guns increased from 1\% in the 2012 cycle to over 8\% in the 2018 cycle. Pro-gun rights content dominated but dropped from 86\% of airings mentioning guns in the 2012 cycle to 45\% in the 2018 cycle. Pro-regulation and anti-NRA advertising increased overtime. These shifts offer clues to how gun issues are being framed in the upcoming 2020 election.}
+      \field{issn}{0278-2715}
+      \field{journaltitle}{Health affairs (Project Hope)}
+      \field{month}{2}
+      \field{number}{2}
+      \field{title}{Guns in Political Advertising over Four US Election Cycles, 2012 to 2018}
+      \field{urlday}{25}
+      \field{urlmonth}{3}
+      \field{urlyear}{2022}
+      \field{volume}{39}
+      \field{year}{2020}
+      \field{urldateera}{ce}
+      \field{pages}{327\bibrangedash 333}
+      \range{pages}{7}
+      \verb{doi}
+      \verb 10.1377/hlthaff.2019.01102
+      \endverb
+      \verb{file}
+      \verb Accepted Version:C\:\\Users\\efowler\\Zotero\\storage\\APMLB7QC\\Barry et al. - 2020 - Guns in Political Advertising over Four US Electio.pdf:application/pdf
+      \endverb
+      \verb{urlraw}
+      \verb https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7114904/
+      \endverb
+      \verb{url}
+      \verb https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7114904/
+      \endverb
+    \endentry
+    \entry{brader2005striking}{article}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=2faef5f6ed1dac5ed2016a9e465fb9c5}{%
+           family={Brader},
+           familyi={B\bibinitperiod},
+           given={Ted},
+           giveni={T\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{publisher}{1}{%
+        {Wiley Online Library}%
+      }
+      \strng{namehash}{2faef5f6ed1dac5ed2016a9e465fb9c5}
+      \strng{fullhash}{2faef5f6ed1dac5ed2016a9e465fb9c5}
+      \strng{bibnamehash}{2faef5f6ed1dac5ed2016a9e465fb9c5}
+      \strng{authorbibnamehash}{2faef5f6ed1dac5ed2016a9e465fb9c5}
+      \strng{authornamehash}{2faef5f6ed1dac5ed2016a9e465fb9c5}
+      \strng{authorfullhash}{2faef5f6ed1dac5ed2016a9e465fb9c5}
+      \field{sortinit}{B}
+      \field{sortinithash}{d7095fff47cda75ca2589920aae98399}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{American Journal of Political Science}
+      \field{number}{2}
+      \field{title}{Striking a responsive chord: How political ads motivate and persuade voters by appealing to emotions}
+      \field{volume}{49}
+      \field{year}{2005}
+      \field{pages}{388\bibrangedash 405}
+      \range{pages}{18}
+    \endentry
+    \entry{carpinella2021visual}{article}{}
+      \name{author}{2}{}{%
+        {{un=0,uniquepart=base,hash=71af32ea52590771479bceceea2804c2}{%
+           family={Carpinella},
+           familyi={C\bibinitperiod},
+           given={Colleen},
+           giveni={C\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=f9527da162321353f3ec7f72924834f3}{%
+           family={Bauer},
+           familyi={B\bibinitperiod},
+           given={Nichole\bibnamedelima M},
+           giveni={N\bibinitperiod\bibinitdelim M\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{publisher}{1}{%
+        {Taylor \& Francis}%
+      }
+      \strng{namehash}{9878fb9445b93ebcefae215ecf21da69}
+      \strng{fullhash}{9878fb9445b93ebcefae215ecf21da69}
+      \strng{bibnamehash}{9878fb9445b93ebcefae215ecf21da69}
+      \strng{authorbibnamehash}{9878fb9445b93ebcefae215ecf21da69}
+      \strng{authornamehash}{9878fb9445b93ebcefae215ecf21da69}
+      \strng{authorfullhash}{9878fb9445b93ebcefae215ecf21da69}
+      \field{sortinit}{C}
+      \field{sortinithash}{4d103a86280481745c9c897c925753c0}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Politics, Groups, and Identities}
+      \field{number}{2}
+      \field{title}{A visual analysis of gender stereotypes in campaign advertising}
+      \field{volume}{9}
+      \field{year}{2021}
+      \field{pages}{369\bibrangedash 386}
+      \range{pages}{18}
+    \endentry
+    \entry{connaughton_invitations_2004}{article}{}
+      \name{author}{2}{}{%
+        {{un=1,uniquepart=given,hash=ab427206649111fff74b033e261920cf}{%
+           family={Connaughton},
+           familyi={C\bibinitperiod},
+           given={Stacey\bibnamedelima L.},
+           giveni={S\bibinitperiod\bibinitdelim L\bibinitperiod},
+           givenun=1}}%
+        {{un=0,uniquepart=base,hash=f99a1821acb248134e25fe493189f1b2}{%
+           family={Jarvis},
+           familyi={J\bibinitperiod},
+           given={Sharon\bibnamedelima E.},
+           giveni={S\bibinitperiod\bibinitdelim E\bibinitperiod},
+           givenun=0}}%
+      }
+      \strng{namehash}{55a51fea5d49bd0d9da3dc643e46a791}
+      \strng{fullhash}{55a51fea5d49bd0d9da3dc643e46a791}
+      \strng{bibnamehash}{55a51fea5d49bd0d9da3dc643e46a791}
+      \strng{authorbibnamehash}{55a51fea5d49bd0d9da3dc643e46a791}
+      \strng{authornamehash}{55a51fea5d49bd0d9da3dc643e46a791}
+      \strng{authorfullhash}{55a51fea5d49bd0d9da3dc643e46a791}
+      \field{sortinit}{C}
+      \field{sortinithash}{4d103a86280481745c9c897c925753c0}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{shorttitle}
+      \field{abstract}{By the year 2050, Latinos will represent the dominant ethnic minority in the United States, and researchers are just beginning to examine the campaign messages targeted to this voting bloc. This article employs identification theory to understand the rhetorical approaches used in campaign advertisements designed for these voters. Through a content analysis of campaign spots targeted to Latinos over four presidential elections (1984, 1988, 1996, 2000), we find that the invitations for party identification sent to this group tend to be positive, focus on the Latino (not the candidate), and depict Latinos as an emergent force in American politics. In trying to foster identification from this desirable voting population, it appears that campaign forces encourage Latinos to view themselves, and politics, as valuable and consequential—a marked alternative to most advertising strategies at the close of the 20th century.}
+      \field{issn}{0021-9916}
+      \field{journaltitle}{Journal of Communication}
+      \field{month}{3}
+      \field{number}{1}
+      \field{shorttitle}{Invitations for {Partisan} {Identification}}
+      \field{title}{Invitations for Partisan Identification: Attempts to Court {Latino} Voters Through Televised {Latino}-Oriented Political Advertisements, 1984–2000}
+      \field{urlday}{23}
+      \field{urlmonth}{3}
+      \field{urlyear}{2022}
+      \field{volume}{54}
+      \field{year}{2004}
+      \field{urldateera}{ce}
+      \field{pages}{38\bibrangedash 54}
+      \range{pages}{17}
+      \verb{doi}
+      \verb 10.1111/j.1460-2466.2004.tb02612.x
+      \endverb
+      \verb{file}
+      \verb Full Text PDF:C\:\\Users\\efowler\\Zotero\\storage\\J8CYDNKV\\Connaughton and Jarvis - 2004 - Invitations for Partisan Identification Attempts .pdf:application/pdf;Snapshot:C\:\\Users\\efowler\\Zotero\\storage\\M7MCT3B9\\4102898.html:text/html
+      \endverb
+      \verb{urlraw}
+      \verb https://doi.org/10.1111/j.1460-2466.2004.tb02612.x
+      \endverb
+      \verb{url}
+      \verb https://doi.org/10.1111/j.1460-2466.2004.tb02612.x
+      \endverb
+    \endentry
+    \entry{dailykos2016}{misc}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=d8ae2a8a770608cecaa678757da9e4cd}{%
+           family={{Daily Kos Election}},
+           familyi={D\bibinitperiod}}}%
+      }
+      \strng{namehash}{d8ae2a8a770608cecaa678757da9e4cd}
+      \strng{fullhash}{d8ae2a8a770608cecaa678757da9e4cd}
+      \strng{bibnamehash}{d8ae2a8a770608cecaa678757da9e4cd}
+      \strng{authorbibnamehash}{d8ae2a8a770608cecaa678757da9e4cd}
+      \strng{authornamehash}{d8ae2a8a770608cecaa678757da9e4cd}
+      \strng{authorfullhash}{d8ae2a8a770608cecaa678757da9e4cd}
+      \field{sortinit}{D}
+      \field{sortinithash}{6f385f66841fb5e82009dc833c761848}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{Daily {Kos} Elections' Guide}
+      \field{year}{2016}
+      \verb{urlraw}
+      \verb https://docs.google.com/spreadsheets/d/1XbUXnI9OyfAuhP5P3vWtMuGc5UJlrhXbzZo3AwMuHtk/edit\#gid=0
+      \endverb
+      \verb{url}
+      \verb https://docs.google.com/spreadsheets/d/1XbUXnI9OyfAuhP5P3vWtMuGc5UJlrhXbzZo3AwMuHtk/edit%5C#gid=0
+      \endverb
+    \endentry
+    \entry{dan_visual_2021}{article}{}
+      \name{author}{2}{}{%
+        {{un=0,uniquepart=base,hash=0cdf35842a6013a4ec62b8cb8e0bcd59}{%
+           family={Dan},
+           familyi={D\bibinitperiod},
+           given={Viorela},
+           giveni={V\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=0b5183f8e0e613d48eb016f9850edd27}{%
+           family={Arendt},
+           familyi={A\bibinitperiod},
+           given={Florian},
+           giveni={F\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{language}{1}{%
+        {en}%
+      }
+      \strng{namehash}{57b1845228c8411656c4a57b5046c057}
+      \strng{fullhash}{57b1845228c8411656c4a57b5046c057}
+      \strng{bibnamehash}{57b1845228c8411656c4a57b5046c057}
+      \strng{authorbibnamehash}{57b1845228c8411656c4a57b5046c057}
+      \strng{authornamehash}{57b1845228c8411656c4a57b5046c057}
+      \strng{authorfullhash}{57b1845228c8411656c4a57b5046c057}
+      \field{sortinit}{D}
+      \field{sortinithash}{6f385f66841fb5e82009dc833c761848}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{shorttitle}
+      \field{abstract}{Politicians’ reticence to communicate their views clearly increases the information asymmetry between them and the electorate. This study tested the potential of subtle ideological cues to redress the balance. By spotlighting visual rather than the already much-examined verbal cues, we sought to contribute to building theory on cue effects. Specifically, we aimed to determine whether the effects from the literature on verbal cues could also be shown for visual ones. We used an experiment (N = 361) to test the effects of subtle backdrop cues (SBCs), that is, of visual cues to ideology embedded in the background of political images. We manipulated photos of a fictitious politician to include liberal or conservative SBCs. We embedded these images in Twitter posts and tested whether they influenced perceptions of the politician’s ideology and the intention to vote for him. We analyzed the relationship between exposure to SBCs, the politician’s perceived political ideology, and voting intention—including the study of conditional effects elicited by cue awareness and ideological consistency between the depicted politician and participant. The conditional process analysis suggested that SBCs mattered, as they influenced citizens’ perceptions of a politician’s political ideology, and consequently, voting intention. These effects were moderated by cue awareness and ideological consistency. We concluded that SBCs can elicit substantial effects and that their use by politicians is paying off.}
+      \field{issn}{1940-1612}
+      \field{journaltitle}{The International Journal of Press/Politics}
+      \field{month}{1}
+      \field{note}{Publisher: SAGE Publications Inc}
+      \field{number}{1}
+      \field{shorttitle}{Visual {Cues} to the {Hidden} {Agenda}}
+      \field{title}{Visual Cues to the Hidden Agenda: {Investigating} the Effects of Ideology-Related Visual Subtle Backdrop Cues in Political Communication}
+      \field{urlday}{23}
+      \field{urlmonth}{3}
+      \field{urlyear}{2022}
+      \field{volume}{26}
+      \field{year}{2021}
+      \field{urldateera}{ce}
+      \field{pages}{22\bibrangedash 45}
+      \range{pages}{24}
+      \verb{doi}
+      \verb 10.1177/1940161220936593
+      \endverb
+      \verb{file}
+      \verb SAGE PDF Full Text:C\:\\Users\\efowler\\Zotero\\storage\\3TPGFJYG\\Dan and Arendt - 2021 - Visual Cues to the Hidden Agenda Investigating th.pdf:application/pdf
+      \endverb
+      \verb{urlraw}
+      \verb https://doi.org/10.1177/1940161220936593
+      \endverb
+      \verb{url}
+      \verb https://doi.org/10.1177/1940161220936593
+      \endverb
+      \keyw{ideology cues,visual cues,voting intention}
+    \endentry
+    \entry{darmofal2005elite}{article}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=9c494db60b2f64bfeda2b9431cf1ee7a}{%
+           family={Darmofal},
+           familyi={D\bibinitperiod},
+           given={David},
+           giveni={D\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{publisher}{1}{%
+        {Sage Publications Sage CA: Thousand Oaks, CA}%
+      }
+      \strng{namehash}{9c494db60b2f64bfeda2b9431cf1ee7a}
+      \strng{fullhash}{9c494db60b2f64bfeda2b9431cf1ee7a}
+      \strng{bibnamehash}{9c494db60b2f64bfeda2b9431cf1ee7a}
+      \strng{authorbibnamehash}{9c494db60b2f64bfeda2b9431cf1ee7a}
+      \strng{authornamehash}{9c494db60b2f64bfeda2b9431cf1ee7a}
+      \strng{authorfullhash}{9c494db60b2f64bfeda2b9431cf1ee7a}
+      \field{sortinit}{D}
+      \field{sortinithash}{6f385f66841fb5e82009dc833c761848}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Political Research Quarterly}
+      \field{number}{3}
+      \field{title}{Elite cues and citizen disagreement with expert opinion}
+      \field{volume}{58}
+      \field{year}{2005}
+      \field{pages}{381\bibrangedash 395}
+      \range{pages}{15}
+    \endentry
+    \entry{dittmar2015navigating}{book}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=b64c360e90bc5d68994982b4398d34a8}{%
+           family={Dittmar},
+           familyi={D\bibinitperiod},
+           given={Kelly},
+           giveni={K\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{publisher}{1}{%
+        {Temple University Press}%
+      }
+      \strng{namehash}{b64c360e90bc5d68994982b4398d34a8}
+      \strng{fullhash}{b64c360e90bc5d68994982b4398d34a8}
+      \strng{bibnamehash}{b64c360e90bc5d68994982b4398d34a8}
+      \strng{authorbibnamehash}{b64c360e90bc5d68994982b4398d34a8}
+      \strng{authornamehash}{b64c360e90bc5d68994982b4398d34a8}
+      \strng{authorfullhash}{b64c360e90bc5d68994982b4398d34a8}
+      \field{sortinit}{D}
+      \field{sortinithash}{6f385f66841fb5e82009dc833c761848}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{Navigating gendered terrain: Stereotypes and strategy in political campaigns}
+      \field{year}{2015}
+    \endentry
+    \entry{dolan2017candidates}{article}{}
+      \name{author}{2}{}{%
+        {{un=0,uniquepart=base,hash=932f221dc4929bf106bc5dce4448ba9f}{%
+           family={Dolan},
+           familyi={D\bibinitperiod},
+           given={Kathleen},
+           giveni={K\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=40d38de2e800d5c2eedf57660477b734}{%
+           family={Lynch},
+           familyi={L\bibinitperiod},
+           given={Timothy},
+           giveni={T\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{publisher}{1}{%
+        {Taylor \& Francis}%
+      }
+      \strng{namehash}{db22c51db2ebe81e5cb2e595d6a275cd}
+      \strng{fullhash}{db22c51db2ebe81e5cb2e595d6a275cd}
+      \strng{bibnamehash}{db22c51db2ebe81e5cb2e595d6a275cd}
+      \strng{authorbibnamehash}{db22c51db2ebe81e5cb2e595d6a275cd}
+      \strng{authornamehash}{db22c51db2ebe81e5cb2e595d6a275cd}
+      \strng{authorfullhash}{db22c51db2ebe81e5cb2e595d6a275cd}
+      \field{sortinit}{D}
+      \field{sortinithash}{6f385f66841fb5e82009dc833c761848}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Journal of Women, Politics \& Policy}
+      \field{number}{4}
+      \field{title}{Do candidates run as women and men or {Democrats} and {Republicans}? {The} impact of party and sex on issue campaigns}
+      \field{volume}{38}
+      \field{year}{2017}
+      \field{pages}{522\bibrangedash 546}
+      \range{pages}{25}
+    \endentry
+    \entry{fowler2021political}{article}{}
+      \name{author}{5}{ul=3}{%
+        {{un=0,uniquepart=base,hash=0662cf0be90cec0bf1cb37b99707db96}{%
+           family={Fowler},
+           familyi={F\bibinitperiod},
+           given={Erika\bibnamedelima Franklin},
+           giveni={E\bibinitperiod\bibinitdelim F\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=f1d3809f5ae1e6c1000068442bbcc556}{%
+           family={Franz},
+           familyi={F\bibinitperiod},
+           given={Michael\bibnamedelima M},
+           giveni={M\bibinitperiod\bibinitdelim M\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=8eaffbd93b42481183c12dbceea59c36}{%
+           family={Martin},
+           familyi={M\bibinitperiod},
+           given={Gregory\bibnamedelima J},
+           giveni={G\bibinitperiod\bibinitdelim J\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=269091445c8bacc54f21bfbc6e560ec6}{%
+           family={Peskowitz},
+           familyi={P\bibinitperiod},
+           given={Zachary},
+           giveni={Z\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=12dd1dc70d2add5460a78873af5c23bd}{%
+           family={Ridout},
+           familyi={R\bibinitperiod},
+           given={Travis\bibnamedelima N},
+           giveni={T\bibinitperiod\bibinitdelim N\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{publisher}{1}{%
+        {Cambridge University Press}%
+      }
+      \strng{namehash}{ed811293edcfafd86a1455864f96deb5}
+      \strng{fullhash}{36c5efc325caff3ed8b1bec82d3f88d9}
+      \strng{bibnamehash}{36c5efc325caff3ed8b1bec82d3f88d9}
+      \strng{authorbibnamehash}{36c5efc325caff3ed8b1bec82d3f88d9}
+      \strng{authornamehash}{ed811293edcfafd86a1455864f96deb5}
+      \strng{authorfullhash}{36c5efc325caff3ed8b1bec82d3f88d9}
+      \field{sortinit}{F}
+      \field{sortinithash}{2638baaa20439f1b5a8f80c6c08a13b4}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{American Political Science Review}
+      \field{number}{1}
+      \field{title}{Political advertising online and offline}
+      \field{volume}{115}
+      \field{year}{2021}
+      \field{pages}{130\bibrangedash 149}
+      \range{pages}{20}
+    \endentry
+    \entry{FFR_2021}{book}{}
+      \name{author}{3}{ul=3}{%
+        {{un=0,uniquepart=base,hash=0662cf0be90cec0bf1cb37b99707db96}{%
+           family={Fowler},
+           familyi={F\bibinitperiod},
+           given={Erika\bibnamedelima Franklin},
+           giveni={E\bibinitperiod\bibinitdelim F\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=f1d3809f5ae1e6c1000068442bbcc556}{%
+           family={Franz},
+           familyi={F\bibinitperiod},
+           given={Michael\bibnamedelima M.},
+           giveni={M\bibinitperiod\bibinitdelim M\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=12dd1dc70d2add5460a78873af5c23bd}{%
+           family={Ridout},
+           familyi={R\bibinitperiod},
+           given={Travis\bibnamedelima N.},
+           giveni={T\bibinitperiod\bibinitdelim N\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{location}{1}{%
+        {New York, New York}%
+      }
+      \list{publisher}{1}{%
+        {Routledge}%
+      }
+      \strng{namehash}{e70bc1e764563ebe9000262f03df3111}
+      \strng{fullhash}{e70bc1e764563ebe9000262f03df3111}
+      \strng{bibnamehash}{e70bc1e764563ebe9000262f03df3111}
+      \strng{authorbibnamehash}{e70bc1e764563ebe9000262f03df3111}
+      \strng{authornamehash}{e70bc1e764563ebe9000262f03df3111}
+      \strng{authorfullhash}{e70bc1e764563ebe9000262f03df3111}
+      \field{sortinit}{F}
+      \field{sortinithash}{2638baaa20439f1b5a8f80c6c08a13b4}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{edition}{2nd}
+      \field{title}{Political Advertising in the {United} {States}}
+      \field{year}{2021}
+    \endentry
+    \entry{fowler2015content}{article}{}
+      \name{author}{2}{}{%
+        {{un=0,uniquepart=base,hash=0662cf0be90cec0bf1cb37b99707db96}{%
+           family={Fowler},
+           familyi={F\bibinitperiod},
+           given={Erika\bibnamedelima Franklin},
+           giveni={E\bibinitperiod\bibinitdelim F\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=0b7ec0fce685a0a8cea5644214e0bbad}{%
+           family={Gollust},
+           familyi={G\bibinitperiod},
+           given={Sarah\bibnamedelima E},
+           giveni={S\bibinitperiod\bibinitdelim E\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{publisher}{1}{%
+        {Sage Publications Sage CA: Los Angeles, CA}%
+      }
+      \strng{namehash}{6712640e4ca3e0d398cc92eea1586b98}
+      \strng{fullhash}{6712640e4ca3e0d398cc92eea1586b98}
+      \strng{bibnamehash}{6712640e4ca3e0d398cc92eea1586b98}
+      \strng{authorbibnamehash}{6712640e4ca3e0d398cc92eea1586b98}
+      \strng{authornamehash}{6712640e4ca3e0d398cc92eea1586b98}
+      \strng{authorfullhash}{6712640e4ca3e0d398cc92eea1586b98}
+      \field{sortinit}{F}
+      \field{sortinithash}{2638baaa20439f1b5a8f80c6c08a13b4}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{The ANNALS of the American Academy of Political and Social Science}
+      \field{number}{1}
+      \field{title}{The content and effect of politicized health controversies}
+      \field{volume}{658}
+      \field{year}{2015}
+      \field{pages}{155\bibrangedash 171}
+      \range{pages}{17}
+    \endentry
+    \entry{fowler_local_2009}{article}{}
+      \name{author}{2}{}{%
+        {{un=0,uniquepart=base,hash=0662cf0be90cec0bf1cb37b99707db96}{%
+           family={Fowler},
+           familyi={F\bibinitperiod},
+           given={Erika\bibnamedelima Franklin},
+           giveni={E\bibinitperiod\bibinitdelim F\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=12dd1dc70d2add5460a78873af5c23bd}{%
+           family={Ridout},
+           familyi={R\bibinitperiod},
+           given={Travis\bibnamedelima N.},
+           giveni={T\bibinitperiod\bibinitdelim N\bibinitperiod},
+           givenun=0}}%
+      }
+      \strng{namehash}{8108df638e517bba8522066a99472c87}
+      \strng{fullhash}{8108df638e517bba8522066a99472c87}
+      \strng{bibnamehash}{8108df638e517bba8522066a99472c87}
+      \strng{authorbibnamehash}{8108df638e517bba8522066a99472c87}
+      \strng{authornamehash}{8108df638e517bba8522066a99472c87}
+      \strng{authorfullhash}{8108df638e517bba8522066a99472c87}
+      \field{sortinit}{F}
+      \field{sortinithash}{2638baaa20439f1b5a8f80c6c08a13b4}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{abstract}{How often do the news media cover the advertising of political candidates? And how do the characteristics of the news outlet, the media market, the race, and the advertisements themselves influence the extent to which this ad amplification takes place? Examining Senate and gubernatorial campaign coverage by several newspapers and local television stations in five midwestern states in 2006, we find that coverage of advertising is quite extensive, most of it is low quality, and its volume depends both on the size of the market and the tone of the spots aired. Surprisingly, however, television stations were not more likely than newspapers to cover advertising, though television does appear to be more sensitive to negative advertising, consistent with our theory.}
+      \field{issn}{1058-4609}
+      \field{journaltitle}{Political Communication}
+      \field{month}{5}
+      \field{number}{2}
+      \field{title}{Local Television and Newspaper Coverage of Political Advertising}
+      \field{urlday}{25}
+      \field{urlmonth}{3}
+      \field{urlyear}{2022}
+      \field{volume}{26}
+      \field{year}{2009}
+      \field{urldateera}{ce}
+      \field{pages}{119\bibrangedash 136}
+      \range{pages}{18}
+      \verb{doi}
+      \verb 10.1080/10584600902850635
+      \endverb
+      \verb{file}
+      \verb Snapshot:C\:\\Users\\efowler\\Zotero\\storage\\QJC8HUDR\\10584600902850635.html:text/html
+      \endverb
+      \verb{urlraw}
+      \verb https://doi.org/10.1080/10584600902850635
+      \endverb
+      \verb{url}
+      \verb https://doi.org/10.1080/10584600902850635
+      \endverb
+      \keyw{political advertising,print news,television news}
+    \endentry
+    \entry{gadarian_partisanship_2021}{article}{}
+      \name{author}{3}{}{%
+        {{un=0,uniquepart=base,hash=fa7650735f8202c0b5f3ce71f4fd8c14}{%
+           family={Gadarian},
+           familyi={G\bibinitperiod},
+           given={Shana\bibnamedelima Kushner},
+           giveni={S\bibinitperiod\bibinitdelim K\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=aac832c11172f3b1b6403336c85a4677}{%
+           family={Goodman},
+           familyi={G\bibinitperiod},
+           given={Sara\bibnamedelima Wallace},
+           giveni={S\bibinitperiod\bibinitdelim W\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=7498219ea1ce841f1e7e17ff88947033}{%
+           family={Pepinsky},
+           familyi={P\bibinitperiod},
+           given={Thomas\bibnamedelima B.},
+           giveni={T\bibinitperiod\bibinitdelim B\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{language}{1}{%
+        {en}%
+      }
+      \strng{namehash}{bad36b05d8784b062a8b1d017fe700d3}
+      \strng{fullhash}{5fa0fab9d4db654bfb4eba920a25b71d}
+      \strng{bibnamehash}{5fa0fab9d4db654bfb4eba920a25b71d}
+      \strng{authorbibnamehash}{5fa0fab9d4db654bfb4eba920a25b71d}
+      \strng{authornamehash}{bad36b05d8784b062a8b1d017fe700d3}
+      \strng{authorfullhash}{5fa0fab9d4db654bfb4eba920a25b71d}
+      \field{sortinit}{G}
+      \field{sortinithash}{32d67eca0634bf53703493fb1090a2e8}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{abstract}{Objective To study the U.S. public’s health behaviors, attitudes, and policy opinions about COVID-19 in the earliest weeks of the national health crisis (March 20–23, 2020). Method We designed and fielded an original representative survey of 3,000 American adults between March 20–23, 2020 to collect data on a battery of 38 health-related behaviors, government policy preferences on COVID-19 response and worries about the pandemic. We test for partisan differences COVID-19 related policy attitudes and behaviors, measured in three different ways: party affiliation, intended 2020 Presidential vote, and self-placed ideological positioning. Our multivariate approach adjusts for a wide range of individual demographic and geographic characteristics that might confound the relationship between partisanship and health behaviors, attitudes, and preferences. Results We find that partisanship—measured as party identification, support for President Trump, or left-right ideological positioning—explains differences in Americans across a wide range of health behaviors and policy preferences. We find no consistent evidence that controlling for individual news consumption, the local policy environment, and local pandemic-related deaths erases the observed partisan differences in health behaviors, beliefs, and attitudes. In further analyses, we use a LASSO regression approach to select predictors, and find that a partisanship indicator is the most commonly selected predictor across the 38 dependent variables that we study. Conclusion Our analysis of individual self-reported behavior, attitudes, and policy preferences in response to COVID-19 reveals that partisanship played a central role in shaping individual responses in the earliest months of the COVID-19 pandemic. These results indicate that partisan differences in responding to a national public health emergency were entrenched from the earliest days of the pandemic.}
+      \field{issn}{1932-6203}
+      \field{journaltitle}{PLOS ONE}
+      \field{month}{4}
+      \field{note}{Publisher: Public Library of Science}
+      \field{number}{4}
+      \field{title}{Partisanship, health behavior, and policy attitudes in the early stages of the {COVID}-19 pandemic}
+      \field{urlday}{19}
+      \field{urlmonth}{9}
+      \field{urlyear}{2021}
+      \field{volume}{16}
+      \field{year}{2021}
+      \field{urldateera}{ce}
+      \field{pages}{e0249596}
+      \range{pages}{-1}
+      \verb{doi}
+      \verb 10.1371/journal.pone.0249596
+      \endverb
+      \verb{file}
+      \verb Full Text PDF:C\:\\Users\\efowler\\Zotero\\storage\\A8DF57HS\\Gadarian et al. - 2021 - Partisanship, health behavior, and policy attitude.pdf:application/pdf;Snapshot:C\:\\Users\\efowler\\Zotero\\storage\\TA5SCE2D\\article.html:text/html
+      \endverb
+      \verb{urlraw}
+      \verb https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0249596
+      \endverb
+      \verb{url}
+      \verb https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0249596
+      \endverb
+      \keyw{Public policy,COVID 19,Pandemics,Psychological attitudes,Behavioral and social aspects of health,Public and occupational health,Social distancing,Surveys}
+    \endentry
+    \entry{gillespie_race_2018}{book}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=32ddbe3e8ee953f2e3abfc6070865d6f}{%
+           family={Gillespie},
+           familyi={G\bibinitperiod},
+           given={Andra},
+           giveni={A\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{language}{1}{%
+        {English}%
+      }
+      \list{location}{1}{%
+        {Manchester}%
+      }
+      \list{publisher}{1}{%
+        {Manchester University Press}%
+      }
+      \strng{namehash}{32ddbe3e8ee953f2e3abfc6070865d6f}
+      \strng{fullhash}{32ddbe3e8ee953f2e3abfc6070865d6f}
+      \strng{bibnamehash}{32ddbe3e8ee953f2e3abfc6070865d6f}
+      \strng{authorbibnamehash}{32ddbe3e8ee953f2e3abfc6070865d6f}
+      \strng{authornamehash}{32ddbe3e8ee953f2e3abfc6070865d6f}
+      \strng{authorfullhash}{32ddbe3e8ee953f2e3abfc6070865d6f}
+      \field{sortinit}{G}
+      \field{sortinithash}{32d67eca0634bf53703493fb1090a2e8}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{shorttitle}
+      \field{isbn}{978-1-5261-0501-1}
+      \field{shorttitle}{Race and the {Obama} {Administration}}
+      \field{title}{Race and the {Obama} Administration: {Substance}, symbols, and hope}
+      \field{year}{2018}
+    \endentry
+    \entry{gollust_emergence_2020}{article}{}
+      \name{author}{3}{}{%
+        {{un=0,uniquepart=base,hash=0b7ec0fce685a0a8cea5644214e0bbad}{%
+           family={Gollust},
+           familyi={G\bibinitperiod},
+           given={Sarah\bibnamedelima E.},
+           giveni={S\bibinitperiod\bibinitdelim E\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=ace6806816e4a952f480573b386534c6}{%
+           family={Nagler},
+           familyi={N\bibinitperiod},
+           given={Rebekah\bibnamedelima H.},
+           giveni={R\bibinitperiod\bibinitdelim H\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=0662cf0be90cec0bf1cb37b99707db96}{%
+           family={Fowler},
+           familyi={F\bibinitperiod},
+           given={Erika\bibnamedelima Franklin},
+           giveni={E\bibinitperiod\bibinitdelim F\bibinitperiod},
+           givenun=0}}%
+      }
+      \strng{namehash}{9c622ef2a7e315d0c47d529c9251692d}
+      \strng{fullhash}{a192cd7cb9a80522830946c7091e6ef4}
+      \strng{bibnamehash}{a192cd7cb9a80522830946c7091e6ef4}
+      \strng{authorbibnamehash}{a192cd7cb9a80522830946c7091e6ef4}
+      \strng{authornamehash}{9c622ef2a7e315d0c47d529c9251692d}
+      \strng{authorfullhash}{a192cd7cb9a80522830946c7091e6ef4}
+      \field{sortinit}{G}
+      \field{sortinithash}{32d67eca0634bf53703493fb1090a2e8}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{shorttitle}
+      \field{abstract}{The coronavirus public health crisis is also a political-communication and health-communication crisis. In this article, the authors describe the key communication-related phenomena and evidence of concerning effects manifested in the United States during the initial response to the pandemic. The authors outline the conditions of communication about coronavirus that contribute to deleterious outcomes, including partisan cueing, conflicting science, downplayed threats, emotional arousal, fragmented media, and Trump's messaging. The authors suggest these have contributed to divergent responses by media sources, partisan leaders, and the public alike, leading to different attitudes and beliefs as well as varying protective actions taken by members of the public to reduce their risk. In turn, these divergent communication phenomena will likely amplify geographic variation in and inequities with COVID-19 disease outcomes. The authors conclude with some suggestions for future research, particularly surrounding communication about health inequity and strategies for reducing partisan divergence in views of public health issues in the future.}
+      \field{issn}{0361-6878}
+      \field{journaltitle}{Journal of Health Politics, Policy and Law}
+      \field{month}{12}
+      \field{number}{6}
+      \field{shorttitle}{The {Emergence} of {COVID}-19 in the {US}}
+      \field{title}{The Emergence of {COVID}-19 in the {US}: A Public Health and Political Communication Crisis}
+      \field{urlday}{22}
+      \field{urlmonth}{3}
+      \field{urlyear}{2021}
+      \field{volume}{45}
+      \field{year}{2020}
+      \field{urldateera}{ce}
+      \field{pages}{967\bibrangedash 981}
+      \range{pages}{15}
+      \verb{doi}
+      \verb 10.1215/03616878-8641506
+      \endverb
+      \verb{file}
+      \verb Snapshot:C\:\\Users\\efowler\\Zotero\\storage\\MUS8SY9L\\The-Emergence-of-COVID-19-in-the-US-A-Public.html:text/html
+      \endverb
+      \verb{urlraw}
+      \verb https://doi.org/10.1215/03616878-8641506
+      \endverb
+      \verb{url}
+      \verb https://doi.org/10.1215/03616878-8641506
+      \endverb
+    \endentry
+    \entry{gramlich2022}{article}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=69ce0e7e81fb8ef4da6796fe47ce34cc}{%
+           family={Gramlich},
+           familyi={G\bibinitperiod},
+           given={John},
+           giveni={J\bibinitperiod},
+           givenun=0}}%
+      }
+      \strng{namehash}{69ce0e7e81fb8ef4da6796fe47ce34cc}
+      \strng{fullhash}{69ce0e7e81fb8ef4da6796fe47ce34cc}
+      \strng{bibnamehash}{69ce0e7e81fb8ef4da6796fe47ce34cc}
+      \strng{authorbibnamehash}{69ce0e7e81fb8ef4da6796fe47ce34cc}
+      \strng{authornamehash}{69ce0e7e81fb8ef4da6796fe47ce34cc}
+      \strng{authorfullhash}{69ce0e7e81fb8ef4da6796fe47ce34cc}
+      \field{sortinit}{G}
+      \field{sortinithash}{32d67eca0634bf53703493fb1090a2e8}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Pew Research Center}
+      \field{month}{3}
+      \field{title}{Two Years Into the Pandemic, {Americans} Inch Closer to a New Normal}
+      \field{year}{2022}
+      \verb{urlraw}
+      \verb https://www.pewresearch.org/2022/03/03/two-years-into-the-pandemic-americans-inch-closer-to-a-new-normal/
+      \endverb
+      \verb{url}
+      \verb https://www.pewresearch.org/2022/03/03/two-years-into-the-pandemic-americans-inch-closer-to-a-new-normal/
+      \endverb
+    \endentry
+    \entry{green2020elusive}{article}{}
+      \name{author}{5}{}{%
+        {{un=0,uniquepart=base,hash=998f6ec963aabceb13ef4b60ac6fb545}{%
+           family={Green},
+           familyi={G\bibinitperiod},
+           given={Jon},
+           giveni={J\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=b552d1b3818e00f38a6eb90cbcaf349b}{%
+           family={Edgerton},
+           familyi={E\bibinitperiod},
+           given={Jared},
+           giveni={J\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=ece7e7771b7eb9dabfbd0101744c91c9}{%
+           family={Naftel},
+           familyi={N\bibinitperiod},
+           given={Daniel},
+           giveni={D\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=2d26a1c58ad09c53cb26316838b23538}{%
+           family={Shoub},
+           familyi={S\bibinitperiod},
+           given={Kelsey},
+           giveni={K\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=1943020c76fa441fb7abf5d166b25e10}{%
+           family={Cranmer},
+           familyi={C\bibinitperiod},
+           given={Skyler\bibnamedelima J},
+           giveni={S\bibinitperiod\bibinitdelim J\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{publisher}{1}{%
+        {American Association for the Advancement of Science}%
+      }
+      \strng{namehash}{55f3f49b1eee9d9302779876b353f007}
+      \strng{fullhash}{d781ef4c6735d2e5d9eea641e5c5797a}
+      \strng{bibnamehash}{d781ef4c6735d2e5d9eea641e5c5797a}
+      \strng{authorbibnamehash}{d781ef4c6735d2e5d9eea641e5c5797a}
+      \strng{authornamehash}{55f3f49b1eee9d9302779876b353f007}
+      \strng{authorfullhash}{d781ef4c6735d2e5d9eea641e5c5797a}
+      \field{sortinit}{G}
+      \field{sortinithash}{32d67eca0634bf53703493fb1090a2e8}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Science Advances}
+      \field{number}{28}
+      \field{title}{Elusive consensus: Polarization in elite communication on the COVID-19 pandemic}
+      \field{volume}{6}
+      \field{year}{2020}
+      \field{pages}{eabc2717}
+      \range{pages}{-1}
+    \endentry
+    \entry{hajnal_changing_2006}{book}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=8e48c374c20e78ff2428249de061fccb}{%
+           family={Hajnal},
+           familyi={H\bibinitperiod},
+           given={Zoltan\bibnamedelima L.},
+           giveni={Z\bibinitperiod\bibinitdelim L\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{language}{1}{%
+        {English}%
+      }
+      \list{location}{1}{%
+        {Cambridge England ; New York}%
+      }
+      \list{publisher}{1}{%
+        {Cambridge University Press}%
+      }
+      \strng{namehash}{8e48c374c20e78ff2428249de061fccb}
+      \strng{fullhash}{8e48c374c20e78ff2428249de061fccb}
+      \strng{bibnamehash}{8e48c374c20e78ff2428249de061fccb}
+      \strng{authorbibnamehash}{8e48c374c20e78ff2428249de061fccb}
+      \strng{authornamehash}{8e48c374c20e78ff2428249de061fccb}
+      \strng{authorfullhash}{8e48c374c20e78ff2428249de061fccb}
+      \field{sortinit}{H}
+      \field{sortinithash}{23a3aa7c24e56cfa16945d55545109b5}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{edition}{1st edition}
+      \field{isbn}{978-0-521-67415-7}
+      \field{month}{12}
+      \field{title}{Changing White Attitudes toward Black Political Leadership}
+      \field{year}{2006}
+    \endentry
+    \entry{hayes2011gender}{article}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=44a6f64d1a4e3f9b0a079925639641cc}{%
+           family={Hayes},
+           familyi={H\bibinitperiod},
+           given={Danny},
+           giveni={D\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{publisher}{1}{%
+        {Cambridge University Press}%
+      }
+      \strng{namehash}{44a6f64d1a4e3f9b0a079925639641cc}
+      \strng{fullhash}{44a6f64d1a4e3f9b0a079925639641cc}
+      \strng{bibnamehash}{44a6f64d1a4e3f9b0a079925639641cc}
+      \strng{authorbibnamehash}{44a6f64d1a4e3f9b0a079925639641cc}
+      \strng{authornamehash}{44a6f64d1a4e3f9b0a079925639641cc}
+      \strng{authorfullhash}{44a6f64d1a4e3f9b0a079925639641cc}
+      \field{sortinit}{H}
+      \field{sortinithash}{23a3aa7c24e56cfa16945d55545109b5}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Politics \& Gender}
+      \field{number}{2}
+      \field{title}{When gender and party collide: Stereotyping in candidate trait attribution}
+      \field{volume}{7}
+      \field{year}{2011}
+      \field{pages}{133\bibrangedash 165}
+      \range{pages}{33}
+    \endentry
+    \entry{holman_masking_nodate}{article}{}
+      \name{author}{3}{}{%
+        {{un=0,uniquepart=base,hash=a7e2a8ceb8dbd5def2868d482c1f7458}{%
+           family={Holman},
+           familyi={H\bibinitperiod},
+           given={Mirya\bibnamedelima R.},
+           giveni={M\bibinitperiod\bibinitdelim R\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=386f7b1ddf3cf60c6fdf3edfb027c5c9}{%
+           family={Boussalis},
+           familyi={B\bibinitperiod},
+           given={Constantine},
+           giveni={C\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=faf10f7e28d7f5ba286bee906c54570c}{%
+           family={Coan},
+           familyi={C\bibinitperiod},
+           given={Travis},
+           giveni={T\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{language}{1}{%
+        {en}%
+      }
+      \list{location}{1}{%
+        {Seattle, WA}%
+      }
+      \strng{namehash}{cd4534b77a7a746a590523f2c1d110ca}
+      \strng{fullhash}{da5824bcc223fd2ae8ac76cd29ede7bf}
+      \strng{bibnamehash}{da5824bcc223fd2ae8ac76cd29ede7bf}
+      \strng{authorbibnamehash}{da5824bcc223fd2ae8ac76cd29ede7bf}
+      \strng{authornamehash}{cd4534b77a7a746a590523f2c1d110ca}
+      \strng{authorfullhash}{da5824bcc223fd2ae8ac76cd29ede7bf}
+      \field{sortinit}{H}
+      \field{sortinithash}{23a3aa7c24e56cfa16945d55545109b5}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{shorttitle}
+      \field{abstract}{The messages and cues that elites send influence public opinion, shaping both issue preferences and behavior. Cues represented in images can be particularly impactful, as they remain in people's minds even when attention is divided. Times of crisis can be particularly illuminating about the cues that elites consider important. We use public communication by Members of Congress (MoCs) during the COVID-19 pandemic to assess how the characteristics of elites shape their use of visual cues. Specifically, what visual cues did members of Congress send about COVID in 2020? What role did partisanship, COVID-19 infection rates, and electoral concerns play in shaping these visual cues? And how do cues diffuse across partisan, gender, and geographic networks in Congress? To answer these questions, we extract posted images from all Congressional social media accounts (including Twitter, Instagram, and Facebook) across 2020. For all images posted, we employ supervised machine learning algorithms to identify `selfies' --- and any image of the representative themselves --- and then detect whether a MoC is wearing a mask in a given image. Our paper speaks to the importance of images in political communication, the role of partisanship in shaping the behavior of elites, and how connections between representations can shape their communication.}
+      \field{journaltitle}{{APSA} {Annual} {Meeting} \& {Exhibition}}
+      \field{shorttitle}{Masking {Concern}}
+      \field{title}{Masking Concern: {Congressional} Social Media Images and Concern About {COVID}-19}
+      \field{urlday}{25}
+      \field{urlmonth}{3}
+      \field{urlyear}{2022}
+      \field{year}{2022}
+      \field{urldateera}{ce}
+      \verb{file}
+      \verb Snapshot:C\:\\Users\\efowler\\Zotero\\storage\\T67EWFS7\\index.html:text/html
+      \endverb
+      \verb{urlraw}
+      \verb https://tinyurl.com/y6fxgfmz
+      \endverb
+      \verb{url}
+      \verb https://tinyurl.com/y6fxgfmz
+      \endverb
+    \endentry
+    \entry{huang_effectiveness_2022}{article}{}
+      \name{author}{11}{}{%
+        {{un=0,uniquepart=base,hash=dc6a25244d65d1c3b76b8da8ba84b54c}{%
+           family={Huang},
+           familyi={H\bibinitperiod},
+           given={Jing},
+           giveni={J\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=6ea7046cbfcbf86a3cd7f0a5fffe4873}{%
+           family={Fisher},
+           familyi={F\bibinitperiod},
+           given={Brian\bibnamedelima T.},
+           giveni={B\bibinitperiod\bibinitdelim T\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=a43317ef26adcf1eb4e89b15b530e0e7}{%
+           family={Tam},
+           familyi={T\bibinitperiod},
+           given={Vicky},
+           giveni={V\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=dcb9bbab78c3708cabc48ae2f653c78c}{%
+           family={Wang},
+           familyi={W\bibinitperiod},
+           given={Zi},
+           giveni={Z\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=a59776e22efa22b9923e119d0529a71e}{%
+           family={Song},
+           familyi={S\bibinitperiod},
+           given={Lihai},
+           giveni={L\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=34d42c1b63a42084929d1a91f11f3c50}{%
+           family={Shi},
+           familyi={S\bibinitperiod},
+           given={Jiasheng},
+           giveni={J\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=44e96aedbbe604713d2d8e2f05d05cbc}{%
+           family={La\bibnamedelima Rochelle},
+           familyi={L\bibinitperiod\bibinitdelim R\bibinitperiod},
+           given={Caroline},
+           giveni={C\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=f2e5f45a009e71ca581b562c25df1b47}{%
+           family={Wang},
+           familyi={W\bibinitperiod},
+           given={Xi},
+           giveni={X\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=5b1c0ba4799c04d87f6871d29a9f21fc}{%
+           family={Morris},
+           familyi={M\bibinitperiod},
+           given={Jeffrey\bibnamedelima S.},
+           giveni={J\bibinitperiod\bibinitdelim S\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=70429bf0a2b93138f1831496125c6ead}{%
+           family={Coffin},
+           familyi={C\bibinitperiod},
+           given={Susan\bibnamedelima E.},
+           giveni={S\bibinitperiod\bibinitdelim E\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=01792f9db1744bc6369552ef7e5f4f88}{%
+           family={Rubin},
+           familyi={R\bibinitperiod},
+           given={David\bibnamedelima M.},
+           giveni={D\bibinitperiod\bibinitdelim M\bibinitperiod},
+           givenun=0}}%
+      }
+      \strng{namehash}{5599a5f515ddace6d4f330e565035e9e}
+      \strng{fullhash}{ea18cab8881b7c9891c65feb0659c56e}
+      \strng{bibnamehash}{ea18cab8881b7c9891c65feb0659c56e}
+      \strng{authorbibnamehash}{ea18cab8881b7c9891c65feb0659c56e}
+      \strng{authornamehash}{5599a5f515ddace6d4f330e565035e9e}
+      \strng{authorfullhash}{ea18cab8881b7c9891c65feb0659c56e}
+      \field{sortinit}{H}
+      \field{sortinithash}{23a3aa7c24e56cfa16945d55545109b5}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{abstract}{Evidence for the effectiveness of masking on SARS-CoV-2 transmission at the individual level has accumulated, but the additional benefit of community-level mandates is less certain. In this observational study of matched cohorts from 394 US counties between March 21 and October 20, 2020, we estimated the association between county-level public masking mandates and daily COVID-19 case incidence. On average, the daily case incidence per 100,000 people in masked counties compared with unmasked counties declined by 23 percent at four weeks, 33 percent at six weeks, and 16 percent across six weeks postintervention. The beneficial effect varied across regions of different population densities and political leanings. The most concentrated effects of masking mandates were seen in urban counties; the benefit of the mandates was potentially stronger within Republican-leaning counties. Although benefits were not equally distributed in all regions, masking mandates conferred benefit in reducing community case incidence during an early period of the COVID-19 pandemic.}
+      \field{issn}{0278-2715}
+      \field{journaltitle}{Health Affairs}
+      \field{month}{3}
+      \field{note}{Publisher: Health Affairs}
+      \field{number}{3}
+      \field{title}{The Effectiveness of Government Masking Mandates on {COVID}-19 County-Level Case Incidence Across The {United} {States}, 2020}
+      \field{urlday}{23}
+      \field{urlmonth}{3}
+      \field{urlyear}{2022}
+      \field{volume}{41}
+      \field{year}{2022}
+      \field{urldateera}{ce}
+      \field{pages}{445\bibrangedash 453}
+      \range{pages}{9}
+      \verb{doi}
+      \verb 10.1377/hlthaff.2021.01072
+      \endverb
+      \verb{file}
+      \verb Full Text PDF:C\:\\Users\\efowler\\Zotero\\storage\\UTJ3WQI9\\Huang et al. - 2022 - The Effectiveness Of Government Masking Mandates O.pdf:application/pdf
+      \endverb
+      \verb{urlraw}
+      \verb https://www.healthaffairs.org/doi/10.1377/hlthaff.2021.01072
+      \endverb
+      \verb{url}
+      \verb https://www.healthaffairs.org/doi/10.1377/hlthaff.2021.01072
+      \endverb
+    \endentry
+    \entry{huddy2002gender}{inbook}{}
+      \name{author}{2}{}{%
+        {{un=0,uniquepart=base,hash=364b6d68a35dbe7bbbc93259fc3dc986}{%
+           family={Huddy},
+           familyi={H\bibinitperiod},
+           given={Leonie},
+           giveni={L\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=4b00f1b5158eb5646265ce5d280f6695}{%
+           family={Capelos},
+           familyi={C\bibinitperiod},
+           given={Theresa},
+           giveni={T\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{publisher}{1}{%
+        {Springer}%
+      }
+      \strng{namehash}{2c355bf3409a9082fcf6c4deaebe73b4}
+      \strng{fullhash}{2c355bf3409a9082fcf6c4deaebe73b4}
+      \strng{bibnamehash}{2c355bf3409a9082fcf6c4deaebe73b4}
+      \strng{authorbibnamehash}{2c355bf3409a9082fcf6c4deaebe73b4}
+      \strng{authornamehash}{2c355bf3409a9082fcf6c4deaebe73b4}
+      \strng{authorfullhash}{2c355bf3409a9082fcf6c4deaebe73b4}
+      \field{sortinit}{H}
+      \field{sortinithash}{23a3aa7c24e56cfa16945d55545109b5}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{booktitle}{The social psychology of politics}
+      \field{title}{Gender stereotyping and candidate evaluation}
+      \field{year}{2002}
+      \field{pages}{29\bibrangedash 53}
+      \range{pages}{25}
+    \endentry
+    \entry{huddy1993gender}{article}{}
+      \name{author}{2}{}{%
+        {{un=0,uniquepart=base,hash=364b6d68a35dbe7bbbc93259fc3dc986}{%
+           family={Huddy},
+           familyi={H\bibinitperiod},
+           given={Leonie},
+           giveni={L\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=911af0f3f53aadd76868bcba5bedcdc1}{%
+           family={Terkildsen},
+           familyi={T\bibinitperiod},
+           given={Nayda},
+           giveni={N\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{publisher}{1}{%
+        {JSTOR}%
+      }
+      \strng{namehash}{f03b83edfc7e70b8a7eea58ea66fa96c}
+      \strng{fullhash}{f03b83edfc7e70b8a7eea58ea66fa96c}
+      \strng{bibnamehash}{f03b83edfc7e70b8a7eea58ea66fa96c}
+      \strng{authorbibnamehash}{f03b83edfc7e70b8a7eea58ea66fa96c}
+      \strng{authornamehash}{f03b83edfc7e70b8a7eea58ea66fa96c}
+      \strng{authorfullhash}{f03b83edfc7e70b8a7eea58ea66fa96c}
+      \field{sortinit}{H}
+      \field{sortinithash}{23a3aa7c24e56cfa16945d55545109b5}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{American Journal of Political Science}
+      \field{title}{Gender stereotypes and the perception of male and female candidates}
+      \field{year}{1993}
+      \field{pages}{119\bibrangedash 147}
+      \range{pages}{29}
+    \endentry
+    \entry{ike_face_2020}{article}{}
+      \name{author}{4}{}{%
+        {{un=0,uniquepart=base,hash=d23ec98a2b6755ca5e78b55caba77669}{%
+           family={Ike},
+           familyi={I\bibinitperiod},
+           given={John\bibnamedelima David},
+           giveni={J\bibinitperiod\bibinitdelim D\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=a20ae541bb2f2304d34b8ef74d2f2089}{%
+           family={Bayerle},
+           familyi={B\bibinitperiod},
+           given={Henry},
+           giveni={H\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=5908a27ebca5694c3ae1a03377aebefb}{%
+           family={Logan},
+           familyi={L\bibinitperiod},
+           given={Robert\bibnamedelima A.},
+           giveni={R\bibinitperiod\bibinitdelim A\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=22ec81c521ded32f5f6d19393e4fc198}{%
+           family={Parker},
+           familyi={P\bibinitperiod},
+           given={Ruth\bibnamedelima M.},
+           giveni={R\bibinitperiod\bibinitdelim M\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{language}{1}{%
+        {eng}%
+      }
+      \strng{namehash}{61743264f900f4ad29de95ea525b93de}
+      \strng{fullhash}{d4f34be4eb522136a0209e6c974b1628}
+      \strng{bibnamehash}{d4f34be4eb522136a0209e6c974b1628}
+      \strng{authorbibnamehash}{d4f34be4eb522136a0209e6c974b1628}
+      \strng{authornamehash}{61743264f900f4ad29de95ea525b93de}
+      \strng{authorfullhash}{d4f34be4eb522136a0209e6c974b1628}
+      \field{sortinit}{I}
+      \field{sortinithash}{8d291c51ee89b6cd86bf5379f0b151d8}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{shorttitle}
+      \field{abstract}{Masks, now recommended and worn by a growing proportion of the world's population, have reflected various perceived meaning across time. This paper provides a brief history of the socio-cultural perceptions attached to wearing a mask by surveying how masks were perceived in ancient Greece and Rome, the origins of medical masks, and the ascribed socio-cultural meaning of masks during the COVID-19 pandemic. The use of a mask has historically diverse perceived meanings; currently, wearing a mask communicates a bipolar socio-cultural meaning and a nuanced, divisive symbology. To some, masks communicate a belief in medical science and a desire to protect one's neighbor from contagion. To others, a mask communicates oppression, government overreach, and a skepticism toward established scientific principles. It is the mask's ability to signal a deception, or extrapolated more broadly, a value system, that is highly relevant to current public health guidelines encouraging mask use to decrease the transmission of SARS-CoV-2, the novel coronavirus responsible for the COVID-19 pandemic. Public health officials and providers should utilize evidence-based health communication strategies when findings warrant a reversed recommendation of a symbol (such as masks) with a legacy of socio-cultural underpinnings that are deep-seated, complex, and emotional.}
+      \field{issn}{1087-0415}
+      \field{journaltitle}{Journal of Health Communication}
+      \field{month}{12}
+      \field{number}{12}
+      \field{shorttitle}{Face {Masks}}
+      \field{title}{Face Masks: {Their} History and the Values They Communicate}
+      \field{volume}{25}
+      \field{year}{2020}
+      \field{pages}{990\bibrangedash 995}
+      \range{pages}{6}
+      \verb{doi}
+      \verb 10.1080/10810730.2020.1867257
+      \endverb
+      \verb{file}
+      \verb Full Text:C\:\\Users\\efowler\\Zotero\\storage\\ZSSJU4KA\\Ike et al. - 2020 - Face Masks Their History and the Values They Comm.pdf:application/pdf
+      \endverb
+      \keyw{Communication,COVID-19,History,17th Century,History,18th Century,History,19th Century,History,20th Century,History,21st Century,History,Ancient,Humans,Masks,Social Values}
+    \endentry
+    \entry{khodak2018}{article}{}
+      \name{author}{6}{}{%
+        {{un=0,uniquepart=base,hash=9321b4e90c2fd1051c138192a45c6ea9}{%
+           family={Khodak},
+           familyi={K\bibinitperiod},
+           given={Mikhail},
+           giveni={M\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=df0d188817eb59196f20b391c4e5080f}{%
+           family={Saunshi},
+           familyi={S\bibinitperiod},
+           given={Nikunj},
+           giveni={N\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=d5fb1ed54b449391f816658687f0db72}{%
+           family={Liang},
+           familyi={L\bibinitperiod},
+           given={Yingyu},
+           giveni={Y\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=5bd4a91e09b499d15e82bc929acf1e34}{%
+           family={Ma},
+           familyi={M\bibinitperiod},
+           given={Tengyu},
+           giveni={T\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=e427af7d6363f6b3a00d558044c534c5}{%
+           family={Stewart},
+           familyi={S\bibinitperiod},
+           given={Brandon},
+           giveni={B\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=8e08b59145b9531815169c7ed0a0b055}{%
+           family={Arora},
+           familyi={A\bibinitperiod},
+           given={Sanjeev},
+           giveni={S\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{location}{1}{%
+        {Melbourne, Australia}%
+      }
+      \list{publisher}{1}{%
+        {Association for Computational Linguistics}%
+      }
+      \strng{namehash}{8d3ecfa085003138ce8394bb85e39de5}
+      \strng{fullhash}{463dcec689de7e7532b1e3d2b185c007}
+      \strng{bibnamehash}{463dcec689de7e7532b1e3d2b185c007}
+      \strng{authorbibnamehash}{463dcec689de7e7532b1e3d2b185c007}
+      \strng{authornamehash}{8d3ecfa085003138ce8394bb85e39de5}
+      \strng{authorfullhash}{463dcec689de7e7532b1e3d2b185c007}
+      \field{sortinit}{K}
+      \field{sortinithash}{c02bf6bff1c488450c352b40f5d853ab}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{shorttitle}
+      \field{journaltitle}{Proceedings of the 56th {{Annual Meeting}} of the {{Association}} for {{Computational Linguistics}} ({{Volume}} 1: {{Long Papers}})}
+      \field{langid}{english}
+      \field{shorttitle}{A {{La Carte Embedding}}}
+      \field{title}{A La Carte Embedding: {Cheap} but Effective Induction of Semantic Feature Vectors}
+      \field{year}{2018}
+      \field{pages}{12\bibrangedash 22}
+      \range{pages}{11}
+      \verb{doi}
+      \verb 10.18653/v1/P18-1002
+      \endverb
+    \endentry
+    \entry{king2003sex}{article}{}
+      \name{author}{2}{}{%
+        {{un=0,uniquepart=base,hash=6b1c2938104e5f5eae27279810696c19}{%
+           family={King},
+           familyi={K\bibinitperiod},
+           given={David\bibnamedelima C},
+           giveni={D\bibinitperiod\bibinitdelim C\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=c95bc17b5e9c9fcb45bc20d79fc190b5}{%
+           family={Matland},
+           familyi={M\bibinitperiod},
+           given={Richard\bibnamedelima E},
+           giveni={R\bibinitperiod\bibinitdelim E\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{publisher}{1}{%
+        {Sage Publications}%
+      }
+      \strng{namehash}{fce4be0281c21775c7c9e19cfdbdad7b}
+      \strng{fullhash}{fce4be0281c21775c7c9e19cfdbdad7b}
+      \strng{bibnamehash}{fce4be0281c21775c7c9e19cfdbdad7b}
+      \strng{authorbibnamehash}{fce4be0281c21775c7c9e19cfdbdad7b}
+      \strng{authornamehash}{fce4be0281c21775c7c9e19cfdbdad7b}
+      \strng{authorfullhash}{fce4be0281c21775c7c9e19cfdbdad7b}
+      \field{sortinit}{K}
+      \field{sortinithash}{c02bf6bff1c488450c352b40f5d853ab}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{American Politics Research}
+      \field{number}{6}
+      \field{title}{Sex and the grand old party: An experimental investigation of the effect of candidate sex on support for a {Republican} candidate}
+      \field{volume}{31}
+      \field{year}{2003}
+      \field{pages}{595\bibrangedash 612}
+      \range{pages}{18}
+    \endentry
+    \entry{kramer_more_2020}{misc}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=596fd558dc50d53c531fd012c7219349}{%
+           family={Kramer},
+           familyi={K\bibinitperiod},
+           given={Stephanie},
+           giveni={S\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{language}{1}{%
+        {en-US}%
+      }
+      \strng{namehash}{596fd558dc50d53c531fd012c7219349}
+      \strng{fullhash}{596fd558dc50d53c531fd012c7219349}
+      \strng{bibnamehash}{596fd558dc50d53c531fd012c7219349}
+      \strng{authorbibnamehash}{596fd558dc50d53c531fd012c7219349}
+      \strng{authornamehash}{596fd558dc50d53c531fd012c7219349}
+      \strng{authorfullhash}{596fd558dc50d53c531fd012c7219349}
+      \field{sortinit}{K}
+      \field{sortinithash}{c02bf6bff1c488450c352b40f5d853ab}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{abstract}{As the pandemic continues, a growing share of Americans say they are regularly wearing a face covering in stores and other businesses.}
+      \field{journaltitle}{Pew Research Center}
+      \field{month}{8}
+      \field{title}{More {Americans} say they are regularly wearing masks in stores and other businesses}
+      \field{urlday}{23}
+      \field{urlmonth}{3}
+      \field{urlyear}{2022}
+      \field{year}{2020}
+      \field{urldateera}{ce}
+      \verb{file}
+      \verb Snapshot:C\:\\Users\\efowler\\Zotero\\storage\\NURCYJL2\\more-americans-say-they-are-regularly-wearing-masks-in-stores-and-other-businesses.html:text/html
+      \endverb
+      \verb{urlraw}
+      \verb https://www.pewresearch.org/fact-tank/2020/08/27/more-americans-say-they-are-regularly-wearing-masks-in-stores-and-other-businesses/
+      \endverb
+      \verb{url}
+      \verb https://www.pewresearch.org/fact-tank/2020/08/27/more-americans-say-they-are-regularly-wearing-masks-in-stores-and-other-businesses/
+      \endverb
+    \endentry
+    \entry{laver2003}{article}{}
+      \name{author}{3}{}{%
+        {{un=0,uniquepart=base,hash=33dc8938fb77f6866c7a6ebb9669695b}{%
+           family={Laver},
+           familyi={L\bibinitperiod},
+           given={Michael},
+           giveni={M\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=3c1ca3e512356959e202dae95044d122}{%
+           family={Benoit},
+           familyi={B\bibinitperiod},
+           given={Kenneth},
+           giveni={K\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=0b0b43816793b0fb93f34e317bf8e2f3}{%
+           family={Garry},
+           familyi={G\bibinitperiod},
+           given={John},
+           giveni={J\bibinitperiod},
+           givenun=0}}%
+      }
+      \strng{namehash}{36c5c009d44c21252efd616cc6d81e6c}
+      \strng{fullhash}{c12cb986260d5d7e766fdcf38dab5c45}
+      \strng{bibnamehash}{c12cb986260d5d7e766fdcf38dab5c45}
+      \strng{authorbibnamehash}{c12cb986260d5d7e766fdcf38dab5c45}
+      \strng{authornamehash}{36c5c009d44c21252efd616cc6d81e6c}
+      \strng{authorfullhash}{c12cb986260d5d7e766fdcf38dab5c45}
+      \field{sortinit}{L}
+      \field{sortinithash}{7c47d417cecb1f4bd38d1825c427a61a}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{issn}{0003-0554, 1537-5943}
+      \field{journaltitle}{American Political Science Review}
+      \field{langid}{english}
+      \field{number}{2}
+      \field{title}{Extracting Policy Positions from Political Texts Using Words as Data}
+      \field{volume}{97}
+      \field{year}{2003}
+      \field{pages}{311\bibrangedash 331}
+      \range{pages}{21}
+      \verb{doi}
+      \verb 10.1017/S0003055403000698
+      \endverb
+    \endentry
+    \entry{layman2006party}{article}{}
+      \name{author}{3}{}{%
+        {{un=0,uniquepart=base,hash=eabb8f457cd06b46fb4c5ce9b89acd01}{%
+           family={Layman},
+           familyi={L\bibinitperiod},
+           given={Geoffrey\bibnamedelima C},
+           giveni={G\bibinitperiod\bibinitdelim C\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=bf9ca662c3c3a6ca653c6a75fe76d751}{%
+           family={Carsey},
+           familyi={C\bibinitperiod},
+           given={Thomas\bibnamedelima M},
+           giveni={T\bibinitperiod\bibinitdelim M\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=13c8947cf3ed28e2feb8677b52ea7b6e}{%
+           family={Horowitz},
+           familyi={H\bibinitperiod},
+           given={Juliana\bibnamedelima Menasce},
+           giveni={J\bibinitperiod\bibinitdelim M\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{publisher}{1}{%
+        {Annual Reviews}%
+      }
+      \strng{namehash}{5cf614862fa44cd40dc32122a953df3d}
+      \strng{fullhash}{a9a39401e995561f4ed9db40a0e1a7c4}
+      \strng{bibnamehash}{a9a39401e995561f4ed9db40a0e1a7c4}
+      \strng{authorbibnamehash}{a9a39401e995561f4ed9db40a0e1a7c4}
+      \strng{authornamehash}{5cf614862fa44cd40dc32122a953df3d}
+      \strng{authorfullhash}{a9a39401e995561f4ed9db40a0e1a7c4}
+      \field{sortinit}{L}
+      \field{sortinithash}{7c47d417cecb1f4bd38d1825c427a61a}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Annu. Rev. Polit. Sci.}
+      \field{title}{Party polarization in {American} politics: Characteristics, causes, and consequences}
+      \field{volume}{9}
+      \field{year}{2006}
+      \field{pages}{83\bibrangedash 110}
+      \range{pages}{28}
+    \endentry
+    \entry{liptak2020}{article}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=1a8fa23203882cd3181d787266745652}{%
+           family={Liptak},
+           familyi={L\bibinitperiod},
+           given={Kevin},
+           giveni={K\bibinitperiod},
+           givenun=0}}%
+      }
+      \strng{namehash}{1a8fa23203882cd3181d787266745652}
+      \strng{fullhash}{1a8fa23203882cd3181d787266745652}
+      \strng{bibnamehash}{1a8fa23203882cd3181d787266745652}
+      \strng{authorbibnamehash}{1a8fa23203882cd3181d787266745652}
+      \strng{authornamehash}{1a8fa23203882cd3181d787266745652}
+      \strng{authorfullhash}{1a8fa23203882cd3181d787266745652}
+      \field{sortinit}{L}
+      \field{sortinithash}{7c47d417cecb1f4bd38d1825c427a61a}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{CNN}
+      \field{title}{Trump announces new face mask recommendations after heated internal debate}
+      \field{year}{2020}
+      \verb{urlraw}
+      \verb https://www.cnn.com/2020/04/03/politics/trump-white-house-face-masks/index.html
+      \endverb
+      \verb{url}
+      \verb https://www.cnn.com/2020/04/03/politics/trump-white-house-face-masks/index.html
+      \endverb
+    \endentry
+    \entry{little2001view}{article}{}
+      \name{author}{3}{}{%
+        {{un=0,uniquepart=base,hash=66b63b411858189b85ac208d456637bf}{%
+           family={Little},
+           familyi={L\bibinitperiod},
+           given={Thomas\bibnamedelima H},
+           giveni={T\bibinitperiod\bibinitdelim H\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=f99cc24e09cbdec43ffc52c95df0fefa}{%
+           family={Dunn},
+           familyi={D\bibinitperiod},
+           given={Dana},
+           giveni={D\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=4cfdc925827d900864456e5fd184a339}{%
+           family={Deen},
+           familyi={D\bibinitperiod},
+           given={Rebecca\bibnamedelima E},
+           giveni={R\bibinitperiod\bibinitdelim E\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{publisher}{1}{%
+        {Taylor \& Francis}%
+      }
+      \strng{namehash}{b85df6b7f414a108098fa688f31a8bb8}
+      \strng{fullhash}{539ad9c80f61a8c7fcd3ce8aa95f3341}
+      \strng{bibnamehash}{539ad9c80f61a8c7fcd3ce8aa95f3341}
+      \strng{authorbibnamehash}{539ad9c80f61a8c7fcd3ce8aa95f3341}
+      \strng{authornamehash}{b85df6b7f414a108098fa688f31a8bb8}
+      \strng{authorfullhash}{539ad9c80f61a8c7fcd3ce8aa95f3341}
+      \field{sortinit}{L}
+      \field{sortinithash}{7c47d417cecb1f4bd38d1825c427a61a}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Women \& Politics}
+      \field{number}{4}
+      \field{title}{A view from the top: Gender differences in legislative priorities among state legislative leaders}
+      \field{volume}{22}
+      \field{year}{2001}
+      \field{pages}{29\bibrangedash 50}
+      \range{pages}{22}
+    \endentry
+    \entry{mikolov2013}{article}{}
+      \name{author}{5}{}{%
+        {{un=0,uniquepart=base,hash=a2d359b12ca2fadf0b40136a73f021bb}{%
+           family={Mikolov},
+           familyi={M\bibinitperiod},
+           given={Tomas},
+           giveni={T\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=8d569d1d5b8b5a7836017a98b430f959}{%
+           family={Sutskever},
+           familyi={S\bibinitperiod},
+           given={Ilya},
+           giveni={I\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=ee3f7d7b96add98106db907e189d6c13}{%
+           family={Chen},
+           familyi={C\bibinitperiod},
+           given={Kai},
+           giveni={K\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=84d9f354fa0b45dae996f27dad2c6607}{%
+           family={Corrado},
+           familyi={C\bibinitperiod},
+           given={Greg\bibnamedelima S},
+           giveni={G\bibinitperiod\bibinitdelim S\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=62f954323339abeba6c6a240e9d2855b}{%
+           family={Dean},
+           familyi={D\bibinitperiod},
+           given={Jeff},
+           giveni={J\bibinitperiod},
+           givenun=0}}%
+      }
+      \strng{namehash}{d4849f6d57e38d9b9846cfb360e45131}
+      \strng{fullhash}{fde8281f0504852db8650bb0736061b6}
+      \strng{bibnamehash}{fde8281f0504852db8650bb0736061b6}
+      \strng{authorbibnamehash}{fde8281f0504852db8650bb0736061b6}
+      \strng{authornamehash}{d4849f6d57e38d9b9846cfb360e45131}
+      \strng{authorfullhash}{fde8281f0504852db8650bb0736061b6}
+      \field{sortinit}{M}
+      \field{sortinithash}{4625c616857f13d17ce56f7d4f97d451}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{langid}{english}
+      \field{title}{Distributed Representations of Words and Phrases and Their Compositionality}
+      \field{year}{2013}
+      \field{pages}{9}
+      \range{pages}{1}
+    \endentry
+    \entry{Monroe2008}{article}{}
+      \name{author}{3}{}{%
+        {{un=0,uniquepart=base,hash=76e69d2a476a07e3ff1aeed32abd92b3}{%
+           family={Monroe},
+           familyi={M\bibinitperiod},
+           given={Burt\bibnamedelima L.},
+           giveni={B\bibinitperiod\bibinitdelim L\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=540dffa4d7da7d13fe8c90e92d399a0b}{%
+           family={Colaresi},
+           familyi={C\bibinitperiod},
+           given={Michael\bibnamedelima P.},
+           giveni={M\bibinitperiod\bibinitdelim P\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=001a41d028c5b1368d0d346ac3d1962d}{%
+           family={Quinn},
+           familyi={Q\bibinitperiod},
+           given={Kevin\bibnamedelima M.},
+           giveni={K\bibinitperiod\bibinitdelim M\bibinitperiod},
+           givenun=0}}%
+      }
+      \strng{namehash}{a38d92c1bc968c26a6e0b2a79494ab97}
+      \strng{fullhash}{bcae8af0bb9a360fbc28f28290cfff37}
+      \strng{bibnamehash}{bcae8af0bb9a360fbc28f28290cfff37}
+      \strng{authorbibnamehash}{bcae8af0bb9a360fbc28f28290cfff37}
+      \strng{authornamehash}{a38d92c1bc968c26a6e0b2a79494ab97}
+      \strng{authorfullhash}{bcae8af0bb9a360fbc28f28290cfff37}
+      \field{sortinit}{M}
+      \field{sortinithash}{4625c616857f13d17ce56f7d4f97d451}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{isbn}{1476-4989}
+      \field{issn}{10471987}
+      \field{journaltitle}{Political Analysis}
+      \field{number}{4 SPEC. ISS.}
+      \field{title}{Fightin' Words: {{Lexical}} Feature Selection and Evaluation for Identifying the Content of Political Conflict}
+      \field{volume}{16}
+      \field{year}{2008}
+      \field{pages}{372\bibrangedash 403}
+      \range{pages}{32}
+      \verb{doi}
+      \verb 10.1093/pan/mpn018
+      \endverb
+    \endentry
+    \entry{montgomery2020}{article}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=e68666c5b308473208ccecc74da04876}{%
+           family={Montgomery},
+           familyi={M\bibinitperiod},
+           given={David},
+           giveni={D\bibinitperiod},
+           givenun=0}}%
+      }
+      \strng{namehash}{e68666c5b308473208ccecc74da04876}
+      \strng{fullhash}{e68666c5b308473208ccecc74da04876}
+      \strng{bibnamehash}{e68666c5b308473208ccecc74da04876}
+      \strng{authorbibnamehash}{e68666c5b308473208ccecc74da04876}
+      \strng{authornamehash}{e68666c5b308473208ccecc74da04876}
+      \strng{authorfullhash}{e68666c5b308473208ccecc74da04876}
+      \field{sortinit}{M}
+      \field{sortinithash}{4625c616857f13d17ce56f7d4f97d451}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{CityLab. Retrieved from: https://github.com/theatlantic/citylab-data/blob/master/citylab-congress/citylab\_cdi.csv}
+      \field{title}{CityLab Congressional Density Index}
+      \field{year}{2020}
+    \endentry
+    \entry{mordecai_public_nodate}{report}{}
+      \name{author}{2}{}{%
+        {{un=0,uniquepart=base,hash=67de85678fbdeac3b99ff44723b71128}{%
+           family={Mordecai},
+           familyi={M\bibinitperiod},
+           given={Mara},
+           giveni={M\bibinitperiod},
+           givenun=0}}%
+        {{un=1,uniquepart=given,hash=87db54aa8546745b57b7bcb6ba7ab2cd}{%
+           family={Connaughton},
+           familyi={C\bibinitperiod},
+           given={Aidan},
+           giveni={A\bibinitperiod},
+           givenun=1}}%
+      }
+      \list{institution}{1}{%
+        {Pew Research Center}%
+      }
+      \list{language}{1}{%
+        {en-US}%
+      }
+      \strng{namehash}{61e7a3158c489c657ad2cfeea387c308}
+      \strng{fullhash}{61e7a3158c489c657ad2cfeea387c308}
+      \strng{bibnamehash}{61e7a3158c489c657ad2cfeea387c308}
+      \strng{authorbibnamehash}{61e7a3158c489c657ad2cfeea387c308}
+      \strng{authornamehash}{61e7a3158c489c657ad2cfeea387c308}
+      \strng{authorfullhash}{61e7a3158c489c657ad2cfeea387c308}
+      \field{sortinit}{M}
+      \field{sortinithash}{4625c616857f13d17ce56f7d4f97d451}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{abstract}{Across 13 countries, people’s assessments of how well their country had handled the coronavirus outbreak were closely tied to partisanship.}
+      \field{title}{Public opinion about coronavirus is more politically divided in {U}.{S}. than in other advanced economies}
+      \field{urlday}{20}
+      \field{urlmonth}{9}
+      \field{urlyear}{2021}
+      \field{year}{2020}
+      \field{urldateera}{ce}
+      \verb{file}
+      \verb Snapshot:C\:\\Users\\efowler\\Zotero\\storage\\E7KU6XFH\\public-opinion-about-coronavirus-is-more-politically-divided-in-u-s-than-in-other-advanced-econ.html:text/html
+      \endverb
+      \verb{urlraw}
+      \verb https://www.pewresearch.org/fact-tank/2020/10/28/public-opinion-about-coronavirus-is-more-politically-divided-in-u-s-than-in-other-advanced-economies/
+      \endverb
+      \verb{url}
+      \verb https://www.pewresearch.org/fact-tank/2020/10/28/public-opinion-about-coronavirus-is-more-politically-divided-in-u-s-than-in-other-advanced-economies/
+      \endverb
+    \endentry
+    \entry{neumann2022body}{article}{}
+      \name{author}{3}{}{%
+        {{un=0,uniquepart=base,hash=fc1fee847c1e8e3d57f222badc8c97ad}{%
+           family={Neumann},
+           familyi={N\bibinitperiod},
+           given={Markus},
+           giveni={M\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=0662cf0be90cec0bf1cb37b99707db96}{%
+           family={Fowler},
+           familyi={F\bibinitperiod},
+           given={Erika\bibnamedelima Franklin},
+           giveni={E\bibinitperiod\bibinitdelim F\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=12dd1dc70d2add5460a78873af5c23bd}{%
+           family={Ridout},
+           familyi={R\bibinitperiod},
+           given={Travis\bibnamedelima N},
+           giveni={T\bibinitperiod\bibinitdelim N\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{publisher}{1}{%
+        {Amsterdam University Press}%
+      }
+      \strng{namehash}{408e3bb3d02b2c108f5264bc7a8a40fd}
+      \strng{fullhash}{4f4df62b3b58fd97c3874c0da94c16fe}
+      \strng{bibnamehash}{4f4df62b3b58fd97c3874c0da94c16fe}
+      \strng{authorbibnamehash}{4f4df62b3b58fd97c3874c0da94c16fe}
+      \strng{authornamehash}{408e3bb3d02b2c108f5264bc7a8a40fd}
+      \strng{authorfullhash}{4f4df62b3b58fd97c3874c0da94c16fe}
+      \field{extraname}{1}
+      \field{sortinit}{N}
+      \field{sortinithash}{22369a73d5f88983a108b63f07f37084}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Computational Communication Research}
+      \field{number}{1}
+      \field{title}{Body Language and Gender Stereotypes in Campaign Video}
+      \field{volume}{4}
+      \field{year}{2022}
+    \endentry
+    \entry{neumann2023politicizing}{article}{}
+      \name{author}{9}{}{%
+        {{un=0,uniquepart=base,hash=fc1fee847c1e8e3d57f222badc8c97ad}{%
+           family={Neumann},
+           familyi={N\bibinitperiod},
+           given={Markus},
+           giveni={M\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=cea8001f04df6ab7a461032d2a887dee}{%
+           family={Moore},
+           familyi={M\bibinitperiod},
+           given={Steven\bibnamedelima T},
+           giveni={S\bibinitperiod\bibinitdelim T\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=858b331e74dff89e874fa82b509dea7c}{%
+           family={Baum},
+           familyi={B\bibinitperiod},
+           given={Laura\bibnamedelima M},
+           giveni={L\bibinitperiod\bibinitdelim M\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=d39f5f068210fc8cafbe27c4ca04ffe9}{%
+           family={Oleinikov},
+           familyi={O\bibinitperiod},
+           given={Pavel},
+           giveni={P\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=845872f3c57bd68f0fd0acdce58cfe9f}{%
+           family={Xu},
+           familyi={X\bibinitperiod},
+           given={Yiwei},
+           giveni={Y\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=7f65711dfc2bbeafcec749ecd1e98d92}{%
+           family={Niederdeppe},
+           familyi={N\bibinitperiod},
+           given={Jeff},
+           giveni={J\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=257446f9dd05cebae80e68343a86b9ce}{%
+           family={Lewis\bibnamedelima Jr},
+           familyi={L\bibinitperiod\bibinitdelim J\bibinitperiod},
+           given={Neil},
+           giveni={N\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=0b7ec0fce685a0a8cea5644214e0bbad}{%
+           family={Gollust},
+           familyi={G\bibinitperiod},
+           given={Sarah\bibnamedelima E},
+           giveni={S\bibinitperiod\bibinitdelim E\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=0662cf0be90cec0bf1cb37b99707db96}{%
+           family={Fowler},
+           familyi={F\bibinitperiod},
+           given={Erika\bibnamedelima Franklin},
+           giveni={E\bibinitperiod\bibinitdelim F\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{publisher}{1}{%
+        {Taylor \& Francis}%
+      }
+      \strng{namehash}{408e3bb3d02b2c108f5264bc7a8a40fd}
+      \strng{fullhash}{217b13ee1ac16d30aa854a6c0af4fbb5}
+      \strng{bibnamehash}{217b13ee1ac16d30aa854a6c0af4fbb5}
+      \strng{authorbibnamehash}{217b13ee1ac16d30aa854a6c0af4fbb5}
+      \strng{authornamehash}{408e3bb3d02b2c108f5264bc7a8a40fd}
+      \strng{authorfullhash}{217b13ee1ac16d30aa854a6c0af4fbb5}
+      \field{extraname}{2}
+      \field{sortinit}{N}
+      \field{sortinithash}{22369a73d5f88983a108b63f07f37084}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Political Communication}
+      \field{number}{1}
+      \field{title}{Politicizing Masks? Examining the Volume and Content of Local News Coverage of Face Coverings in the US Through the COVID-19 Pandemic}
+      \field{volume}{41}
+      \field{year}{2024}
+      \field{pages}{66\bibrangedash 106}
+      \range{pages}{41}
+    \endentry
+    \entry{osborn2012women}{book}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=23db9b07410e6cd745e1f9579c5a8170}{%
+           family={Osborn},
+           familyi={O\bibinitperiod},
+           given={Tracy\bibnamedelima L},
+           giveni={T\bibinitperiod\bibinitdelim L\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{publisher}{1}{%
+        {Oxford University Press, USA}%
+      }
+      \strng{namehash}{23db9b07410e6cd745e1f9579c5a8170}
+      \strng{fullhash}{23db9b07410e6cd745e1f9579c5a8170}
+      \strng{bibnamehash}{23db9b07410e6cd745e1f9579c5a8170}
+      \strng{authorbibnamehash}{23db9b07410e6cd745e1f9579c5a8170}
+      \strng{authornamehash}{23db9b07410e6cd745e1f9579c5a8170}
+      \strng{authorfullhash}{23db9b07410e6cd745e1f9579c5a8170}
+      \field{sortinit}{O}
+      \field{sortinithash}{2cd7140a07aea5341f9e2771efe90aae}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{How women represent women: Political parties, gender and representation in the state legislatures}
+      \field{year}{2012}
+    \endentry
+    \entry{palmer_toxic_2020}{article}{}
+      \name{author}{2}{}{%
+        {{un=0,uniquepart=base,hash=ade9f67d8a6337205d8237b71bc997cd}{%
+           family={Palmer},
+           familyi={P\bibinitperiod},
+           given={Carl\bibnamedelima L.},
+           giveni={C\bibinitperiod\bibinitdelim L\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=c4cf88aa2332e3a86f92ffdae25c7721}{%
+           family={Peterson},
+           familyi={P\bibinitperiod},
+           given={Rolfe\bibnamedelima D.},
+           giveni={R\bibinitperiod\bibinitdelim D\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{language}{1}{%
+        {en}%
+      }
+      \strng{namehash}{4fa6dbdb4cf5de1989ddbce599e19ce8}
+      \strng{fullhash}{4fa6dbdb4cf5de1989ddbce599e19ce8}
+      \strng{bibnamehash}{4fa6dbdb4cf5de1989ddbce599e19ce8}
+      \strng{authorbibnamehash}{4fa6dbdb4cf5de1989ddbce599e19ce8}
+      \strng{authornamehash}{4fa6dbdb4cf5de1989ddbce599e19ce8}
+      \strng{authorfullhash}{4fa6dbdb4cf5de1989ddbce599e19ce8}
+      \field{sortinit}{P}
+      \field{sortinithash}{ff3bcf24f47321b42cb156c2cc8a8422}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{shorttitle}
+      \field{abstract}{The COVID-19 pandemic has altered numerous elements of social, political, and economic life. Mask wearing is arguably an essential component of the new normal until substantial progress is made on a vaccine. However, though evidence suggests the practice is a positive for public health and limiting the transmission of COVID-19, there is variation in attitudes toward and practices of mask wearing. Specifically, there appears to be a sex-based divide in mask wearing, with men more likely to resist wearing masks. Utilizing an original survey, we test the correlation between masculinity and mask wearing. We find that identification with norms of masculinity has a significant influence on affective responses toward mask wearing.}
+      \field{issn}{1743-923X, 1743-9248}
+      \field{journaltitle}{Politics \& Gender}
+      \field{month}{12}
+      \field{note}{Publisher: Cambridge University Press}
+      \field{number}{4}
+      \field{shorttitle}{Toxic {Mask}-ulinity}
+      \field{title}{Toxic Mask-ulinity: {The} Link between Masculine Toughness and Affective Reactions to Mask Wearing in the {COVID}-19 Era}
+      \field{urlday}{25}
+      \field{urlmonth}{3}
+      \field{urlyear}{2022}
+      \field{volume}{16}
+      \field{year}{2020}
+      \field{urldateera}{ce}
+      \field{pages}{1044\bibrangedash 1051}
+      \range{pages}{8}
+      \verb{doi}
+      \verb 10.1017/S1743923X20000422
+      \endverb
+      \verb{file}
+      \verb Full Text PDF:C\:\\Users\\efowler\\Zotero\\storage\\LMGQ29IW\\Palmer and Peterson - 2020 - Toxic Mask-ulinity The Link between Masculine Tou.pdf:application/pdf;Snapshot:C\:\\Users\\efowler\\Zotero\\storage\\6HYVL7EA\\8753DA181D76C7D59D6712C8F0C666E7.html:text/html
+      \endverb
+      \verb{urlraw}
+      \verb https://www.cambridge.org/core/journals/politics-and-gender/article/toxic-maskulinity-the-link-between-masculine-toughness-and-affective-reactions-to-mask-wearing-in-the-covid19-era/8753DA181D76C7D59D6712C8F0C666E7
+      \endverb
+      \verb{url}
+      \verb https://www.cambridge.org/core/journals/politics-and-gender/article/toxic-maskulinity-the-link-between-masculine-toughness-and-affective-reactions-to-mask-wearing-in-the-covid19-era/8753DA181D76C7D59D6712C8F0C666E7
+      \endverb
+      \keyw{affect,COVID-19,masculinity,Sex}
+    \endentry
+    \entry{Roberts2014}{article}{}
+      \name{author}{8}{}{%
+        {{un=0,uniquepart=base,hash=ca08ae29f1298af10aa6e11f92b01aae}{%
+           family={Roberts},
+           familyi={R\bibinitperiod},
+           given={Margaret\bibnamedelima E.},
+           giveni={M\bibinitperiod\bibinitdelim E\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=f1370510cfe223ff4c2c652b160014ba}{%
+           family={Stewart},
+           familyi={S\bibinitperiod},
+           given={Brandon\bibnamedelima M.},
+           giveni={B\bibinitperiod\bibinitdelim M\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=0e9a50476b4db979d3b603e83a05e919}{%
+           family={Tingley},
+           familyi={T\bibinitperiod},
+           given={Dustin},
+           giveni={D\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=3995dda0933bb03d997dfe71bb50dea0}{%
+           family={Lucas},
+           familyi={L\bibinitperiod},
+           given={Christopher},
+           giveni={C\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=dd584e3edce057e599237e990a12a93d}{%
+           family={{Leder-Luis}},
+           familyi={L\bibinitperiod},
+           given={Jetson},
+           giveni={J\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=fa7650735f8202c0b5f3ce71f4fd8c14}{%
+           family={Gadarian},
+           familyi={G\bibinitperiod},
+           given={Shana\bibnamedelima Kushner},
+           giveni={S\bibinitperiod\bibinitdelim K\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=c1f81b75e0f1eb9b8e3955cc7788edff}{%
+           family={Albertson},
+           familyi={A\bibinitperiod},
+           given={Bethany},
+           giveni={B\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=187c24b68c32371cc8f611424ad4a73d}{%
+           family={Rand},
+           familyi={R\bibinitperiod},
+           given={David\bibnamedelima G.},
+           giveni={D\bibinitperiod\bibinitdelim G\bibinitperiod},
+           givenun=0}}%
+      }
+      \strng{namehash}{4a287588d41e8d382603f687a9220830}
+      \strng{fullhash}{e9b476e9c9c1bb9916574bf656da8130}
+      \strng{bibnamehash}{e9b476e9c9c1bb9916574bf656da8130}
+      \strng{authorbibnamehash}{e9b476e9c9c1bb9916574bf656da8130}
+      \strng{authornamehash}{4a287588d41e8d382603f687a9220830}
+      \strng{authorfullhash}{e9b476e9c9c1bb9916574bf656da8130}
+      \field{sortinit}{R}
+      \field{sortinithash}{5e1c39a9d46ffb6bebd8f801023a9486}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{isbn}{0092-5853}
+      \field{issn}{15405907}
+      \field{journaltitle}{American Journal of Political Science}
+      \field{number}{4}
+      \field{title}{Structural Topic Models for Open-Ended Survey Responses}
+      \field{volume}{58}
+      \field{year}{2014}
+      \field{pages}{1064\bibrangedash 1082}
+      \range{pages}{19}
+      \verb{doi}
+      \verb 10.1111/ajps.12103
+      \endverb
+    \endentry
+    \entry{robertson2020}{article}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=5c571ce8aba112505cc5f79bf14ba80c}{%
+           family={Robertson},
+           familyi={R\bibinitperiod},
+           given={Nicky},
+           giveni={N\bibinitperiod},
+           givenun=0}}%
+      }
+      \strng{namehash}{5c571ce8aba112505cc5f79bf14ba80c}
+      \strng{fullhash}{5c571ce8aba112505cc5f79bf14ba80c}
+      \strng{bibnamehash}{5c571ce8aba112505cc5f79bf14ba80c}
+      \strng{authorbibnamehash}{5c571ce8aba112505cc5f79bf14ba80c}
+      \strng{authornamehash}{5c571ce8aba112505cc5f79bf14ba80c}
+      \strng{authorfullhash}{5c571ce8aba112505cc5f79bf14ba80c}
+      \field{sortinit}{R}
+      \field{sortinithash}{5e1c39a9d46ffb6bebd8f801023a9486}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{CNN}
+      \field{title}{Trump doesn’t think US needs a national mask mandate}
+      \field{year}{2020}
+      \verb{urlraw}
+      \verb https://www.cnn.com/2020/07/18/politics/trump-us-mask-mandate-coronavirus/index.html
+      \endverb
+      \verb{url}
+      \verb https://www.cnn.com/2020/07/18/politics/trump-us-mask-mandate-coronavirus/index.html
+      \endverb
+    \endentry
+    \entry{rodriguez2021embedding}{report}{}
+      \name{author}{3}{}{%
+        {{un=0,uniquepart=base,hash=330ca8f5022b706e696a9962758a096d}{%
+           family={Rodriguez},
+           familyi={R\bibinitperiod},
+           given={Pedro\bibnamedelima L},
+           giveni={P\bibinitperiod\bibinitdelim L\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=9470e342d33f39a05662cafdf539b68a}{%
+           family={Spirling},
+           familyi={S\bibinitperiod},
+           given={Arthur},
+           giveni={A\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=f1370510cfe223ff4c2c652b160014ba}{%
+           family={Stewart},
+           familyi={S\bibinitperiod},
+           given={Brandon\bibnamedelima M},
+           giveni={B\bibinitperiod\bibinitdelim M\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{institution}{1}{%
+        {Working Paper Vanderbilt University}%
+      }
+      \strng{namehash}{6f5d86571f3d1143ea6991342cfb7d46}
+      \strng{fullhash}{202f487bce05eff4446c30b9c5d846ac}
+      \strng{bibnamehash}{202f487bce05eff4446c30b9c5d846ac}
+      \strng{authorbibnamehash}{202f487bce05eff4446c30b9c5d846ac}
+      \strng{authornamehash}{6f5d86571f3d1143ea6991342cfb7d46}
+      \strng{authorfullhash}{202f487bce05eff4446c30b9c5d846ac}
+      \field{sortinit}{R}
+      \field{sortinithash}{5e1c39a9d46ffb6bebd8f801023a9486}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{Embedding Regression: Models for Context-Specific Description and Inference}
+      \field{type}{techreport}
+      \field{year}{2021}
+    \endentry
+    \entry{rollcall2020}{misc}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=aa9daeba0e95c2e7a438e106b2c79e37}{%
+           family={{Roll Call}},
+           familyi={R\bibinitperiod}}}%
+      }
+      \strng{namehash}{aa9daeba0e95c2e7a438e106b2c79e37}
+      \strng{fullhash}{aa9daeba0e95c2e7a438e106b2c79e37}
+      \strng{bibnamehash}{aa9daeba0e95c2e7a438e106b2c79e37}
+      \strng{authorbibnamehash}{aa9daeba0e95c2e7a438e106b2c79e37}
+      \strng{authornamehash}{aa9daeba0e95c2e7a438e106b2c79e37}
+      \strng{authorfullhash}{aa9daeba0e95c2e7a438e106b2c79e37}
+      \field{sortinit}{R}
+      \field{sortinithash}{5e1c39a9d46ffb6bebd8f801023a9486}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{Roll Call Election Guide}
+      \field{year}{2020}
+      \verb{urlraw}
+      \verb https://www.rollcall.com/election-guide-house/
+      \endverb
+      \verb{url}
+      \verb https://www.rollcall.com/election-guide-house/
+      \endverb
+    \endentry
+    \entry{sapiro2011gender}{article}{}
+      \name{author}{4}{}{%
+        {{un=0,uniquepart=base,hash=671e9e37e760643fb8a1177075e5a39d}{%
+           family={Sapiro},
+           familyi={S\bibinitperiod},
+           given={Virginia},
+           giveni={V\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=0a9d37999c0767c8f10bdba33c0df6a4}{%
+           family={Cramer\bibnamedelima Walsh},
+           familyi={C\bibinitperiod\bibinitdelim W\bibinitperiod},
+           given={Katherine},
+           giveni={K\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=e384c4dfb9325a3d005a5c105f7409cf}{%
+           family={Strach},
+           familyi={S\bibinitperiod},
+           given={Patricia},
+           giveni={P\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=2810bf1c7a95e1a9abaf3fdc2a6c12c2}{%
+           family={Hennings},
+           familyi={H\bibinitperiod},
+           given={Valerie},
+           giveni={V\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{publisher}{1}{%
+        {Sage Publications Sage CA: Los Angeles, CA}%
+      }
+      \strng{namehash}{32b999ca90584236c578494363607f09}
+      \strng{fullhash}{79cb889c412f0ffe94efb5ee05194249}
+      \strng{bibnamehash}{79cb889c412f0ffe94efb5ee05194249}
+      \strng{authorbibnamehash}{79cb889c412f0ffe94efb5ee05194249}
+      \strng{authornamehash}{32b999ca90584236c578494363607f09}
+      \strng{authorfullhash}{79cb889c412f0ffe94efb5ee05194249}
+      \field{sortinit}{S}
+      \field{sortinithash}{b164b07b29984b41daf1e85279fbc5ab}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Political Research Quarterly}
+      \field{number}{1}
+      \field{title}{Gender, context, and television advertising: A comprehensive analysis of 2000 and 2002 {House} races}
+      \field{volume}{64}
+      \field{year}{2011}
+      \field{pages}{107\bibrangedash 119}
+      \range{pages}{13}
+    \endentry
+    \entry{schill2012visual}{article}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=95d82beb0803eafa4e32af8db51e223c}{%
+           family={Schill},
+           familyi={S\bibinitperiod},
+           given={Dan},
+           giveni={D\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{publisher}{1}{%
+        {Taylor \& Francis}%
+      }
+      \strng{namehash}{95d82beb0803eafa4e32af8db51e223c}
+      \strng{fullhash}{95d82beb0803eafa4e32af8db51e223c}
+      \strng{bibnamehash}{95d82beb0803eafa4e32af8db51e223c}
+      \strng{authorbibnamehash}{95d82beb0803eafa4e32af8db51e223c}
+      \strng{authornamehash}{95d82beb0803eafa4e32af8db51e223c}
+      \strng{authorfullhash}{95d82beb0803eafa4e32af8db51e223c}
+      \field{sortinit}{S}
+      \field{sortinithash}{b164b07b29984b41daf1e85279fbc5ab}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Review of Communication}
+      \field{number}{2}
+      \field{title}{The visual image and the political image: A review of visual communication research in the field of political communication}
+      \field{volume}{12}
+      \field{year}{2012}
+      \field{pages}{118\bibrangedash 142}
+      \range{pages}{25}
+    \endentry
+    \entry{schmuck_effects_2017}{article}{}
+      \name{author}{2}{}{%
+        {{un=0,uniquepart=base,hash=d0fe4f1ebe86fc77c2280ccee273ecc8}{%
+           family={Schmuck},
+           familyi={S\bibinitperiod},
+           given={Desirée},
+           giveni={D\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=6beb97a6390ea9d674183e3f6ca03793}{%
+           family={Matthes},
+           familyi={M\bibinitperiod},
+           given={Jörg},
+           giveni={J\bibinitperiod},
+           givenun=0}}%
+      }
+      \strng{namehash}{88428f270a9435375d320e12f333d41f}
+      \strng{fullhash}{88428f270a9435375d320e12f333d41f}
+      \strng{bibnamehash}{88428f270a9435375d320e12f333d41f}
+      \strng{authorbibnamehash}{88428f270a9435375d320e12f333d41f}
+      \strng{authornamehash}{88428f270a9435375d320e12f333d41f}
+      \strng{authorfullhash}{88428f270a9435375d320e12f333d41f}
+      \field{sortinit}{S}
+      \field{sortinithash}{b164b07b29984b41daf1e85279fbc5ab}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{shorttitle}
+      \field{abstract}{Right-wing populist parties portray immigrants as economic or symbolic threats in their political advertisements by constructing a moral divide between the “good” ordinary people and “bad” immigrants. Yet, it remains unclear how these different threat appeals contribute to the formation of anti-immigrant attitudes among citizens and what role visual elements play in producing these effects. A survey-experiment with a quota sample of 471 participants reveals that, overall, symbolic threat appeals exert stronger effects on anti-immigrant attitudes than economic ones. When presented via text alone, only symbolic—not economic—threat appeals increased anti-immigrant attitudes via the activation of heuristic processing such as the reliance on negative stereotypes or feelings of anxiety, in particular among lower-educated citizens. When visuals were present, both types of threat appeals enhanced anti-immigrant attitudes among citizens across all education levels based on heuristic processing. Additionally, high image-text congruency induced cognitive argument approval resulting in higher anti-immigrant attitudes.}
+      \field{issn}{1058-4609}
+      \field{journaltitle}{Political Communication}
+      \field{month}{10}
+      \field{number}{4}
+      \field{shorttitle}{Effects of {Economic} and {Symbolic} {Threat} {Appeals} in {Right}-{Wing} {Populist} {Advertising} on {Anti}-{Immigrant} {Attitudes}}
+      \field{title}{Effects of Economic and Symbolic Threat Appeals in Right-Wing Populist Advertising on Anti-Immigrant Attitudes: The Impact of Textual and Visual Appeals}
+      \field{urlday}{23}
+      \field{urlmonth}{3}
+      \field{urlyear}{2022}
+      \field{volume}{34}
+      \field{year}{2017}
+      \field{urldateera}{ce}
+      \field{pages}{607\bibrangedash 626}
+      \range{pages}{20}
+      \verb{doi}
+      \verb 10.1080/10584609.2017.1316807
+      \endverb
+      \verb{file}
+      \verb Full Text PDF:C\:\\Users\\efowler\\Zotero\\storage\\TPFTEMXJ\\Schmuck and Matthes - 2017 - Effects of Economic and Symbolic Threat Appeals in.pdf:application/pdf;Snapshot:C\:\\Users\\efowler\\Zotero\\storage\\MWINC7XG\\10584609.2017.html:text/html
+      \endverb
+      \verb{urlraw}
+      \verb https://doi.org/10.1080/10584609.2017.1316807
+      \endverb
+      \verb{url}
+      \verb https://doi.org/10.1080/10584609.2017.1316807
+      \endverb
+      \keyw{political advertising,economic threat,right-wing populism,symbolic threat}
+    \endentry
+    \entry{schneider_face_2020}{article}{}
+      \name{author}{1}{}{%
+        {{un=1,uniquepart=given,hash=e8b8e1b62f020950f7d35d869811cf1a}{%
+           family={Schneider},
+           familyi={S\bibinitperiod},
+           given={Elena},
+           giveni={E\bibinitperiod},
+           givenun=1}}%
+      }
+      \strng{namehash}{e8b8e1b62f020950f7d35d869811cf1a}
+      \strng{fullhash}{e8b8e1b62f020950f7d35d869811cf1a}
+      \strng{bibnamehash}{e8b8e1b62f020950f7d35d869811cf1a}
+      \strng{authorbibnamehash}{e8b8e1b62f020950f7d35d869811cf1a}
+      \strng{authornamehash}{e8b8e1b62f020950f7d35d869811cf1a}
+      \strng{authorfullhash}{e8b8e1b62f020950f7d35d869811cf1a}
+      \field{sortinit}{S}
+      \field{sortinithash}{b164b07b29984b41daf1e85279fbc5ab}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Politico}
+      \field{month}{9}
+      \field{title}{The face mask `is almost as much of a symbol as a {MAGA} hat'}
+      \field{year}{2020}
+      \verb{urlraw}
+      \verb https://www.politico.com/news/2020/09/30/face-masks-political-ads-coronavirus-424149
+      \endverb
+      \verb{url}
+      \verb https://www.politico.com/news/2020/09/30/face-masks-political-ads-coronavirus-424149
+      \endverb
+    \endentry
+    \entry{schneider2016interplay}{article}{}
+      \name{author}{2}{}{%
+        {{un=1,uniquepart=given,hash=5446942349d674172b0968464bcd14cb}{%
+           family={Schneider},
+           familyi={S\bibinitperiod},
+           given={Monica\bibnamedelima C},
+           giveni={M\bibinitperiod\bibinitdelim C\bibinitperiod},
+           givenun=1}}%
+        {{un=0,uniquepart=base,hash=62da4e574147f0298a4bd6ef0ea4182d}{%
+           family={Bos},
+           familyi={B\bibinitperiod},
+           given={Angela\bibnamedelima L},
+           giveni={A\bibinitperiod\bibinitdelim L\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{publisher}{1}{%
+        {Taylor \& Francis}%
+      }
+      \strng{namehash}{e17359fad33b7af2b7b9aa32f05912af}
+      \strng{fullhash}{e17359fad33b7af2b7b9aa32f05912af}
+      \strng{bibnamehash}{e17359fad33b7af2b7b9aa32f05912af}
+      \strng{authorbibnamehash}{e17359fad33b7af2b7b9aa32f05912af}
+      \strng{authornamehash}{e17359fad33b7af2b7b9aa32f05912af}
+      \strng{authorfullhash}{e17359fad33b7af2b7b9aa32f05912af}
+      \field{sortinit}{S}
+      \field{sortinithash}{b164b07b29984b41daf1e85279fbc5ab}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Journal of Women, Politics \& Policy}
+      \field{number}{3}
+      \field{title}{The interplay of candidate party and gender in evaluations of political candidates}
+      \field{volume}{37}
+      \field{year}{2016}
+      \field{pages}{274\bibrangedash 294}
+      \range{pages}{21}
+    \endentry
+    \entry{scoville2022mask}{article}{}
+      \name{author}{4}{}{%
+        {{un=0,uniquepart=base,hash=b0e6125396577d47b66b1e746686de60}{%
+           family={Scoville},
+           familyi={S\bibinitperiod},
+           given={Caleb},
+           giveni={C\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=9307526bd42e974672444ba524a83865}{%
+           family={McCumber},
+           familyi={M\bibinitperiod},
+           given={Andrew},
+           giveni={A\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=53188425d3bbccceea7db37439e04612}{%
+           family={Amironesei},
+           familyi={A\bibinitperiod},
+           given={Razvan},
+           giveni={R\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=d2c919b4656e2449e9ea983f80ba1fac}{%
+           family={Jeon},
+           familyi={J\bibinitperiod},
+           given={June},
+           giveni={J\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{publisher}{1}{%
+        {SAGE Publications Sage CA: Los Angeles, CA}%
+      }
+      \strng{namehash}{2dc05797e9fb4dca2d116253f5fe408b}
+      \strng{fullhash}{86716b52345328155f82c1a09addddde}
+      \strng{bibnamehash}{86716b52345328155f82c1a09addddde}
+      \strng{authorbibnamehash}{86716b52345328155f82c1a09addddde}
+      \strng{authornamehash}{2dc05797e9fb4dca2d116253f5fe408b}
+      \strng{authorfullhash}{86716b52345328155f82c1a09addddde}
+      \field{sortinit}{S}
+      \field{sortinithash}{b164b07b29984b41daf1e85279fbc5ab}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Socius}
+      \field{title}{Mask refusal backlash: the politicization of face masks in the {American} public sphere during the early stages of the COVID-19 pandemic}
+      \field{volume}{8}
+      \field{year}{2022}
+    \endentry
+    \entry{shapiro1986gender}{article}{}
+      \name{author}{2}{}{%
+        {{un=0,uniquepart=base,hash=221767dcb1b451bd1be561af46ff8d47}{%
+           family={Shapiro},
+           familyi={S\bibinitperiod},
+           given={Robert\bibnamedelima Y},
+           giveni={R\bibinitperiod\bibinitdelim Y\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=70f1a723f52f0a68f437207242269417}{%
+           family={Mahajan},
+           familyi={M\bibinitperiod},
+           given={Harpreet},
+           giveni={H\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{publisher}{1}{%
+        {Oxford University Press}%
+      }
+      \strng{namehash}{f3911d5da13e9281bf7b08360e6e2dcf}
+      \strng{fullhash}{f3911d5da13e9281bf7b08360e6e2dcf}
+      \strng{bibnamehash}{f3911d5da13e9281bf7b08360e6e2dcf}
+      \strng{authorbibnamehash}{f3911d5da13e9281bf7b08360e6e2dcf}
+      \strng{authornamehash}{f3911d5da13e9281bf7b08360e6e2dcf}
+      \strng{authorfullhash}{f3911d5da13e9281bf7b08360e6e2dcf}
+      \field{sortinit}{S}
+      \field{sortinithash}{b164b07b29984b41daf1e85279fbc5ab}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Public Opinion Quarterly}
+      \field{number}{1}
+      \field{title}{Gender Differences in Policy Preferences: A Summary of Trends from the 1960s to the 1980s}
+      \field{volume}{50}
+      \field{year}{1986}
+      \field{pages}{42\bibrangedash 61}
+      \range{pages}{20}
+    \endentry
+    \entry{sides2006origins}{article}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=5d7c023d30efedf1cab9d2adcc87f438}{%
+           family={Sides},
+           familyi={S\bibinitperiod},
+           given={John},
+           giveni={J\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{publisher}{1}{%
+        {Cambridge University Press}%
+      }
+      \strng{namehash}{5d7c023d30efedf1cab9d2adcc87f438}
+      \strng{fullhash}{5d7c023d30efedf1cab9d2adcc87f438}
+      \strng{bibnamehash}{5d7c023d30efedf1cab9d2adcc87f438}
+      \strng{authorbibnamehash}{5d7c023d30efedf1cab9d2adcc87f438}
+      \strng{authornamehash}{5d7c023d30efedf1cab9d2adcc87f438}
+      \strng{authorfullhash}{5d7c023d30efedf1cab9d2adcc87f438}
+      \field{sortinit}{S}
+      \field{sortinithash}{b164b07b29984b41daf1e85279fbc5ab}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{British Journal of Political Science}
+      \field{number}{3}
+      \field{title}{The origins of campaign agendas}
+      \field{volume}{36}
+      \field{year}{2006}
+      \field{pages}{407\bibrangedash 436}
+      \range{pages}{30}
+    \endentry
+    \entry{stephens-dougan_race_2020}{book}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=0aea1e6b33370f100e1d1a567d17c3ac}{%
+           family={Stephens-Dougan},
+           familyi={S\bibinithyphendelim D\bibinitperiod},
+           given={LaFleur},
+           giveni={L\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{language}{1}{%
+        {en}%
+      }
+      \list{location}{1}{%
+        {Chicago, IL}%
+      }
+      \list{publisher}{1}{%
+        {University of Chicago Press}%
+      }
+      \strng{namehash}{0aea1e6b33370f100e1d1a567d17c3ac}
+      \strng{fullhash}{0aea1e6b33370f100e1d1a567d17c3ac}
+      \strng{bibnamehash}{0aea1e6b33370f100e1d1a567d17c3ac}
+      \strng{authorbibnamehash}{0aea1e6b33370f100e1d1a567d17c3ac}
+      \strng{authornamehash}{0aea1e6b33370f100e1d1a567d17c3ac}
+      \strng{authorfullhash}{0aea1e6b33370f100e1d1a567d17c3ac}
+      \field{sortinit}{S}
+      \field{sortinithash}{b164b07b29984b41daf1e85279fbc5ab}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{shorttitle}
+      \field{abstract}{African American voters are a key demographic to the modern Democratic base, and conventional wisdom has it that there is political cost to racialized “dog whistles,” especially for Democratic candidates. However, politicians from both parties and from all racial backgrounds continually appeal to negative racial attitudes for political gain.             Challenging what we think we know about race and politics, LaFleur Stephens-Dougan argues that candidates across the racial and political spectrum engage in “racial distancing,” or using negative racial appeals to communicate to racially moderate and conservative whites—the overwhelming majority of whites—that they will not disrupt the racial status quo. Race to the Bottom closely examines empirical data on racialized partisan stereotypes to show that engaging in racial distancing through political platforms that do not address the needs of nonwhite communities and charged rhetoric that targets African Americans, immigrants, and others can be politically advantageous. Racialized communication persists as a well-worn campaign strategy because it has real electoral value for both white and black politicians seeking to broaden their coalitions. Stephens-Dougan reveals that claims of racial progress have been overstated as our politicians are incentivized to employ racial prejudices at the expense of the most marginalized in our society.}
+      \field{isbn}{978-0-226-69898-4}
+      \field{month}{7}
+      \field{series}{Chicago {Studies} in {American} {Politics}}
+      \field{shorttitle}{Race to the {Bottom}}
+      \field{title}{Race to the Bottom: {How} Racial Appeals Work in {American} Politics}
+      \field{urlday}{29}
+      \field{urlmonth}{3}
+      \field{urlyear}{2022}
+      \field{year}{2020}
+      \field{urldateera}{ce}
+      \verb{file}
+      \verb Snapshot:C\:\\Users\\efowler\\Zotero\\storage\\IGGRZQ3J\\bo50271574.html:text/html
+      \endverb
+      \verb{urlraw}
+      \verb https://press.uchicago.edu/ucp/books/book/chicago/R/bo50271574.html
+      \endverb
+      \verb{url}
+      \verb https://press.uchicago.edu/ucp/books/book/chicago/R/bo50271574.html
+      \endverb
+      \keyw{academic,african,america,american,attitude,bias,black,communities,community,conservative,data,democratic,demographic,discrimination,distancing,dog whistle,elections,institutional,marginalized,moderate,negative,opportunist,oppressed,parties,party,political,politician,politics,prejudice,racial,racism,republican,research,rhetoric,scholarly,spectrum,status quo,voter,voting,white}
+    \endentry
+    \entry{stolberg2020}{article}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=106e922d49ec50ff851ffb6609c4f6bc}{%
+           family={Stolberg},
+           familyi={S\bibinitperiod},
+           given={Sheryl\bibnamedelima Gay},
+           giveni={S\bibinitperiod\bibinitdelim G\bibinitperiod},
+           givenun=0}}%
+      }
+      \strng{namehash}{106e922d49ec50ff851ffb6609c4f6bc}
+      \strng{fullhash}{106e922d49ec50ff851ffb6609c4f6bc}
+      \strng{bibnamehash}{106e922d49ec50ff851ffb6609c4f6bc}
+      \strng{authorbibnamehash}{106e922d49ec50ff851ffb6609c4f6bc}
+      \strng{authornamehash}{106e922d49ec50ff851ffb6609c4f6bc}
+      \strng{authorfullhash}{106e922d49ec50ff851ffb6609c4f6bc}
+      \field{sortinit}{S}
+      \field{sortinithash}{b164b07b29984b41daf1e85279fbc5ab}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{New York Times}
+      \field{month}{10}
+      \field{title}{Biden’s Call for `National Mask Mandate’ Gains Traction in Public Health Circles}
+      \field{year}{2020}
+      \verb{urlraw}
+      \verb https://www.nytimes.com/2020/10/29/us/politics/trump-biden-mask-mandate.html
+      \endverb
+      \verb{url}
+      \verb https://www.nytimes.com/2020/10/29/us/politics/trump-biden-mask-mandate.html
+      \endverb
+    \endentry
+    \entry{strach2011campaigning}{article}{}
+      \name{author}{2}{}{%
+        {{un=0,uniquepart=base,hash=e384c4dfb9325a3d005a5c105f7409cf}{%
+           family={Strach},
+           familyi={S\bibinitperiod},
+           given={Patricia},
+           giveni={P\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=671e9e37e760643fb8a1177075e5a39d}{%
+           family={Sapiro},
+           familyi={S\bibinitperiod},
+           given={Virginia},
+           giveni={V\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{publisher}{1}{%
+        {SAGE Publications Sage CA: Los Angeles, CA}%
+      }
+      \strng{namehash}{4c6c896b3def791124535d07df5e481d}
+      \strng{fullhash}{4c6c896b3def791124535d07df5e481d}
+      \strng{bibnamehash}{4c6c896b3def791124535d07df5e481d}
+      \strng{authorbibnamehash}{4c6c896b3def791124535d07df5e481d}
+      \strng{authornamehash}{4c6c896b3def791124535d07df5e481d}
+      \strng{authorfullhash}{4c6c896b3def791124535d07df5e481d}
+      \field{sortinit}{S}
+      \field{sortinithash}{b164b07b29984b41daf1e85279fbc5ab}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{American Politics Research}
+      \field{number}{2}
+      \field{title}{Campaigning for {congress} in the “9/11” era: Considerations of gender and party in response to an exogenous shock}
+      \field{volume}{39}
+      \field{year}{2011}
+      \field{pages}{264\bibrangedash 290}
+      \range{pages}{27}
+    \endentry
+    \entry{swigger2012you}{article}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=011fb444d8ee47dfef96f9f680b755d7}{%
+           family={Swigger},
+           familyi={S\bibinitperiod},
+           given={Nathaniel},
+           giveni={N\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{publisher}{1}{%
+        {Taylor \& Francis}%
+      }
+      \strng{namehash}{011fb444d8ee47dfef96f9f680b755d7}
+      \strng{fullhash}{011fb444d8ee47dfef96f9f680b755d7}
+      \strng{bibnamehash}{011fb444d8ee47dfef96f9f680b755d7}
+      \strng{authorbibnamehash}{011fb444d8ee47dfef96f9f680b755d7}
+      \strng{authornamehash}{011fb444d8ee47dfef96f9f680b755d7}
+      \strng{authorfullhash}{011fb444d8ee47dfef96f9f680b755d7}
+      \field{sortinit}{S}
+      \field{sortinithash}{b164b07b29984b41daf1e85279fbc5ab}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Political Communication}
+      \field{number}{4}
+      \field{title}{What you see is what you get: Drawing inferences from campaign imagery}
+      \field{volume}{29}
+      \field{year}{2012}
+      \field{pages}{367\bibrangedash 386}
+      \range{pages}{20}
+    \endentry
+    \entry{tesler_raphael_2020}{misc}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=d51bdd0b6530912d77ebb8d6cfcdd944}{%
+           family={Tesler},
+           familyi={T\bibinitperiod},
+           given={Michael},
+           giveni={M\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{language}{1}{%
+        {en-US}%
+      }
+      \strng{namehash}{d51bdd0b6530912d77ebb8d6cfcdd944}
+      \strng{fullhash}{d51bdd0b6530912d77ebb8d6cfcdd944}
+      \strng{bibnamehash}{d51bdd0b6530912d77ebb8d6cfcdd944}
+      \strng{authorbibnamehash}{d51bdd0b6530912d77ebb8d6cfcdd944}
+      \strng{authornamehash}{d51bdd0b6530912d77ebb8d6cfcdd944}
+      \strng{authorfullhash}{d51bdd0b6530912d77ebb8d6cfcdd944}
+      \field{sortinit}{T}
+      \field{sortinithash}{9af77f0292593c26bde9a56e688eaee9}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{abstract}{If he wins next month, Raphael Warnock may have his pet beagle to thank. So far, Warnock, the Democratic candidate in one of Georgia’s two Senate runoff electio…}
+      \field{journaltitle}{FiveThirtyEight}
+      \field{month}{12}
+      \field{title}{Raphael {Warnock}’s Dog Ads Cut Against White Voters’ Stereotypes of Black People}
+      \field{urlday}{23}
+      \field{urlmonth}{3}
+      \field{urlyear}{2022}
+      \field{year}{2020}
+      \field{urldateera}{ce}
+      \verb{file}
+      \verb Snapshot:C\:\\Users\\efowler\\Zotero\\storage\\Q5FHPJG9\\raphael-warnocks-dog-ads-cut-against-white-voters-stereotypes-of-black-people.html:text/html
+      \endverb
+      \verb{urlraw}
+      \verb https://fivethirtyeight.com/features/raphael-warnocks-dog-ads-cut-against-white-voters-stereotypes-of-black-people/
+      \endverb
+      \verb{url}
+      \verb https://fivethirtyeight.com/features/raphael-warnocks-dog-ads-cut-against-white-voters-stereotypes-of-black-people/
+      \endverb
+    \endentry
+    \entry{us2020american}{misc}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=fb461c0c6976b357452502c0cb338c70}{%
+           family={{U.S. Census Bureau}},
+           familyi={U\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {The US Census Bureau}%
+      }
+      \strng{namehash}{fb461c0c6976b357452502c0cb338c70}
+      \strng{fullhash}{fb461c0c6976b357452502c0cb338c70}
+      \strng{bibnamehash}{fb461c0c6976b357452502c0cb338c70}
+      \strng{authorbibnamehash}{fb461c0c6976b357452502c0cb338c70}
+      \strng{authornamehash}{fb461c0c6976b357452502c0cb338c70}
+      \strng{authorfullhash}{fb461c0c6976b357452502c0cb338c70}
+      \field{sortinit}{U}
+      \field{sortinithash}{6901a00e45705986ee5e7ca9fd39adca}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{American Community Survey 5-Year Data (2009-2019)}
+      \field{year}{2020}
+    \endentry
+    \entry{valentino_cues_2002}{article}{}
+      \name{author}{3}{}{%
+        {{un=0,uniquepart=base,hash=6a4f2178e3487e940802f1183b237c72}{%
+           family={Valentino},
+           familyi={V\bibinitperiod},
+           given={Nicholas\bibnamedelima A.},
+           giveni={N\bibinitperiod\bibinitdelim A\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=e23ccc928b7a96fc41e9120fd4e3bf1c}{%
+           family={Hutchings},
+           familyi={H\bibinitperiod},
+           given={Vincent\bibnamedelima L.},
+           giveni={V\bibinitperiod\bibinitdelim L\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=d74b49cc63782695eb4bb0542082c96b}{%
+           family={White},
+           familyi={W\bibinitperiod},
+           given={Ismail\bibnamedelima K.},
+           giveni={I\bibinitperiod\bibinitdelim K\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{language}{1}{%
+        {en}%
+      }
+      \strng{namehash}{80074c1da7609bd34c1869670b8668bf}
+      \strng{fullhash}{0200c0dec9c01ce51f044c71e7147e06}
+      \strng{bibnamehash}{0200c0dec9c01ce51f044c71e7147e06}
+      \strng{authorbibnamehash}{0200c0dec9c01ce51f044c71e7147e06}
+      \strng{authornamehash}{80074c1da7609bd34c1869670b8668bf}
+      \strng{authorfullhash}{0200c0dec9c01ce51f044c71e7147e06}
+      \field{extraname}{1}
+      \field{sortinit}{V}
+      \field{sortinithash}{afb52128e5b4dc4b843768c0113d673b}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{shorttitle}
+      \field{abstract}{Recent evidence suggests that elites can capitalize on preexisting linkages between issues and social groups to alter the criteria citizens use to make political decisions. In particular, studies have shown that subtle racial cues in campaign communications may activate racial attitudes, thereby altering the foundations of mass political decision making. However, the precise psychological mechanism by which such attitudes are activated has not been empirically demonstrated, and the range of implicit cues powerful enough to produce this effect is still unknown. In an experiment, we tested whether subtle racial cues embedded in political advertisements prime racial attitudes as predictors of candidate preference by making them more accessible in memory. Results show that a wide range of implicit race cues can prime racial attitudes and that cognitive accessibility mediates the effect. Furthermore, counter-stereotypic cues—especially those implying blacks are deserving of government resources—dampen racial priming, suggesting that the meaning drawn from the visual/narrative pairing in an advertisement, and not simply the presence of black images, triggers the effect.}
+      \field{issn}{1537-5943, 0003-0554}
+      \field{journaltitle}{American Political Science Review}
+      \field{month}{3}
+      \field{note}{Publisher: Cambridge University Press}
+      \field{number}{1}
+      \field{shorttitle}{Cues that {Matter}}
+      \field{title}{Cues that Matter: {How} Political Ads Prime Racial Attitudes During Campaigns}
+      \field{urlday}{23}
+      \field{urlmonth}{3}
+      \field{urlyear}{2022}
+      \field{volume}{96}
+      \field{year}{2002}
+      \field{urldateera}{ce}
+      \field{pages}{75\bibrangedash 90}
+      \range{pages}{16}
+      \verb{doi}
+      \verb 10.1017/S0003055402004240
+      \endverb
+      \verb{file}
+      \verb Full Text PDF:C\:\\Users\\efowler\\Zotero\\storage\\Q3T572RT\\Valentino et al. - 2002 - Cues that Matter How Political Ads Prime Racial A.pdf:application/pdf;Snapshot:C\:\\Users\\efowler\\Zotero\\storage\\GYD4TC8F\\11DC5174924A0CA17C7337CCEA42A762.html:text/html
+      \endverb
+      \verb{urlraw}
+      \verb http://www.cambridge.org/core/journals/american-political-science-review/article/cues-that-matter-how-political-ads-prime-racial-attitudes-during-campaigns/11DC5174924A0CA17C7337CCEA42A762
+      \endverb
+      \verb{url}
+      \verb http://www.cambridge.org/core/journals/american-political-science-review/article/cues-that-matter-how-political-ads-prime-racial-attitudes-during-campaigns/11DC5174924A0CA17C7337CCEA42A762
+      \endverb
+    \endentry
+    \entry{valentino2004impact}{article}{}
+      \name{author}{3}{}{%
+        {{un=0,uniquepart=base,hash=6a4f2178e3487e940802f1183b237c72}{%
+           family={Valentino},
+           familyi={V\bibinitperiod},
+           given={Nicholas\bibnamedelima A},
+           giveni={N\bibinitperiod\bibinitdelim A\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=e23ccc928b7a96fc41e9120fd4e3bf1c}{%
+           family={Hutchings},
+           familyi={H\bibinitperiod},
+           given={Vincent\bibnamedelima L},
+           giveni={V\bibinitperiod\bibinitdelim L\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=53ef40a7cbd6b71b68f52eb6ec07c425}{%
+           family={Williams},
+           familyi={W\bibinitperiod},
+           given={Dmitri},
+           giveni={D\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{publisher}{1}{%
+        {Oxford University Press}%
+      }
+      \strng{namehash}{80074c1da7609bd34c1869670b8668bf}
+      \strng{fullhash}{2f6b94bf3ee39c20e3c6f9b4dd8cb6e6}
+      \strng{bibnamehash}{2f6b94bf3ee39c20e3c6f9b4dd8cb6e6}
+      \strng{authorbibnamehash}{2f6b94bf3ee39c20e3c6f9b4dd8cb6e6}
+      \strng{authornamehash}{80074c1da7609bd34c1869670b8668bf}
+      \strng{authorfullhash}{2f6b94bf3ee39c20e3c6f9b4dd8cb6e6}
+      \field{extraname}{2}
+      \field{sortinit}{V}
+      \field{sortinithash}{afb52128e5b4dc4b843768c0113d673b}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Journal of Communication}
+      \field{number}{2}
+      \field{title}{The impact of political advertising on knowledge, Internet information seeking, and candidate preference}
+      \field{volume}{54}
+      \field{year}{2004}
+      \field{pages}{337\bibrangedash 354}
+      \range{pages}{18}
+    \endentry
+    \entry{wallace2022excess}{report}{}
+      \name{author}{3}{}{%
+        {{un=0,uniquepart=base,hash=ae40db16f49c9cf85a5f58c7defc1779}{%
+           family={Wallace},
+           familyi={W\bibinitperiod},
+           given={Jacob},
+           giveni={J\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=f3ca973d5895ae6e5e148903f7218eca}{%
+           family={Goldsmith-Pinkham},
+           familyi={G\bibinithyphendelim P\bibinitperiod},
+           given={Paul},
+           giveni={P\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=b15cae5a720be56eeeef6bf8e30caa29}{%
+           family={Schwartz},
+           familyi={S\bibinitperiod},
+           given={Jason\bibnamedelima L},
+           giveni={J\bibinitperiod\bibinitdelim L\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{institution}{1}{%
+        {National Bureau of Economic Research}%
+      }
+      \strng{namehash}{b4b888ec6365e93d2abd9a49e0a87a40}
+      \strng{fullhash}{5e7d74d3ef6b666fced65c88927332dd}
+      \strng{bibnamehash}{5e7d74d3ef6b666fced65c88927332dd}
+      \strng{authorbibnamehash}{5e7d74d3ef6b666fced65c88927332dd}
+      \strng{authornamehash}{b4b888ec6365e93d2abd9a49e0a87a40}
+      \strng{authorfullhash}{5e7d74d3ef6b666fced65c88927332dd}
+      \field{sortinit}{W}
+      \field{sortinithash}{4315d78024d0cea9b57a0c6f0e35ed0d}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{Excess death rates for {Republicans} and {Democrats} during the {COVID}-19 pandemic}
+      \field{type}{techreport}
+      \field{year}{2022}
+    \endentry
+    \entry{young_politics_2022}{article}{}
+      \name{author}{4}{}{%
+        {{un=0,uniquepart=base,hash=e1da0f34f5a44e460b667a63b5cc6498}{%
+           family={Young},
+           familyi={Y\bibinitperiod},
+           given={Dannagal\bibnamedelima G.},
+           giveni={D\bibinitperiod\bibinitdelim G\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=c544b10572dd846ba4aadd54ab1632b2}{%
+           family={Rasheed},
+           familyi={R\bibinitperiod},
+           given={Huma},
+           giveni={H\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=de04fddf891320cdcfb95013a234dac5}{%
+           family={Bleakley},
+           familyi={B\bibinitperiod},
+           given={Amy},
+           giveni={A\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=f2bbcaf37d7047da5ac69ce977584eb7}{%
+           family={Langbaum},
+           familyi={L\bibinitperiod},
+           given={Jessica\bibnamedelima B.},
+           giveni={J\bibinitperiod\bibinitdelim B\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{language}{1}{%
+        {eng}%
+      }
+      \strng{namehash}{757fd2fd1948efe092a1f16c6ac42bec}
+      \strng{fullhash}{0d8bbf3c54c7d382959b1c3389201fa7}
+      \strng{bibnamehash}{0d8bbf3c54c7d382959b1c3389201fa7}
+      \strng{authorbibnamehash}{0d8bbf3c54c7d382959b1c3389201fa7}
+      \strng{authornamehash}{757fd2fd1948efe092a1f16c6ac42bec}
+      \strng{authorfullhash}{0d8bbf3c54c7d382959b1c3389201fa7}
+      \field{sortinit}{Y}
+      \field{sortinithash}{fd67ad5a9ef0f7456bdd9aab10fe1495}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{year}
+      \true{uniqueprimaryauthor}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{shorttitle}
+      \field{abstract}{The current project examines how psychological reactance and conflict orientation relate to the highly politicized debate over mask-wearing in the U.S. during the COVID-19 pandemic. We explore how psychological reactance and conflict orientation are related to self-reported mask-wearing, and how these same predispositions are correlated with political beliefs. We then assess how favorability towards President Trump in the context of the 2020 Election was uniquely correlated with these traits and how Trump favorability both mediated and moderated the effects of conflict orientation and psychological reactance on individuals' likelihood of wearing masks. Results from a national survey of U.S. adults from Nov-Dec 2020 suggest that Trump favorability was positively associated with trait reactance, negatively associated with conflict aversion, and negatively associated with self-reported mask-wearing. The opposite was true of favorability towards Joe Biden. Moderation analyses indicate that conflict-approaching Biden detractors were especially unlikely to report wearing masks, while mediation analyses show that political preferences significantly mediated the relationships between both psychological traits and self-reported mask-wearing. Implications for the politicization of health messaging and health behavior are discussed.}
+      \field{issn}{1873-5347}
+      \field{journaltitle}{Social Science \& Medicine (1982)}
+      \field{month}{4}
+      \field{shorttitle}{The politics of mask-wearing}
+      \field{title}{The politics of mask-wearing: {Political} preferences, reactance, and conflict aversion during {COVID}}
+      \field{volume}{298}
+      \field{year}{2022}
+      \field{pages}{114836}
+      \range{pages}{1}
+      \verb{doi}
+      \verb 10.1016/j.socscimed.2022.114836
+      \endverb
+      \keyw{Conflict aversion,Conflict orientation,Coronavirus,COVID-19,Masking,Politics,Public health,Reactance}
+    \endentry
+  \enddatalist
+\endrefsection
+\endinput
+
