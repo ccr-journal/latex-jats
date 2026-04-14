@@ -44,15 +44,27 @@ export async function uploadFiles(
   doiSuffix: string,
   files: File[],
   uploadedBy: string = "editor",
-  fix: boolean = false,
 ): Promise<Manuscript> {
   const form = new FormData();
   for (const file of files) {
-    form.append("files", file);
+    // Preserve folder structure (webkitRelativePath) when uploading a folder
+    const relPath = (file as File & { webkitRelativePath?: string }).webkitRelativePath;
+    form.append("files", file, relPath || file.name);
   }
   form.append("uploaded_by", uploadedBy);
-  form.append("fix", fix ? "true" : "false");
   return apiFetch(`/api/manuscripts/${doiSuffix}/upload`, {
+    method: "POST",
+    body: form,
+  });
+}
+
+export async function startProcessing(
+  doiSuffix: string,
+  fix: boolean = false,
+): Promise<Manuscript> {
+  const form = new FormData();
+  form.append("fix", fix ? "true" : "false");
+  return apiFetch(`/api/manuscripts/${doiSuffix}/process`, {
     method: "POST",
     body: form,
   });

@@ -19,20 +19,18 @@ interface Props {
 export function CreateManuscriptDialog({ onCreated }: Props) {
   const [open, setOpen] = useState(false);
   const [doiSuffix, setDoiSuffix] = useState("");
-  const [title, setTitle] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!doiSuffix.trim() || !title.trim()) return;
+    if (!doiSuffix.trim()) return;
     setSubmitting(true);
     setError(null);
     try {
-      const ms = await createManuscript({ doi_suffix: doiSuffix.trim(), title: title.trim() });
+      const ms = await createManuscript({ doi_suffix: doiSuffix.trim() });
       setOpen(false);
       setDoiSuffix("");
-      setTitle("");
       onCreated(ms);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create manuscript");
@@ -58,16 +56,6 @@ export function CreateManuscriptDialog({ onCreated }: Props) {
               placeholder="CCR2025.1.2.YAO"
               value={doiSuffix}
               onChange={(e) => setDoiSuffix(e.target.value)}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="title">Title</Label>
-            <Input
-              id="title"
-              placeholder="Article title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
               required
             />
           </div>

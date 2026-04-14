@@ -5,6 +5,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Optional
 
+from sqlalchemy import Column, JSON
 from sqlmodel import Field, SQLModel
 
 
@@ -13,6 +14,7 @@ from sqlmodel import Field, SQLModel
 
 class ManuscriptStatus(str, Enum):
     draft = "draft"
+    uploaded = "uploaded"
     queued = "queued"
     processing = "processing"
     ready = "ready"
@@ -20,9 +22,22 @@ class ManuscriptStatus(str, Enum):
     published = "published"
 
 
+class StepStatus(str, Enum):
+    pending = "pending"
+    running = "running"
+    ok = "ok"
+    warnings = "warnings"
+    errors = "errors"
+    failed = "failed"
+    skipped = "skipped"
+
+
 class TokenRole(str, Enum):
     editor = "editor"
     author = "author"
+
+
+PIPELINE_STEPS = ["prepare", "compile", "convert", "validate"]
 
 
 # ── Tables ────────────────────────────────────────────────────────────────────
@@ -30,7 +45,6 @@ class TokenRole(str, Enum):
 
 class Manuscript(SQLModel, table=True):
     doi_suffix: str = Field(primary_key=True)
-    title: str
     ojs_submission_id: Optional[int] = None
     status: ManuscriptStatus = ManuscriptStatus.draft
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -40,6 +54,7 @@ class Manuscript(SQLModel, table=True):
     job_log: str = ""
     job_started_at: Optional[datetime] = None
     job_completed_at: Optional[datetime] = None
+    pipeline_steps: Optional[list] = Field(default=None, sa_column=Column(JSON, nullable=True))
 
 
 class AccessToken(SQLModel, table=True):
@@ -55,14 +70,25 @@ class AccessToken(SQLModel, table=True):
 
 
 class ManuscriptCreate(SQLModel):
-    title: str
     doi_suffix: str
     ojs_submission_id: Optional[int] = None
 
 
+class StepLogEntry(SQLModel):
+    name: str
+    content: str
+
+
+class PipelineStepRead(SQLModel):
+    name: str
+    status: str
+    logs: list[StepLogEntry] = []
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+
+
 class ManuscriptRead(SQLModel):
     doi_suffix: str
-    title: str
     ojs_submission_id: Optional[int]
     status: ManuscriptStatus
     created_at: datetime
@@ -72,3 +98,4 @@ class ManuscriptRead(SQLModel):
     job_log: str
     job_started_at: Optional[datetime]
     job_completed_at: Optional[datetime]
+    pipeline_steps: Optional[list[PipelineStepRead]] = None

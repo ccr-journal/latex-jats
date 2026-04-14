@@ -61,7 +61,6 @@ export function DashboardPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>DOI Suffix</TableHead>
-                <TableHead>Title</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Uploaded</TableHead>
                 <TableHead>Updated</TableHead>
@@ -78,7 +77,6 @@ export function DashboardPage() {
                       {ms.doi_suffix}
                     </Link>
                   </TableCell>
-                  <TableCell className="max-w-xs truncate">{ms.title}</TableCell>
                   <TableCell>
                     <StatusBadge status={ms.status} />
                   </TableCell>

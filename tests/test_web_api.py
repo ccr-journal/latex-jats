@@ -58,29 +58,29 @@ def client(tmp_path: Path, test_storage: Storage):
 def test_create_manuscript(client):
     r = client.post(
         "/api/manuscripts",
-        json={"title": "Test Article", "doi_suffix": "CCR2025.1.1.TEST"},
+        json={"doi_suffix": "CCR2025.1.1.TEST"},
     )
     assert r.status_code == 201
     data = r.json()
     assert data["doi_suffix"] == "CCR2025.1.1.TEST"
-    assert data["title"] == "Test Article"
     assert data["status"] == "draft"
     assert data["uploaded_at"] is None
     assert data["job_log"] == ""
     assert data["job_started_at"] is None
     assert data["job_completed_at"] is None
+    assert data["pipeline_steps"] is None
 
 
 def test_create_manuscript_duplicate(client):
-    payload = {"title": "Test Article", "doi_suffix": "CCR2025.1.1.TEST"}
+    payload = {"doi_suffix": "CCR2025.1.1.TEST"}
     client.post("/api/manuscripts", json=payload)
     r = client.post("/api/manuscripts", json=payload)
     assert r.status_code == 409
 
 
 def test_list_manuscripts(client):
-    client.post("/api/manuscripts", json={"title": "A", "doi_suffix": "CCR2025.1.1.AAA"})
-    client.post("/api/manuscripts", json={"title": "B", "doi_suffix": "CCR2025.1.1.BBB"})
+    client.post("/api/manuscripts", json={"doi_suffix": "CCR2025.1.1.AAA"})
+    client.post("/api/manuscripts", json={"doi_suffix": "CCR2025.1.1.BBB"})
     r = client.get("/api/manuscripts")
     assert r.status_code == 200
     doi_suffixes = [m["doi_suffix"] for m in r.json()]
@@ -89,7 +89,7 @@ def test_list_manuscripts(client):
 
 
 def test_get_manuscript(client):
-    client.post("/api/manuscripts", json={"title": "A", "doi_suffix": "CCR2025.1.1.AAA"})
+    client.post("/api/manuscripts", json={"doi_suffix": "CCR2025.1.1.AAA"})
     r = client.get("/api/manuscripts/CCR2025.1.1.AAA")
     assert r.status_code == 200
     assert r.json()["doi_suffix"] == "CCR2025.1.1.AAA"
@@ -104,7 +104,7 @@ def test_get_manuscript_not_found(client):
 
 
 def _create(client, doi_suffix="CCR2025.1.1.TEST"):
-    client.post("/api/manuscripts", json={"title": "T", "doi_suffix": doi_suffix})
+    client.post("/api/manuscripts", json={"doi_suffix": doi_suffix})
     return doi_suffix
 
 
@@ -118,10 +118,31 @@ def test_upload_single_file(mock_pipeline, client, test_storage):
     )
     assert r.status_code == 201
     data = r.json()
-    assert data["status"] == "queued"
+    assert data["status"] == "uploaded"
     assert data["doi_suffix"] == doi
     assert (test_storage.source_dir(doi) / "main.tex").exists()
+    # Upload no longer auto-starts the pipeline
+    mock_pipeline.assert_not_called()
+
+
+@patch("web.backend.app.routes.upload.run_pipeline")
+def test_process_starts_pipeline(mock_pipeline, client, test_storage):
+    """POST /process should kick off the pipeline after upload."""
+    doi = _create(client)
+    client.post(
+        f"/api/manuscripts/{doi}/upload",
+        files=[("files", ("main.tex", b"x", "text/plain"))],
+    )
+    r = client.post(f"/api/manuscripts/{doi}/process", data={"fix": "false"})
+    assert r.status_code == 200
+    assert r.json()["status"] == "queued"
     mock_pipeline.assert_called_once()
+
+
+def test_process_without_upload_rejected(client):
+    doi = _create(client)
+    r = client.post(f"/api/manuscripts/{doi}/process")
+    assert r.status_code == 400
 
 
 @patch("web.backend.app.routes.upload.run_pipeline")
@@ -198,7 +219,10 @@ def test_upload_rejected_while_processing(mock_pipeline, client):
         files=[("files", ("main.tex", b"x", "text/plain"))],
     )
     assert r.status_code == 201
-    assert r.json()["status"] == "queued"
+    assert r.json()["status"] == "uploaded"
+
+    # Kick off processing (status becomes queued via background task)
+    client.post(f"/api/manuscripts/{doi}/process")
 
     # Second upload while queued should be rejected
     r = client.post(
@@ -219,6 +243,23 @@ def test_status_draft(client):
     assert data["status"] == "draft"
     assert data["job_log"] == ""
     assert data["job_started_at"] is None
+    assert data["pipeline_steps"] is None
+
+
+@patch("web.backend.app.routes.upload.run_pipeline")
+def test_status_after_upload(mock_pipeline, client):
+    doi = _create(client)
+    client.post(
+        f"/api/manuscripts/{doi}/upload",
+        files=[("files", ("main.tex", b"x", "text/plain"))],
+    )
+    r = client.get(f"/api/manuscripts/{doi}/status")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["status"] == "uploaded"
+    assert data["job_log"] == ""
+    # pipeline_steps is cleared on upload; set when processing starts
+    assert data["pipeline_steps"] is None
 
 
 @patch("web.backend.app.routes.upload.run_pipeline")
@@ -228,11 +269,16 @@ def test_status_queued(mock_pipeline, client):
         f"/api/manuscripts/{doi}/upload",
         files=[("files", ("main.tex", b"x", "text/plain"))],
     )
+    client.post(f"/api/manuscripts/{doi}/process")
     r = client.get(f"/api/manuscripts/{doi}/status")
     assert r.status_code == 200
     data = r.json()
     assert data["status"] == "queued"
-    assert data["job_log"] == ""
+    # pipeline_steps should be initialized with all-pending steps
+    steps = data["pipeline_steps"]
+    assert steps is not None
+    assert len(steps) == 4
+    assert all(s["status"] == "pending" for s in steps)
 
 
 def test_status_not_found(client):
@@ -291,6 +337,29 @@ def test_output_file_path_traversal(client, test_storage):
     assert r.status_code == 404
 
 
+# ── classify_step_status ─────────────────────────────────────────────────────
+
+from web.backend.app.worker import classify_step_status
+
+
+def test_classify_step_status_ok():
+    assert classify_step_status("INFO: all good\nINFO: done") == "ok"
+    assert classify_step_status("") == "ok"
+
+
+def test_classify_step_status_warnings():
+    assert classify_step_status("WARNING: something\nINFO: done") == "warnings"
+
+
+def test_classify_step_status_errors():
+    assert classify_step_status("ERROR: bad thing") == "errors"
+    assert classify_step_status("WARNING: LaTeXML: Error: foo") == "errors"
+
+
+def test_classify_step_status_errors_over_warnings():
+    assert classify_step_status("WARNING: minor\nERROR: critical") == "errors"
+
+
 # ── Integration: full upload → convert → download ────────────────────────────
 
 FIXTURES = Path(__file__).parent / "fixtures" / "latex"
@@ -306,7 +375,7 @@ def test_upload_convert_download(client, test_storage):
     """
     # The authors.tex fixture has \doi{10.0000/test}, so get_doi_suffix returns "test"
     doi = "test"
-    client.post("/api/manuscripts", json={"title": "Integration Test", "doi_suffix": doi})
+    client.post("/api/manuscripts", json={"doi_suffix": doi})
 
     # Upload the fixture files
     fixture_files = ["authors.tex", "ccr.cls", "bibliography.bib"]
@@ -320,6 +389,10 @@ def test_upload_convert_download(client, test_storage):
     r = client.post(f"/api/manuscripts/{doi}/upload", files=files)
     assert r.status_code == 201
 
+    # Start the pipeline (upload no longer does it automatically)
+    r = client.post(f"/api/manuscripts/{doi}/process")
+    assert r.status_code == 200
+
     # Check status — pipeline should have completed
     r = client.get(f"/api/manuscripts/{doi}/status")
     assert r.status_code == 200
@@ -328,6 +401,17 @@ def test_upload_convert_download(client, test_storage):
     assert data["job_log"] != ""
     assert data["job_started_at"] is not None
     assert data["job_completed_at"] is not None
+
+    # Check pipeline steps
+    steps = data["pipeline_steps"]
+    assert steps is not None
+    assert len(steps) == 4
+    assert [s["name"] for s in steps] == ["prepare", "compile", "convert", "validate"]
+    for step in steps:
+        assert step["status"] not in ("pending", "running"), f"Step {step['name']} still {step['status']}"
+        assert step["started_at"] is not None
+        assert step["completed_at"] is not None
+        assert isinstance(step["logs"], list)
 
     # Download the zip
     r = client.get(f"/api/manuscripts/{doi}/download")

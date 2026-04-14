@@ -1,14 +1,36 @@
 export type ManuscriptStatus =
   | "draft"
+  | "uploaded"
   | "queued"
   | "processing"
   | "ready"
   | "failed"
   | "published";
 
+export type StepStatus =
+  | "pending"
+  | "running"
+  | "ok"
+  | "warnings"
+  | "errors"
+  | "failed"
+  | "skipped";
+
+export interface StepLogEntry {
+  name: string;
+  content: string;
+}
+
+export interface PipelineStep {
+  name: string;
+  status: StepStatus;
+  logs: StepLogEntry[];
+  started_at: string | null;
+  completed_at: string | null;
+}
+
 export interface Manuscript {
   doi_suffix: string;
-  title: string;
   ojs_submission_id: number | null;
   status: ManuscriptStatus;
   created_at: string;
@@ -18,10 +40,10 @@ export interface Manuscript {
   job_log: string;
   job_started_at: string | null;
   job_completed_at: string | null;
+  pipeline_steps: PipelineStep[] | null;
 }
 
 export interface ManuscriptCreate {
-  title: string;
   doi_suffix: string;
   ojs_submission_id?: number;
 }

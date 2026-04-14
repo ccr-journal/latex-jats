@@ -2,11 +2,26 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { StatusBadge } from "@/components/StatusBadge";
 import { LogViewer } from "@/components/LogViewer";
+import { PipelineProgress } from "@/components/PipelineProgress";
 import { UploadZone } from "@/components/UploadZone";
-import { getManuscript, getStatus, uploadFiles, downloadUrl, outputUrl } from "@/api/client";
-import type { Manuscript } from "@/api/types";
+import { getManuscript, getStatus, uploadFiles, startProcessing, downloadUrl, outputUrl } from "@/api/client";
+import type { Manuscript, PipelineStep } from "@/api/types";
+
+const PENDING_STEPS: PipelineStep[] = [
+  { name: "prepare",  status: "pending", logs: [], started_at: null, completed_at: null },
+  { name: "compile",  status: "pending", logs: [], started_at: null, completed_at: null },
+  { name: "convert",  status: "pending", logs: [], started_at: null, completed_at: null },
+  { name: "validate", status: "pending", logs: [], started_at: null, completed_at: null },
+];
 
 function formatDate(iso: string | null): string {
   if (!iso) return "\u2014";
@@ -24,6 +39,9 @@ export function ManuscriptPage() {
   const [manuscript, setManuscript] = useState<Manuscript | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showFullLog, setShowFullLog] = useState(false);
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [fix, setFix] = useState(false);
 
   // Initial fetch
   useEffect(() => {
@@ -58,12 +76,20 @@ export function ManuscriptPage() {
   if (error) return <p className="text-red-600">{error}</p>;
   if (!manuscript || !doiSuffix) return <p className="text-red-600">Manuscript not found</p>;
 
-  const canUpload = ["draft", "ready", "failed"].includes(manuscript.status);
   const isProcessing = manuscript.status === "queued" || manuscript.status === "processing";
   const isReady = manuscript.status === "ready";
+  const hasBeenUploaded = manuscript.uploaded_at !== null;
+  const canProcess = hasBeenUploaded && !isProcessing;
+  const pipelineSteps = manuscript.pipeline_steps ?? PENDING_STEPS;
 
-  const handleUpload = async (files: File[], fix: boolean) => {
-    const updated = await uploadFiles(doiSuffix, files, "editor", fix);
+  const handleUpload = async (files: File[]) => {
+    const updated = await uploadFiles(doiSuffix, files);
+    setManuscript(updated);
+    setUploadDialogOpen(false);
+  };
+
+  const handleStartProcessing = async () => {
+    const updated = await startProcessing(doiSuffix, fix);
     setManuscript(updated);
   };
 
@@ -79,10 +105,7 @@ export function ManuscriptPage() {
       <Card>
         <CardHeader>
           <div className="flex items-start justify-between gap-4">
-            <div>
-              <CardTitle className="text-xl">{manuscript.title}</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">{manuscript.doi_suffix}</p>
-            </div>
+            <CardTitle className="text-xl">{manuscript.doi_suffix}</CardTitle>
             <StatusBadge status={manuscript.status} />
           </div>
         </CardHeader>
@@ -108,71 +131,128 @@ export function ManuscriptPage() {
         </CardContent>
       </Card>
 
-      {/* Processing indicator */}
-      {isProcessing && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Converting...</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2 mb-4">
-              <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
-              <span className="text-sm text-muted-foreground">
-                Pipeline is {manuscript.status}
-              </span>
+      {/* Source — always visible; upload button opens a dialog */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between gap-4">
+            <CardTitle className="text-base">Source</CardTitle>
+            <Button
+              variant={hasBeenUploaded ? "outline" : "default"}
+              onClick={() => setUploadDialogOpen(true)}
+              disabled={isProcessing}
+              title={isProcessing ? "Wait for the current conversion to finish" : undefined}
+            >
+              {hasBeenUploaded ? "Upload new version" : "Upload source"}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {hasBeenUploaded ? (
+            <p className="text-sm text-muted-foreground">
+              Last uploaded {formatDate(manuscript.uploaded_at)}
+              {manuscript.uploaded_by ? ` by ${manuscript.uploaded_by}` : ""}.
+            </p>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No source uploaded yet.
+            </p>
+          )}
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="fix-source"
+              checked={fix}
+              onChange={(e) => setFix(e.target.checked)}
+              disabled={isProcessing}
+              className="h-4 w-4 rounded border-input accent-primary"
+            />
+            <Label htmlFor="fix-source" className="text-sm font-normal cursor-pointer">
+              Apply source fixes before compiling
+            </Label>
+          </div>
+          {canProcess && (
+            <Button onClick={handleStartProcessing}>
+              {isReady || manuscript.status === "failed"
+                ? "Re-run conversion"
+                : "Start conversion"}
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {hasBeenUploaded ? "Upload new version" : "Upload source"}
+            </DialogTitle>
+          </DialogHeader>
+          <UploadZone onUpload={handleUpload} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Pipeline progress — always visible */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">
+            {isProcessing ? "Pipeline Progress" : "Pipeline"}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <PipelineProgress steps={pipelineSteps} />
+        </CardContent>
+      </Card>
+
+      {/* Output — always visible */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Output</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isReady ? (
+            <div className="flex gap-3">
+              <Button asChild>
+                <a href={downloadUrl(doiSuffix)} download>
+                  Download ZIP
+                </a>
+              </Button>
+              <Button variant="outline" asChild>
+                <Link to={`/manuscripts/${doiSuffix}/preview`}>View HTML Proof</Link>
+              </Button>
+              <Button variant="outline" asChild>
+                <a href={outputUrl(doiSuffix, `${doiSuffix}.pdf`)} target="_blank" rel="noopener">
+                  View PDF
+                </a>
+              </Button>
             </div>
-            <LogViewer log={manuscript.job_log} />
-          </CardContent>
-        </Card>
-      )}
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Output will be available once the conversion completes successfully.
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
-      {/* Actions when ready */}
-      {isReady && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Output</CardTitle>
-          </CardHeader>
-          <CardContent className="flex gap-3">
-            <Button asChild>
-              <a href={downloadUrl(doiSuffix)} download>
-                Download ZIP
-              </a>
-            </Button>
-            <Button variant="outline" asChild>
-              <Link to={`/manuscripts/${doiSuffix}/preview`}>View HTML Proof</Link>
-            </Button>
-            <Button variant="outline" asChild>
-              <a href={outputUrl(doiSuffix, `${doiSuffix}.pdf`)} target="_blank" rel="noopener">
-                View PDF
-              </a>
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Upload zone */}
-      {canUpload && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">
-              {manuscript.status === "draft" ? "Upload Source" : "Re-upload Source"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <UploadZone onUpload={handleUpload} />
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Log (always visible when non-empty, unless already shown in processing) */}
+      {/* Full log (collapsible) */}
       {!isProcessing && manuscript.job_log && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Conversion Log</CardTitle>
+            <button
+              type="button"
+              className="flex items-center gap-2 text-left"
+              onClick={() => setShowFullLog(!showFullLog)}
+            >
+              <CardTitle className="text-base">Full Log</CardTitle>
+              <span className="text-xs text-muted-foreground">
+                {showFullLog ? "▾ hide" : "▸ show"}
+              </span>
+            </button>
           </CardHeader>
-          <CardContent>
-            <LogViewer log={manuscript.job_log} />
-          </CardContent>
+          {showFullLog && (
+            <CardContent>
+              <LogViewer log={manuscript.job_log} />
+            </CardContent>
+          )}
         </Card>
       )}
     </div>

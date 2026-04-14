@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-export function LogViewer({ log }: { log: string }) {
+export function LogViewer({ log, className }: { log: string; className?: string }) {
   const ref = useRef<HTMLPreElement>(null);
 
   useEffect(() => {
@@ -14,7 +14,7 @@ export function LogViewer({ log }: { log: string }) {
   return (
     <pre
       ref={ref}
-      className="max-h-80 overflow-auto rounded-md border bg-muted p-4 text-sm font-mono whitespace-pre-wrap"
+      className={className ?? "max-h-80 overflow-auto rounded-md border bg-muted p-4 text-sm font-mono whitespace-pre-wrap"}
     >
       {log.split("\n").map((line, i) => {
         let color = "";
