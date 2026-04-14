@@ -52,7 +52,5 @@ jobs:
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            deploy/docker-compose.yml
-            deploy/.env.example
+          files: deploy/docker-compose.yml
           generate_release_notes: true
