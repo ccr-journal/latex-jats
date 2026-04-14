@@ -23,8 +23,9 @@ COPY pyproject.toml ./
 COPY src/ src/
 
 # Install Python dependencies (project + web extras)
+# Editable install so Path(__file__).parent resolves to src/ (needed for xslt/ and latexml/ paths)
 RUN uv venv /app/.venv && \
-    VIRTUAL_ENV=/app/.venv uv pip install '.[web]'
+    VIRTUAL_ENV=/app/.venv uv pip install -e '.[web]'
 
 # Copy backend code
 COPY web/backend/ web/backend/
