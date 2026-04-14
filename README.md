@@ -5,6 +5,14 @@ This is a tool to convert CCR journal articles in _latex_ format into _JATS XML_
 - it uses the [LaTeXML package](https://math.nist.gov/~BMiller/LaTeXML/) with custom bindings for `ccr.cls` and `biblatex`
 - it does some post-processing of the JATS output
 
+It can be used as a CLI tool (see below) or as a web service where editors and authors can upload LaTeX source, run the conversion, and preview/download results. The quickest way to get the web service running:
+
+```sh
+SITE_ADDRESS=jats.yourdomain.com docker compose up -d --build
+```
+
+See the [Web Service](#web-service) section for details.
+
 
 ### Processing pipeline
 
@@ -78,6 +86,44 @@ Another file that is likely to grow is the biblatex binding `src/latexml/biblate
 ### on the whole
 Latex is a slippery beast, very different from XML. Authors do as they please. Expect continuous variety and surprises. Expect constant updating of the scripts. Do _not_ expect automatic conversion and a smooth workflow. Expect manual labor, the hallmark of a good editor.
 -->
+
+## Web Service
+
+A web interface for editors and authors to upload LaTeX source, run the conversion pipeline, and preview/download results.
+
+### Local development
+
+Install dependencies:
+
+```sh
+uv sync --extra web              # Python backend
+npm install                      # root (concurrently)
+npm run install:frontend         # React frontend
+```
+
+Run the dev servers (backend on :8000, frontend on :5173):
+
+```sh
+npm start
+```
+
+Swagger UI is available at http://localhost:8000/docs.
+
+### Docker deployment
+
+```sh
+# Build and start (set SITE_ADDRESS to your domain for automatic HTTPS)
+SITE_ADDRESS=jats.example.com docker compose up -d --build
+
+# Or run locally
+docker compose up -d --build
+```
+
+This starts two containers:
+- **caddy** — serves the React frontend and reverse-proxies `/api` to the backend; handles TLS certificates automatically when `SITE_ADDRESS` is set to a public domain
+- **api** — FastAPI backend with the full conversion pipeline (TeX Live, LaTeXML, inkscape)
+
+Data (SQLite database, uploaded manuscripts, conversion output) is stored in the `app_storage` Docker volume.
 
 ## Unit and Integration Tests
 

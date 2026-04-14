@@ -1,0 +1,17 @@
+{$SITE_ADDRESS:localhost} {
+    # API — reverse proxy to the FastAPI backend
+    handle /api {
+        reverse_proxy api:8000
+    }
+    handle /api/* {
+        reverse_proxy api:8000
+    }
+
+    # Frontend — static SPA
+    handle {
+        root * /srv
+        encode zstd gzip
+        try_files {path} /index.html
+        file_server
+    }
+}

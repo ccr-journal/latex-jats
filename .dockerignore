@@ -1,0 +1,30 @@
+# Output and storage (runtime data)
+output/
+storage/
+
+# Frontend (built separately in its own image)
+web/frontend/
+
+# Node (root-level dev tooling)
+node_modules/
+package.json
+package-lock.json
+
+# Python caches
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+
+# Git
+.git/
+
+# Examples and test fixtures
+examples/
+tests/
+
+# Editor / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
