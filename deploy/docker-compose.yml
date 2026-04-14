@@ -1,6 +1,6 @@
 services:
   caddy:
-    image: ${DOCKERHUB_USERNAME}/latex-jats-caddy:${VERSION:-latest}
+    image: ccsamsterdam/latex-jats-caddy:${VERSION:-latest}
     restart: unless-stopped
     ports:
       - "${HTTP_PORT:-80}:80"
@@ -14,7 +14,7 @@ services:
       - api
 
   api:
-    image: ${DOCKERHUB_USERNAME}/latex-jats-api:${VERSION:-latest}
+    image: ccsamsterdam/latex-jats-api:${VERSION:-latest}
     restart: unless-stopped
     environment:
       - CORS_ORIGINS=
