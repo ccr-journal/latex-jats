@@ -49,15 +49,10 @@ jobs:
             ccsamsterdam/latex-jats-api:${{ steps.version.outputs.version }}
             ccsamsterdam/latex-jats-api:latest
 
-      - name: Package deploy files
-        run: |
-          mkdir latex-jats-deploy
-          cp deploy/docker-compose.yml latex-jats-deploy/
-          cp deploy/.env.example latex-jats-deploy/.env
-          zip -r latex-jats-deploy.zip latex-jats-deploy
-
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          files: latex-jats-deploy.zip
+          files: |
+            deploy/docker-compose.yml
+            deploy/.env.example
           generate_release_notes: true
