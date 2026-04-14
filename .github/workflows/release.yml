@@ -38,6 +38,8 @@ jobs:
           tags: |
             ccsamsterdam/latex-jats-caddy:${{ steps.version.outputs.version }}
             ccsamsterdam/latex-jats-caddy:latest
+          cache-from: type=gha,scope=caddy
+          cache-to: type=gha,scope=caddy,mode=max
 
       - name: Build and push API image
         uses: docker/build-push-action@v6
@@ -48,9 +50,13 @@ jobs:
           tags: |
             ccsamsterdam/latex-jats-api:${{ steps.version.outputs.version }}
             ccsamsterdam/latex-jats-api:latest
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,scope=api,mode=max
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          files: deploy/docker-compose.yml
+          files: |
+            deploy/docker-compose.yml
+            deploy/update.sh
           generate_release_notes: true
