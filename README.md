@@ -124,6 +124,29 @@ This starts two containers:
 
 Data (SQLite database, uploaded manuscripts, conversion output) is stored in the `app_storage` Docker volume.
 
+#### Rebuilding the base image
+
+The api image is split into a **base image** (Ubuntu + TeX Live + LaTeXML + inkscape + poppler + uv, ~2.5 GB) and a thin **app image** on top (Python deps + source code, ~100 MB). App releases reuse the base, so a VPS redeploy only pulls the small delta.
+
+The base is rebuilt manually when a TeX Live refresh or Ubuntu security update is needed (every few months is typical). App releases pin a specific base tag in `web/backend/Dockerfile`, so untested base refreshes don't sneak into app deploys.
+
+To publish a new base:
+
+```sh
+# Tag convention: YYYY-MM
+TAG=2026-04
+
+docker buildx build \
+  --platform linux/amd64 \
+  --tag ccsamsterdam/latex-jats-base:$TAG \
+  --tag ccsamsterdam/latex-jats-base:latest \
+  --push \
+  -f web/backend/Dockerfile.base \
+  web/backend/
+```
+
+Then bump the `FROM ccsamsterdam/latex-jats-base:...` line in `web/backend/Dockerfile`, commit, and tag a new app release.
+
 ## Unit and Integration Tests
 
 Unit tests cover the Python post-processing functions and require no external tools:

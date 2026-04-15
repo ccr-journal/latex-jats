@@ -1,23 +1,7 @@
-FROM ubuntu:24.04
-
-ENV DEBIAN_FRONTEND=noninteractive
-
-# System packages: TeX Live (2023 from Ubuntu repos), LaTeXML, inkscape
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    # TeX Live (full — CCR articles use arbitrary packages)
-    texlive-full \
-    # LaTeXML (0.8.7 from Ubuntu repos — includes all Perl dependencies)
-    latexml \
-    # PDF figure conversion
-    inkscape \
-    # pdfinfo for page count detection
-    poppler-utils \
-    # Python
-    python3 python3-pip python3-venv \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install uv
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+# TeX Live, LaTeXML, inkscape, poppler, python3, uv all baked into the base
+# image. See web/backend/Dockerfile.base and the "Rebuilding the base image"
+# section of README.md. Bump the date tag when refreshing system packages.
+FROM ccsamsterdam/latex-jats-base:2026-04
 
 # Set up application — copy full project (backend imports src/latex_jats)
 WORKDIR /app
