@@ -27,7 +27,7 @@ COPY src/ src/
 # Install Python dependencies into venv; use PYTHONPATH for the project itself
 # so Path(__file__) resolves to src/ (needed for sibling xslt/ and latexml/ dirs)
 RUN uv venv /app/.venv && \
-    VIRTUAL_ENV=/app/.venv uv pip install lxml pyyaml 'fastapi>=0.111' 'uvicorn[standard]>=0.29' 'sqlmodel>=0.0.18' 'alembic>=1.13' 'python-multipart>=0.0.9'
+    VIRTUAL_ENV=/app/.venv uv pip install '.[web]'
 
 # Copy backend code
 COPY web/backend/ web/backend/
