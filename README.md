@@ -8,10 +8,11 @@ This is a tool to convert CCR journal articles in _latex_ format into _JATS XML_
 It can be used as a CLI tool (see below) or as a web service where editors and authors can upload LaTeX source, run the conversion, and preview/download results. The quickest way to get the web service running:
 
 ```sh
-SITE_ADDRESS=jats.yourdomain.com docker compose up -d --build
+cp .env.example .env   # then fill in ORCID_* and OJS_* credentials
+docker compose up -d --build
 ```
 
-See the [Web Service](#web-service) section for details.
+See the [Web Service](#web-service) section for details, and [.env.example](.env.example) for every configuration option.
 
 
 ### Processing pipeline
@@ -111,11 +112,9 @@ Swagger UI is available at http://localhost:8000/docs.
 
 ### Docker deployment
 
-```sh
-# Build and start (set SITE_ADDRESS to your domain for automatic HTTPS)
-SITE_ADDRESS=jats.example.com docker compose up -d --build
+Copy [.env.example](.env.example) to `.env` and fill in ORCID and OJS credentials (see the comments in that file), then:
 
-# Or run locally
+```sh
 docker compose up -d --build
 ```
 

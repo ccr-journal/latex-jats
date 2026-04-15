@@ -19,6 +19,8 @@ services:
       context: .
       dockerfile: web/backend/Dockerfile
     restart: unless-stopped
+    env_file:
+      - .env  # ORCID_*, OJS_*, SITE_ADDRESS, etc. — see .env.example
     environment:
       - CORS_ORIGINS=
       - STORAGE_DIR=/app/storage

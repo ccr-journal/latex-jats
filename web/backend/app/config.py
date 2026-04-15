@@ -57,15 +57,33 @@ def _load() -> AuthConfig:
             return opt(key, default)
         return req(key)
 
+    # In production we deploy behind SITE_ADDRESS (set in .env alongside the
+    # docker-compose config); derive ORCID_REDIRECT_URI and FRONTEND_URL from
+    # it so prod only needs the one value.
+    site_address = opt("SITE_ADDRESS", "")
+    # Only upgrade to https:// for real domains; localhost stays on http://
+    # (Caddy serves localhost over HTTP, no TLS cert).
+    if site_address and site_address not in ("localhost", "127.0.0.1"):
+        site_origin = f"https://{site_address}"
+    elif site_address:
+        site_origin = f"http://{site_address}"
+    else:
+        site_origin = ""
+
     return AuthConfig(
         orcid_client_id=req("ORCID_CLIENT_ID"),
         orcid_client_secret=req("ORCID_CLIENT_SECRET"),
         orcid_env=opt("ORCID_ENV", "sandbox"),
         orcid_redirect_uri=opt(
             "ORCID_REDIRECT_URI",
-            "http://127.0.0.1:8000/api/auth/orcid/callback",
+            f"{site_origin}/api/auth/orcid/callback"
+            if site_origin
+            else "http://127.0.0.1:8000/api/auth/orcid/callback",
         ),
-        frontend_url=opt("FRONTEND_URL", "http://127.0.0.1:5173"),
+        frontend_url=opt(
+            "FRONTEND_URL",
+            site_origin if site_origin else "http://127.0.0.1:5173",
+        ),
         ojs_base_url=ojs_req("OJS_BASE_URL"),
         ojs_journal_path=ojs_req("OJS_JOURNAL_PATH", "ccr"),
         ojs_admin_token=ojs_req("OJS_ADMIN_TOKEN"),
