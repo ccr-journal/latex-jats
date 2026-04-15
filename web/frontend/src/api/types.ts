@@ -47,3 +47,8 @@ export interface ManuscriptCreate {
   doi_suffix: string;
   ojs_submission_id?: number;
 }
+
+export interface CurrentUser {
+  orcid: string;
+  name: string | null;
+}

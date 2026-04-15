@@ -615,7 +615,7 @@ def preprocess_for_latexml(workspace_dir: Path) -> int:
 def _latexmlc_pipeline(tex_path, latexml_path, xsl_path, latexml_log, post_log, output_xml):
     """Run latexmlc → fix_listing_data → latexmlpost."""
     latexmlc_cmd = ["latexmlc", f"--path={LATEXML_DIR}", "--destination", str(latexml_path), "--format=xml",
-                    f"--log={latexml_log}", str(tex_path)]
+                    "--timeout=0", f"--log={latexml_log}", str(tex_path)]
     subprocess.run(latexmlc_cmd, check=True)
 
     _report_latexml_issues(latexml_log)

@@ -4,8 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 from sqlmodel import Session
 
-from ..deps import get_session, get_storage
-from ..models import Manuscript
+from ..deps import get_current_user, get_session, get_storage
+from ..models import CurrentUser, Manuscript
 from ..storage import Storage
 
 router = APIRouter(prefix="/api/manuscripts", tags=["download"])
@@ -14,6 +14,7 @@ router = APIRouter(prefix="/api/manuscripts", tags=["download"])
 @router.get("/{doi_suffix}/download")
 def download_output(
     doi_suffix: str,
+    _user: CurrentUser = Depends(get_current_user),
     session: Session = Depends(get_session),
     storage: Storage = Depends(get_storage),
 ):

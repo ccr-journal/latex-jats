@@ -6,7 +6,7 @@
     "install:backend": "uv sync --extra web",
     "build:frontend": "npm -C web/frontend run build",
     "start:web": "npm -C web/frontend run dev",
-    "start:api": "uv run --extra web uvicorn web.backend.app.main:app --reload --port 8000",
+    "start:api": "uv run --env-file .env --extra web uvicorn web.backend.app.main:app --reload --port 8000",
     "start": "concurrently -k -n \"api,web\" -c \"cyan,green\" \"npm run start:api\" \"npm run start:web\"",
     "dev": "npm run start",
     "test": "uv run pytest -m \"not integration\""

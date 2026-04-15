@@ -19,8 +19,16 @@ from sqlmodel import Session, SQLModel, create_engine
 
 from web.backend.app import deps
 from web.backend.app.main import app
-from web.backend.app.models import AccessToken, Manuscript  # noqa: F401
+from web.backend.app.models import (  # noqa: F401
+    AccessToken,
+    LoginState,
+    Manuscript,
+)
 from web.backend.app.storage import Storage
+
+
+EDITOR_TOKEN = "editor-test-token"
+EDITOR_ORCID = "0000-0000-0000-0001"
 
 
 @pytest.fixture
@@ -29,14 +37,18 @@ def test_storage(tmp_path: Path) -> Storage:
 
 
 @pytest.fixture
-def client(tmp_path: Path, test_storage: Storage):
+def engine():
     engine = create_engine(
         "sqlite:///:memory:",
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
     SQLModel.metadata.create_all(engine)
+    return engine
 
+
+@pytest.fixture
+def anon_client(tmp_path: Path, test_storage: Storage, engine):
     def override_session():
         with Session(engine) as session:
             yield session
@@ -50,6 +62,35 @@ def client(tmp_path: Path, test_storage: Storage):
     yield TestClient(app, raise_server_exceptions=False)
     app.dependency_overrides.clear()
     deps._engine = None
+
+
+@pytest.fixture
+def client(anon_client: TestClient, engine):
+    with Session(engine) as session:
+        session.add(
+            AccessToken(
+                token=EDITOR_TOKEN,
+                orcid=EDITOR_ORCID,
+                name="Test Editor",
+            )
+        )
+        session.commit()
+    anon_client.headers.update({"Authorization": f"Bearer {EDITOR_TOKEN}"})
+    return anon_client
+
+
+# ── Auth negatives ────────────────────────────────────────────────────────────
+
+
+def test_manuscripts_require_auth(anon_client):
+    assert anon_client.get("/api/manuscripts").status_code == 401
+    r = anon_client.post("/api/manuscripts", json={"doi_suffix": "CCR2025.1.1.X"})
+    assert r.status_code == 401
+
+
+def test_bad_bearer_token(anon_client):
+    anon_client.headers.update({"Authorization": "Bearer nonsense"})
+    assert anon_client.get("/api/manuscripts").status_code == 401
 
 
 # ── Manuscript CRUD ───────────────────────────────────────────────────────────

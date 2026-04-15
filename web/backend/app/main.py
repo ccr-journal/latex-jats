@@ -10,8 +10,12 @@ from fastapi.staticfiles import StaticFiles
 from sqlmodel import SQLModel, create_engine
 
 from . import deps
-from .models import AccessToken, Manuscript  # noqa: F401 — registers metadata
-from .routes import download, manuscripts, output, status, upload
+from .models import (  # noqa: F401 — registers metadata
+    AccessToken,
+    LoginState,
+    Manuscript,
+)
+from .routes import auth, download, manuscripts, output, status, upload
 from .storage import Storage
 
 _PROJECT_ROOT = Path(__file__).parents[3]
@@ -40,7 +44,9 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="LaTeX-JATS Web Service", lifespan=lifespan)
 
-_CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "http://localhost:5173")
+_CORS_ORIGINS = os.environ.get(
+    "CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"
+)
 if _CORS_ORIGINS:
     app.add_middleware(
         CORSMiddleware,
@@ -49,6 +55,7 @@ if _CORS_ORIGINS:
         allow_headers=["*"],
     )
 
+app.include_router(auth.router)
 app.include_router(manuscripts.router)
 app.include_router(upload.router)
 app.include_router(status.router)

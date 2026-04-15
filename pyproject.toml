@@ -13,13 +13,14 @@ dependencies = ["lxml", "pyyaml"]
 where = ["src"]
 
 [project.optional-dependencies]
-test = ["pytest", "httpx"]
+test = ["pytest", "httpx", "respx"]
 web = [
     "fastapi>=0.111",
     "uvicorn[standard]>=0.29",
     "sqlmodel>=0.0.18",
     "alembic>=1.13",
     "python-multipart>=0.0.9",
+    "httpx>=0.27",
 ]
 
 [tool.pytest.ini_options]
@@ -36,3 +37,8 @@ run-examples = "latex_jats.runner:main"
 
 [tool.basedpyright]
 typeCheckingMode = "basic"
+
+[dependency-groups]
+test = [
+    "anyio>=4.13.0",
+]

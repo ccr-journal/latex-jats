@@ -32,11 +32,6 @@ class StepStatus(str, Enum):
     skipped = "skipped"
 
 
-class TokenRole(str, Enum):
-    editor = "editor"
-    author = "author"
-
-
 PIPELINE_STEPS = ["prepare", "compile", "convert", "validate"]
 
 
@@ -59,11 +54,16 @@ class Manuscript(SQLModel, table=True):
 
 class AccessToken(SQLModel, table=True):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
-    manuscript_id: str = Field(foreign_key="manuscript.doi_suffix", index=True)
-    token: str = Field(index=True)
-    role: TokenRole
+    token: str = Field(index=True, unique=True)
+    orcid: str = Field(index=True)
+    name: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
     expires_at: Optional[datetime] = None
+
+
+class LoginState(SQLModel, table=True):
+    state: str = Field(primary_key=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
 # ── Request / response schemas ────────────────────────────────────────────────
@@ -72,6 +72,11 @@ class AccessToken(SQLModel, table=True):
 class ManuscriptCreate(SQLModel):
     doi_suffix: str
     ojs_submission_id: Optional[int] = None
+
+
+class CurrentUser(SQLModel):
+    orcid: str
+    name: Optional[str] = None
 
 
 class StepLogEntry(SQLModel):

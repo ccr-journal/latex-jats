@@ -11,7 +11,11 @@ from sqlalchemy import engine_from_config, pool
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
 # Import all table classes so SQLModel metadata is fully populated.
-from app.models import AccessToken, ConversionJob, Manuscript  # noqa: F401
+from app.models import (  # noqa: F401
+    AccessToken,
+    LoginState,
+    Manuscript,
+)
 from sqlmodel import SQLModel
 
 config = context.config

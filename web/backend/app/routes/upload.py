@@ -9,8 +9,8 @@ from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPExcepti
 from sqlmodel import Session
 
 from .. import deps
-from ..deps import get_session, get_storage
-from ..models import ManuscriptRead, ManuscriptStatus, Manuscript
+from ..deps import get_current_user, get_session, get_storage
+from ..models import CurrentUser, ManuscriptRead, ManuscriptStatus, Manuscript
 from ..storage import Storage
 from ..worker import run_pipeline, init_pipeline_steps
 
@@ -51,6 +51,7 @@ async def upload_source(
     doi_suffix: str,
     files: list[UploadFile] = File(...),
     uploaded_by: str = Form("editor"),
+    _user: CurrentUser = Depends(get_current_user),
     session: Session = Depends(get_session),
     storage: Storage = Depends(get_storage),
 ):
@@ -97,7 +98,7 @@ async def upload_source(
 
     now = datetime.utcnow()
     ms.uploaded_at = now
-    ms.uploaded_by = uploaded_by
+    ms.uploaded_by = "editor"
     ms.updated_at = now
     ms.status = ManuscriptStatus.uploaded
     ms.job_log = ""
@@ -116,6 +117,7 @@ async def start_processing(
     doi_suffix: str,
     background_tasks: BackgroundTasks,
     fix: bool = Form(False),
+    _user: CurrentUser = Depends(get_current_user),
     session: Session = Depends(get_session),
     storage: Storage = Depends(get_storage),
 ):

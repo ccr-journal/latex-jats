@@ -1,7 +1,17 @@
-import { Link, Outlet } from "react-router-dom";
+import { Link, Outlet, useNavigate } from "react-router-dom";
 import { ThemeToggle } from "./ThemeToggle";
+import { Button } from "./ui/button";
+import { useAuth } from "@/auth/AuthContext";
 
 export function Layout() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate("/login", { replace: true });
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card">
@@ -18,8 +28,18 @@ export function Layout() {
               Manuscripts
             </Link>
           </nav>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-3">
+            {user && (
+              <span className="text-sm text-muted-foreground">
+                {user.name ?? user.orcid}
+              </span>
+            )}
             <ThemeToggle />
+            {user && (
+              <Button variant="outline" size="sm" onClick={handleLogout}>
+                Sign out
+              </Button>
+            )}
           </div>
         </div>
       </header>
