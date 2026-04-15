@@ -73,7 +73,7 @@ def _load() -> AuthConfig:
     return AuthConfig(
         orcid_client_id=req("ORCID_CLIENT_ID"),
         orcid_client_secret=req("ORCID_CLIENT_SECRET"),
-        orcid_env=opt("ORCID_ENV", "sandbox"),
+        orcid_env=opt("ORCID_ENV", "production"),
         orcid_redirect_uri=opt(
             "ORCID_REDIRECT_URI",
             f"{site_origin}/api/auth/orcid/callback"
