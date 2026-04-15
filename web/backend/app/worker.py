@@ -317,7 +317,13 @@ def run_pipeline(doi_suffix: str, engine: Engine, storage: Storage, *, fix: bool
 
         # Mark the current step as failed and remaining steps as skipped
         if current_step:
-            _finish_step(engine, doi_suffix, current_step, log_text, failed=True)
+            step_log_dirs: list[Path] = []
+            if current_step == "compile":
+                step_log_dirs = [storage.prepare_output_dir(doi_suffix)]
+            elif current_step == "convert":
+                step_log_dirs = [storage.convert_output_dir(doi_suffix) / "logs"]
+            _finish_step(engine, doi_suffix, current_step, log_text,
+                         failed=True, log_dirs=step_log_dirs or None)
             remaining = PIPELINE_STEPS[PIPELINE_STEPS.index(current_step) + 1:]
             _skip_remaining_steps(engine, doi_suffix, remaining)
         else:
