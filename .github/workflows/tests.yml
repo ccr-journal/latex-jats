@@ -28,7 +28,7 @@ jobs:
         run: sudo apt-get install -y cpanminus libxml2-dev libxslt1-dev libdb-dev libexpat1-dev
 
       - name: Install TeX Live (pdflatex, biber)
-        run: sudo apt-get install -y texlive-latex-base texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended texlive-bibtex-extra biber
+        run: sudo apt-get install -y texlive-latex-base texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended texlive-fonts-extra texlive-bibtex-extra biber
 
       - name: Cache LaTeXML Perl installation
         uses: actions/cache@v4
