@@ -20,6 +20,7 @@ const PENDING_STEPS: PipelineStep[] = [
   { name: "prepare",  status: "pending", logs: [], started_at: null, completed_at: null },
   { name: "compile",  status: "pending", logs: [], started_at: null, completed_at: null },
   { name: "convert",  status: "pending", logs: [], started_at: null, completed_at: null },
+  { name: "metadata", status: "pending", logs: [], started_at: null, completed_at: null },
   { name: "validate", status: "pending", logs: [], started_at: null, completed_at: null },
 ];
 

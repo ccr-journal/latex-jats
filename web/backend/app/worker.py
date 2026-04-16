@@ -15,7 +15,12 @@ from pathlib import Path
 from sqlalchemy import Engine
 from sqlmodel import Session
 
+import re
+
+from sqlmodel import select
+
 from latex_jats.convert import (
+    compare_metadata,
     convert,
     create_publisher_zip,
     get_doi_suffix,
@@ -24,10 +29,60 @@ from latex_jats.convert import (
 )
 from latex_jats.prepare_source import compile_latex, prepare_workspace
 
-from .models import Manuscript, ManuscriptStatus, PIPELINE_STEPS, StepStatus
+from .models import (
+    Manuscript, ManuscriptAuthor, ManuscriptStatus, PIPELINE_STEPS, StepStatus,
+)
 from .storage import Storage
 
 logger = logging.getLogger(__name__)
+
+# LaTeX macro name → Manuscript field name
+_OJS_MACRO_MAP = {
+    "doi": "doi",
+    "volume": "volume",
+    "pubnumber": "issue_number",
+    "pubyear": "year",
+    "firstpage": None,  # default to "1" if missing
+}
+
+
+def inject_ojs_metadata(tex_file: Path, manuscript) -> None:
+    """Inject missing journal metadata macros into the LaTeX preamble.
+
+    For each macro in _OJS_MACRO_MAP, if it is absent from the preamble and
+    the manuscript has a value for it, the macro is inserted before
+    ``\\begin{document}``.  Existing macros are never overwritten — mismatches
+    are caught later by compare_metadata.
+    """
+    text = tex_file.read_text(encoding="utf-8")
+    parts = text.split(r"\begin{document}", 1)
+    if len(parts) != 2:
+        return  # no \begin{document} found
+
+    preamble, rest = parts
+    injected: list[str] = []
+
+    for macro, field in _OJS_MACRO_MAP.items():
+        # Check if macro already present in preamble
+        if re.search(r'\\' + macro + r'\s*\{', preamble):
+            continue
+        if field is not None:
+            value = getattr(manuscript, field, None)
+            if value is None:
+                continue
+            value = str(value)
+        else:
+            # firstpage: inject default "1" if missing
+            value = "1"
+        injected.append(rf"\{macro}{{{value}}}")
+
+    if injected:
+        insert_block = "\n% Injected from OJS metadata\n" + "\n".join(injected) + "\n"
+        text = preamble + insert_block + r"\begin{document}" + rest
+        tex_file.write_text(text, encoding="utf-8")
+        pipeline_logger = logging.getLogger("latex_jats")
+        pipeline_logger.info("Injected missing metadata from OJS: %s",
+                             ", ".join(injected))
 
 
 class _LogCollector(logging.Handler):
@@ -237,6 +292,13 @@ def run_pipeline(doi_suffix: str, engine: Engine, storage: Storage, *, fix: bool
         current_step = "prepare"
         _start_step(engine, doi_suffix, "prepare")
         workspace_tex = prepare_workspace(source_dir, workspace_dir, fix_problems=fix)
+
+        # Inject missing journal metadata from OJS before compilation
+        with Session(engine) as session:
+            ms = session.get(Manuscript, doi_suffix)
+            if ms and ms.ojs_submission_id:
+                inject_ojs_metadata(workspace_tex, ms)
+
         _finish_step(engine, doi_suffix, "prepare", collector.drain())
 
         # ── Step 2: compile LaTeX ────────────────────────────────────────
@@ -248,7 +310,7 @@ def run_pipeline(doi_suffix: str, engine: Engine, storage: Storage, *, fix: bool
                      failed=not ok, log_dirs=[log_dir])
 
         if not ok:
-            _skip_remaining_steps(engine, doi_suffix, ["convert", "validate"])
+            _skip_remaining_steps(engine, doi_suffix, ["convert", "metadata", "validate"])
             _update_manuscript(
                 engine,
                 doi_suffix,
@@ -293,7 +355,24 @@ def run_pipeline(doi_suffix: str, engine: Engine, storage: Storage, *, fix: bool
         _finish_step(engine, doi_suffix, "convert", collector.drain(),
                      log_dirs=[convert_log_dir])
 
-        # ── Step 4: validate JATS XML ────────────────────────────────────
+        # ── Step 4: compare metadata against OJS ────────────────────────
+        current_step = "metadata"
+        _start_step(engine, doi_suffix, "metadata")
+        with Session(engine) as session:
+            ms = session.get(Manuscript, doi_suffix)
+            if ms and ms.ojs_submission_id:
+                ms_authors = session.exec(
+                    select(ManuscriptAuthor)
+                    .where(ManuscriptAuthor.manuscript_id == doi_suffix)
+                    .order_by(ManuscriptAuthor.order)
+                ).all()
+                compare_metadata(
+                    output_xml, ms, ms_authors,
+                    output_json=convert_output / "metadata_comparison.json",
+                )
+        _finish_step(engine, doi_suffix, "metadata", collector.drain())
+
+        # ── Step 5: validate JATS XML ────────────────────────────────────
         current_step = "validate"
         _start_step(engine, doi_suffix, "validate")
         validate_jats(str(output_xml))

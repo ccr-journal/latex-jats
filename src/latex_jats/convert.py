@@ -1797,6 +1797,177 @@ def fix_metadata(jats_file, tex_file, lastpage=None):
     tree.write(jats_file, encoding="unicode")
 
 
+# ── Metadata comparison (OJS vs JATS) ──────────────────────────────────────
+
+
+def _strip_tags(html: str) -> str:
+    """Remove HTML/XML tags and normalize whitespace."""
+    text = re.sub(r"<[^>]+>", " ", html)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def _elem_text(elem) -> str:
+    """Return the full text content of an XML element (including tail of children)."""
+    return "".join(elem.itertext()).strip() if elem is not None else ""
+
+
+def compare_metadata(jats_file, manuscript, authors, output_json=None):
+    """Compare JATS XML metadata against OJS-imported manuscript metadata.
+
+    Logs warnings for each discrepancy found.  If *output_json* is given,
+    writes a structured JSON file with all comparison results.
+
+    Parameters
+    ----------
+    jats_file : str or Path
+        Path to the converted JATS XML file.
+    manuscript : Manuscript
+        The manuscript DB record with OJS-imported metadata.
+    authors : list[ManuscriptAuthor]
+        Author rows from the DB, ordered by ``order``.
+    output_json : Path, optional
+        If provided, write structured comparison results here.
+    """
+    import json
+
+    # Use the parent 'latex_jats' logger directly so warnings are guaranteed
+    # to reach the pipeline's _LogCollector (which is attached to that logger).
+    meta_logger = logging.getLogger("latex_jats")
+
+    tree = ET.parse(str(jats_file))
+    root = tree.getroot()
+    am = root.find(".//article-meta")
+    if am is None:
+        meta_logger.warning("No <article-meta> found in JATS — skipping metadata comparison")
+        return
+
+    results = []
+
+    def _compare(field, ojs_val, jats_val, *, normalize=True):
+        if ojs_val is None:
+            return  # nothing to compare against
+        if normalize:
+            ojs_n = _strip_tags(str(ojs_val)).lower()
+            jats_n = _strip_tags(str(jats_val)).lower()
+        else:
+            ojs_n = str(ojs_val).strip()
+            jats_n = str(jats_val).strip()
+        if ojs_n == jats_n:
+            results.append({"field": field, "status": "ok",
+                            "ojs": str(ojs_val), "latex": str(jats_val)})
+        else:
+            results.append({"field": field, "status": "mismatch",
+                            "ojs": str(ojs_val), "latex": str(jats_val)})
+            meta_logger.warning("Metadata mismatch [%s]:\n  OJS:   %s\n  LaTeX: %s",
+                                field, ojs_val, jats_val)
+
+    # ── Title ────────────────────────────────────────────────────────────
+    jats_title_elem = am.find(".//article-title")
+    jats_title = _elem_text(jats_title_elem)
+    _compare("title", manuscript.title, jats_title)
+
+    # ── Abstract ─────────────────────────────────────────────────────────
+    abstract_elem = am.find("abstract")
+    if abstract_elem is not None:
+        # Skip the <title>Abstract</title> child
+        parts = []
+        for child in abstract_elem:
+            if child.tag != "title":
+                parts.append(_elem_text(child))
+        jats_abstract = " ".join(parts)
+    else:
+        jats_abstract = ""
+    _compare("abstract", manuscript.abstract, jats_abstract)
+
+    # ── Keywords ─────────────────────────────────────────────────────────
+    ojs_kw = set(k.strip().lower() for k in (manuscript.keywords or []))
+    jats_kwds = am.findall(".//kwd")
+    jats_kw = set(_elem_text(k).lower() for k in jats_kwds)
+    if ojs_kw and ojs_kw != jats_kw:
+        added = jats_kw - ojs_kw
+        removed = ojs_kw - jats_kw
+        parts = []
+        if added:
+            parts.append(f"added in LaTeX: {added}")
+        if removed:
+            parts.append(f"missing from LaTeX: {removed}")
+        meta_logger.warning("Keyword mismatch: %s", "; ".join(parts))
+        results.append({
+            "field": "keywords", "status": "mismatch",
+            "ojs": sorted(ojs_kw), "latex": sorted(jats_kw),
+        })
+    elif ojs_kw:
+        results.append({
+            "field": "keywords", "status": "ok",
+            "ojs": sorted(ojs_kw), "latex": sorted(jats_kw),
+        })
+
+    # ── Authors ──────────────────────────────────────────────────────────
+    contribs = am.findall(".//contrib[@contrib-type='author']")
+    jats_authors = []
+    for contrib in contribs:
+        name_elem = contrib.find("name")
+        if name_elem is not None:
+            surname = (name_elem.findtext("surname") or "").strip()
+            given = (name_elem.findtext("given-names") or "").strip()
+            jats_authors.append(f"{given} {surname}".strip())
+        else:
+            # string-name fallback
+            sn = contrib.find("string-name")
+            jats_authors.append(_elem_text(sn) if sn is not None else "?")
+
+    ojs_authors = [a.name for a in authors if a.name]
+    if ojs_authors and jats_authors:
+        if len(ojs_authors) != len(jats_authors):
+            meta_logger.warning(
+                "Author count mismatch: OJS has %d, LaTeX has %d\n  OJS:   %s\n  LaTeX: %s",
+                len(ojs_authors), len(jats_authors), ojs_authors, jats_authors,
+            )
+            results.append({
+                "field": "authors", "status": "mismatch",
+                "ojs": ojs_authors, "latex": jats_authors,
+            })
+        else:
+            mismatches = []
+            for i, (ojs_a, jats_a) in enumerate(zip(ojs_authors, jats_authors)):
+                # Normalize for comparison: lowercase, collapse whitespace
+                ojs_n = re.sub(r"\s+", " ", ojs_a.strip().lower())
+                jats_n = re.sub(r"\s+", " ", jats_a.strip().lower())
+                if ojs_n != jats_n:
+                    mismatches.append((i + 1, ojs_a, jats_a))
+            if mismatches:
+                for pos, ojs_a, jats_a in mismatches:
+                    meta_logger.warning("Author %d mismatch: OJS=%r, LaTeX=%r",
+                                       pos, ojs_a, jats_a)
+                results.append({
+                    "field": "authors", "status": "mismatch",
+                    "ojs": ojs_authors, "latex": jats_authors,
+                })
+            else:
+                results.append({
+                    "field": "authors", "status": "ok",
+                    "ojs": ojs_authors, "latex": jats_authors,
+                })
+
+    # ── Journal metadata (should match after injection) ──────────────────
+    doi_elem = am.find("article-id[@pub-id-type='doi']")
+    _compare("doi", manuscript.doi, _elem_text(doi_elem), normalize=False)
+
+    vol_elem = am.find("volume")
+    _compare("volume", manuscript.volume, _elem_text(vol_elem), normalize=False)
+
+    iss_elem = am.find("issue")
+    _compare("issue", manuscript.issue_number, _elem_text(iss_elem), normalize=False)
+
+    year_elem = am.find(".//pub-date/year")
+    ojs_year = str(manuscript.year) if manuscript.year else None
+    _compare("year", ojs_year, _elem_text(year_elem), normalize=False)
+
+    # ── Write structured output ──────────────────────────────────────────
+    if output_json:
+        Path(output_json).write_text(json.dumps(results, indent=2, ensure_ascii=False))
+
+
 _XML_DECL = '<?xml version="1.0" encoding="UTF-8"?>\n'
 _DOCTYPE = (
     '<!DOCTYPE article PUBLIC '

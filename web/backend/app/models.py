@@ -32,7 +32,7 @@ class StepStatus(str, Enum):
     skipped = "skipped"
 
 
-PIPELINE_STEPS = ["prepare", "compile", "convert", "validate"]
+PIPELINE_STEPS = ["prepare", "compile", "convert", "metadata", "validate"]
 
 
 # ── Tables ────────────────────────────────────────────────────────────────────

@@ -352,7 +352,7 @@ def test_status_queued(mock_pipeline, client):
     # pipeline_steps should be initialized with all-pending steps
     steps = data["pipeline_steps"]
     assert steps is not None
-    assert len(steps) == 4
+    assert len(steps) == 5
     assert all(s["status"] == "pending" for s in steps)
 
 
@@ -795,8 +795,8 @@ def test_upload_convert_download(client, test_storage):
     # Check pipeline steps
     steps = data["pipeline_steps"]
     assert steps is not None
-    assert len(steps) == 4
-    assert [s["name"] for s in steps] == ["prepare", "compile", "convert", "validate"]
+    assert len(steps) == 5
+    assert [s["name"] for s in steps] == ["prepare", "compile", "convert", "metadata", "validate"]
     for step in steps:
         assert step["status"] not in ("pending", "running"), f"Step {step['name']} still {step['status']}"
         assert step["started_at"] is not None
