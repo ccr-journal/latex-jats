@@ -165,7 +165,11 @@ class AuthorTokenRead(BaseModel):
 
 
 def _build_author_url(doi_suffix: str, token: str) -> str:
-    frontend_url = os.environ.get("FRONTEND_URL", "http://127.0.0.1:5173")
+    try:
+        from ..config import get_config
+        frontend_url = get_config().frontend_url
+    except Exception:
+        frontend_url = os.environ.get("FRONTEND_URL", "http://127.0.0.1:5173")
     return f"{frontend_url}/m/{doi_suffix}?token={token}"
 
 
