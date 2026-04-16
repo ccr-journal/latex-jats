@@ -19,6 +19,7 @@ from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine
 
 from web.backend.app import deps, ojs as ojs_client
+from web.backend.app.config import AuthConfig, set_for_tests
 from web.backend.app.main import app
 from web.backend.app.models import (  # noqa: F401
     AccessToken,
@@ -38,9 +39,26 @@ OTHER_ORCID = "0000-0000-0000-0003"
 MANUSCRIPT_TOKEN = "manuscript-access-token-12345"
 
 
+TEST_CFG = AuthConfig(
+    orcid_client_id="cid",
+    orcid_client_secret="sec",
+    orcid_env="sandbox",
+    orcid_redirect_uri="http://testserver/api/auth/orcid/callback",
+    frontend_url="http://testserver",
+    ojs_base_url="https://ojs",
+    ojs_journal_path="ccr",
+    ojs_admin_token="admintok",
+    ojs_doi_prefix="10.5117/",
+    ojs_editor_cache_ttl_seconds=300,
+    session_token_ttl_days=30,
+    editor_override_orcids=frozenset(),
+)
+
+
 @pytest.fixture(autouse=True)
 def _editor_orcid_override(monkeypatch):
-    """Pin the editor ORCID set so get_current_role doesn't hit the network."""
+    """Pin the editor ORCID set and config so tests don't hit the network."""
+    set_for_tests(TEST_CFG)
     async def fake_fetch(cfg=None):
         return frozenset({EDITOR_ORCID})
     monkeypatch.setattr(ojs_client, "fetch_editor_orcids", fake_fetch)
