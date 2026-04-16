@@ -18,7 +18,7 @@ export function Layout() {
         <div className="mx-auto flex h-14 max-w-5xl items-center gap-6 px-4">
           <Link to="/" className="flex items-center gap-2 font-semibold text-primary">
             <span className="text-lg text-orange-600">CCR</span>
-            <span className="text-sm text-muted-foreground">LaTeX-JATS</span>
+            <span className="text-sm text-muted-foreground">JATSmith</span>
           </Link>
           <nav className="flex gap-4">
             <Link

@@ -25,7 +25,7 @@ export function LoginPage() {
     <div className="mx-auto max-w-md px-4 py-12">
       <Card>
         <CardHeader>
-          <CardTitle>CCR LaTeX-JATS</CardTitle>
+          <CardTitle>CCR JATSmith</CardTitle>
           <CardDescription>
             Sign in with your ORCID. Only CCR editors can access this service.
           </CardDescription>
