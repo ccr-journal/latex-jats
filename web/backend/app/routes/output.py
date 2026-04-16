@@ -39,7 +39,7 @@ async def presign(
 ):
     """Return a short-lived token for unauthenticated access to output files."""
     load_manuscript_for_user(doi_suffix, session, user, role)
-    return {"token": create_token(doi_suffix, user.orcid)}
+    return {"token": create_token(doi_suffix, user.orcid or "token-author")}
 
 
 @router.get("/{doi_suffix}/output/{path:path}")

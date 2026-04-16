@@ -112,4 +112,9 @@ async def me(
     user: CurrentUser = Depends(get_current_user),
     role: Literal["editor", "author"] = Depends(get_current_role),
 ):
-    return CurrentUserWithRole(orcid=user.orcid, name=user.name, role=role)
+    return CurrentUserWithRole(
+        orcid=user.orcid,
+        name=user.name,
+        role=role,
+        manuscript_token_scope=user.manuscript_token_scope,
+    )

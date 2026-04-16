@@ -6,6 +6,7 @@ import { useAuth } from "@/auth/AuthContext";
 export function Layout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const isTokenScoped = !!user?.manuscript_token_scope;
 
   const handleLogout = async () => {
     await logout();
@@ -20,22 +21,24 @@ export function Layout() {
             <span className="text-lg text-orange-600">CCR</span>
             <span className="text-sm text-muted-foreground">JATSmith</span>
           </Link>
-          <nav className="flex gap-4">
-            <Link
-              to="/"
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Manuscripts
-            </Link>
-          </nav>
+          {!isTokenScoped && (
+            <nav className="flex gap-4">
+              <Link
+                to="/"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Manuscripts
+              </Link>
+            </nav>
+          )}
           <div className="ml-auto flex items-center gap-3">
             {user && (
               <span className="text-sm text-muted-foreground">
-                {user.name ?? user.orcid}
+                {isTokenScoped ? "Viewing as author" : (user.name ?? user.orcid)}
               </span>
             )}
             <ThemeToggle />
-            {user && (
+            {user && !isTokenScoped && (
               <Button variant="outline" size="sm" onClick={handleLogout}>
                 Sign out
               </Button>

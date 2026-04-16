@@ -9,6 +9,7 @@ import { PdfPreviewPage } from "@/pages/PdfPreviewPage";
 import { XmlPreviewPage } from "@/pages/XmlPreviewPage";
 import { LoginPage } from "@/pages/LoginPage";
 import { AuthCompletePage } from "@/pages/AuthCompletePage";
+import { TokenLandingPage } from "@/pages/TokenLandingPage";
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/auth/complete" element={<AuthCompletePage />} />
+          <Route path="/m/:doiSuffix" element={<TokenLandingPage />} />
           <Route
             element={
               <RequireAuth>

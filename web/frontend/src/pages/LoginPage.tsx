@@ -27,7 +27,8 @@ export function LoginPage() {
         <CardHeader>
           <CardTitle>CCR JATSmith</CardTitle>
           <CardDescription>
-            Sign in with your ORCID. Only CCR editors can access this service.
+            Editor sign-in via ORCID. Authors access manuscripts through
+            direct links provided by the production editor.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

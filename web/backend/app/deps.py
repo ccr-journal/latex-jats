@@ -20,6 +20,7 @@ from .models import (
     Manuscript,
     ManuscriptAuthor,
     ManuscriptRead,
+    ManuscriptToken,
 )
 from .storage import Storage
 
@@ -39,18 +40,32 @@ def get_storage() -> Storage:
 
 
 def _authenticate_bearer(authorization: str | None, session: Session) -> CurrentUser:
-    """Validate a Bearer token and return the user. Raises HTTPException on failure."""
+    """Validate a Bearer token and return the user. Raises HTTPException on failure.
+
+    Tries ORCID session tokens (AccessToken) first, then per-manuscript author
+    tokens (ManuscriptToken).
+    """
     if not authorization or not authorization.lower().startswith("bearer "):
         raise HTTPException(401, detail="Missing or malformed Authorization header")
     token = authorization.split(None, 1)[1].strip()
+
+    # Try ORCID session token
     row = session.exec(select(AccessToken).where(AccessToken.token == token)).first()
-    if row is None:
-        raise HTTPException(401, detail="Invalid session token")
-    if row.expires_at is not None and row.expires_at < datetime.utcnow():
-        session.delete(row)
-        session.commit()
-        raise HTTPException(401, detail="Session expired")
-    return CurrentUser(orcid=row.orcid, name=row.name)
+    if row is not None:
+        if row.expires_at is not None and row.expires_at < datetime.utcnow():
+            session.delete(row)
+            session.commit()
+            raise HTTPException(401, detail="Session expired")
+        return CurrentUser(orcid=row.orcid, name=row.name)
+
+    # Try per-manuscript author token
+    mt = session.exec(
+        select(ManuscriptToken).where(ManuscriptToken.token == token)
+    ).first()
+    if mt is not None:
+        return CurrentUser(name="Author", manuscript_token_scope=mt.manuscript_id)
+
+    raise HTTPException(401, detail="Invalid session token")
 
 
 def get_current_user(
@@ -62,6 +77,8 @@ def get_current_user(
 
 async def resolve_role(user: CurrentUser) -> Literal["editor", "author"]:
     """Determine role for a user (editor vs author) via OJS lookup."""
+    if user.manuscript_token_scope is not None:
+        return "author"
     try:
         editors = await ojs_client.fetch_editor_orcids()
     except (ojs_client.OjsAdminTokenInvalid, ojs_client.OjsUnavailable):
@@ -91,24 +108,22 @@ def load_manuscript_for_user(
 ) -> Manuscript:
     """Return the manuscript if the current user may access it, else 404.
 
-    Editors see everything. Authors see only manuscripts where their ORCID
-    appears in ManuscriptAuthor. We return 404 (not 403) when an author is
-    denied so we don't leak existence of other manuscripts.
+    Editors see everything. Token-scoped authors see only their scoped
+    manuscript. We return 404 (not 403) when denied so we don't leak
+    existence of other manuscripts.
     """
     ms = session.get(Manuscript, doi_suffix)
     if ms is None:
         raise HTTPException(404, detail=f"Manuscript '{doi_suffix}' not found")
     if role == "editor":
         return ms
-    link = session.exec(
-        select(ManuscriptAuthor).where(
-            ManuscriptAuthor.manuscript_id == doi_suffix,
-            ManuscriptAuthor.orcid == user.orcid,
-        )
-    ).first()
-    if link is None:
-        raise HTTPException(404, detail=f"Manuscript '{doi_suffix}' not found")
-    return ms
+    # Token-scoped author: must match the specific manuscript
+    if user.manuscript_token_scope is not None:
+        if user.manuscript_token_scope != doi_suffix:
+            raise HTTPException(404, detail=f"Manuscript '{doi_suffix}' not found")
+        return ms
+    # No valid access path for non-editor, non-token users
+    raise HTTPException(404, detail=f"Manuscript '{doi_suffix}' not found")
 
 
 def manuscript_to_read(

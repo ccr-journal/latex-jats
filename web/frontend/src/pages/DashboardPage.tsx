@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import {
   Table,
   TableBody,
@@ -29,6 +29,11 @@ export function DashboardPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const isEditor = user?.role === "editor";
+
+  // Token-scoped authors should never see the dashboard
+  if (user?.manuscript_token_scope) {
+    return <Navigate to={`/manuscripts/${user.manuscript_token_scope}`} replace />;
+  }
 
   useEffect(() => {
     listManuscripts()

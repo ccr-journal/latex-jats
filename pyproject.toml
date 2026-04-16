@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "latex-jats"
-version = "0.3.1"
+version = "0.4.0"
 description = "Convert CCR journal LaTeX manuscripts to JATS XML"
 requires-python = ">=3.10"
 dependencies = ["lxml", "pyyaml"]

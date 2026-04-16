@@ -25,6 +25,7 @@ from web.backend.app.models import (  # noqa: F401
     LoginState,
     Manuscript,
     ManuscriptAuthor,
+    ManuscriptToken,
 )
 from web.backend.app.storage import Storage
 
@@ -34,6 +35,7 @@ EDITOR_ORCID = "0000-0000-0000-0001"
 AUTHOR_TOKEN = "author-test-token"
 AUTHOR_ORCID = "0000-0000-0000-0002"
 OTHER_ORCID = "0000-0000-0000-0003"
+MANUSCRIPT_TOKEN = "manuscript-access-token-12345"
 
 
 @pytest.fixture(autouse=True)
@@ -562,6 +564,12 @@ def _link_author(engine, doi: str, orcid: str) -> None:
         session.commit()
 
 
+def _create_manuscript_token(engine, doi: str, token: str = MANUSCRIPT_TOKEN) -> None:
+    with Session(engine) as session:
+        session.add(ManuscriptToken(manuscript_id=doi, token=token))
+        session.commit()
+
+
 def test_me_role_editor(client):
     r = client.get("/api/auth/me")
     assert r.status_code == 200
@@ -572,30 +580,6 @@ def test_me_role_author(author_client):
     r = author_client.get("/api/auth/me")
     assert r.status_code == 200
     assert r.json()["role"] == "author"
-
-
-def test_author_sees_only_own_manuscripts(client, author_client, engine):
-    client.post("/api/manuscripts", json={"doi_suffix": "CCR.A"})
-    client.post("/api/manuscripts", json={"doi_suffix": "CCR.B"})
-    _link_author(engine, "CCR.A", AUTHOR_ORCID)
-
-    r = author_client.get("/api/manuscripts")
-    assert r.status_code == 200
-    suffixes = [m["doi_suffix"] for m in r.json()]
-    assert suffixes == ["CCR.A"]
-
-
-def test_author_get_linked_manuscript(client, author_client, engine):
-    client.post("/api/manuscripts", json={"doi_suffix": "CCR.A"})
-    _link_author(engine, "CCR.A", AUTHOR_ORCID)
-    r = author_client.get("/api/manuscripts/CCR.A")
-    assert r.status_code == 200
-
-
-def test_author_get_unlinked_manuscript_404(client, author_client):
-    client.post("/api/manuscripts", json={"doi_suffix": "CCR.B"})
-    r = author_client.get("/api/manuscripts/CCR.B")
-    assert r.status_code == 404
 
 
 def test_author_cannot_create_manuscript(author_client):
@@ -610,30 +594,167 @@ def test_editor_sees_all(client):
     assert {m["doi_suffix"] for m in r.json()} == {"CCR.A", "CCR.B"}
 
 
-def test_author_status_of_unlinked_is_404(client, author_client):
-    client.post("/api/manuscripts", json={"doi_suffix": "CCR.B"})
-    r = author_client.get("/api/manuscripts/CCR.B/status")
+# ── Manuscript token access ──────────────────────────────────────────────────
+
+
+def test_manuscript_token_auth(client, engine):
+    """A manuscript token grants access to its scoped manuscript."""
+    doi = _create(client)
+    _create_manuscript_token(engine, doi)
+
+    tc = TestClient(app, raise_server_exceptions=False)
+    tc.headers.update({"Authorization": f"Bearer {MANUSCRIPT_TOKEN}"})
+
+    r = tc.get(f"/api/manuscripts/{doi}")
+    assert r.status_code == 200
+    assert r.json()["doi_suffix"] == doi
+
+
+def test_manuscript_token_scoped_to_one_manuscript(client, engine):
+    """A manuscript token must not grant access to other manuscripts."""
+    doi_a = _create(client, "CCR.TOK.A")
+    _create(client, "CCR.TOK.B")
+    _create_manuscript_token(engine, doi_a)
+
+    tc = TestClient(app, raise_server_exceptions=False)
+    tc.headers.update({"Authorization": f"Bearer {MANUSCRIPT_TOKEN}"})
+
+    r = tc.get("/api/manuscripts/CCR.TOK.B")
     assert r.status_code == 404
 
 
+def test_manuscript_token_list_returns_only_scoped(client, engine):
+    """Token-scoped authors listing manuscripts see only their scoped one."""
+    doi = _create(client, "CCR.TOK.LIST")
+    _create(client, "CCR.TOK.OTHER")
+    _create_manuscript_token(engine, doi, "tok-list-test")
+
+    tc = TestClient(app, raise_server_exceptions=False)
+    tc.headers.update({"Authorization": "Bearer tok-list-test"})
+
+    r = tc.get("/api/manuscripts")
+    assert r.status_code == 200
+    suffixes = [m["doi_suffix"] for m in r.json()]
+    assert suffixes == ["CCR.TOK.LIST"]
+
+
+def test_manuscript_token_me_endpoint(client, engine):
+    """The /me endpoint returns author role and manuscript_token_scope."""
+    doi = _create(client)
+    _create_manuscript_token(engine, doi)
+
+    tc = TestClient(app, raise_server_exceptions=False)
+    tc.headers.update({"Authorization": f"Bearer {MANUSCRIPT_TOKEN}"})
+
+    r = tc.get("/api/auth/me")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["role"] == "author"
+    assert data["manuscript_token_scope"] == doi
+    assert data["orcid"] is None
+
+
+def test_manuscript_token_cannot_create(client, engine):
+    """Token-scoped authors cannot create manuscripts."""
+    doi = _create(client)
+    _create_manuscript_token(engine, doi)
+
+    tc = TestClient(app, raise_server_exceptions=False)
+    tc.headers.update({"Authorization": f"Bearer {MANUSCRIPT_TOKEN}"})
+
+    r = tc.post("/api/manuscripts", json={"doi_suffix": "CCR.NEW"})
+    assert r.status_code == 403
+
+
 @patch("web.backend.app.routes.upload.run_pipeline")
-def test_author_can_upload_to_linked_manuscript(mock_pipeline, client, author_client, engine, test_storage):
-    client.post("/api/manuscripts", json={"doi_suffix": "CCR.A"})
-    _link_author(engine, "CCR.A", AUTHOR_ORCID)
-    r = author_client.post(
-        "/api/manuscripts/CCR.A/upload",
+def test_manuscript_token_can_upload(mock_pipeline, client, engine, test_storage):
+    """Token-scoped authors can upload to their scoped manuscript."""
+    doi = _create(client)
+    _create_manuscript_token(engine, doi)
+
+    tc = TestClient(app, raise_server_exceptions=False)
+    tc.headers.update({"Authorization": f"Bearer {MANUSCRIPT_TOKEN}"})
+
+    r = tc.post(
+        f"/api/manuscripts/{doi}/upload",
         files=[("files", ("main.tex", b"x", "text/plain"))],
     )
     assert r.status_code == 201
     assert r.json()["uploaded_by"] == "author"
 
 
-def test_author_cannot_upload_to_unlinked(client, author_client):
-    client.post("/api/manuscripts", json={"doi_suffix": "CCR.B"})
-    r = author_client.post(
-        "/api/manuscripts/CCR.B/upload",
-        files=[("files", ("main.tex", b"x", "text/plain"))],
-    )
+def test_manuscript_token_presign(client, engine, test_storage):
+    """Token-scoped authors can get presign tokens for their manuscript."""
+    doi = _create(client)
+    _create_manuscript_token(engine, doi)
+
+    tc = TestClient(app, raise_server_exceptions=False)
+    tc.headers.update({"Authorization": f"Bearer {MANUSCRIPT_TOKEN}"})
+
+    r = tc.get(f"/api/manuscripts/{doi}/presign")
+    assert r.status_code == 200
+    assert "token" in r.json()
+
+
+def test_invalid_manuscript_token(anon_client):
+    """An invalid manuscript token returns 401."""
+    anon_client.headers.update({"Authorization": "Bearer bogus-token-123"})
+    r = anon_client.get("/api/manuscripts")
+    assert r.status_code == 401
+
+
+# ── Author token generation (editor-only) ────────────────────────────────────
+
+
+def test_get_author_token(client):
+    """Editor can get/create an author token for a manuscript."""
+    doi = _create(client)
+    r = client.get(f"/api/manuscripts/{doi}/author-token")
+    assert r.status_code == 200
+    data = r.json()
+    assert "token" in data
+    assert "url" in data
+    assert doi in data["url"]
+
+    # Second call returns the same token
+    r2 = client.get(f"/api/manuscripts/{doi}/author-token")
+    assert r2.json()["token"] == data["token"]
+
+
+def test_regenerate_author_token(client):
+    """Regenerating an author token invalidates the old one."""
+    doi = _create(client)
+    r1 = client.get(f"/api/manuscripts/{doi}/author-token")
+    old_token = r1.json()["token"]
+
+    r2 = client.post(f"/api/manuscripts/{doi}/author-token/regenerate")
+    assert r2.status_code == 200
+    new_token = r2.json()["token"]
+    assert new_token != old_token
+
+    # Old token should no longer work
+    tc = TestClient(app, raise_server_exceptions=False)
+    tc.headers.update({"Authorization": f"Bearer {old_token}"})
+    r3 = tc.get(f"/api/manuscripts/{doi}")
+    assert r3.status_code == 401
+
+    # New token should work
+    tc.headers.update({"Authorization": f"Bearer {new_token}"})
+    r4 = tc.get(f"/api/manuscripts/{doi}")
+    assert r4.status_code == 200
+
+
+def test_author_token_requires_editor(client, author_client, engine):
+    """Non-editors cannot generate author tokens."""
+    doi = _create(client)
+    _link_author(engine, doi, AUTHOR_ORCID)
+    r = author_client.get(f"/api/manuscripts/{doi}/author-token")
+    assert r.status_code == 403
+
+
+def test_author_token_not_found(client):
+    """Author token for non-existent manuscript returns 404."""
+    r = client.get("/api/manuscripts/DOES-NOT-EXIST/author-token")
     assert r.status_code == 404
 
 
@@ -659,18 +780,39 @@ def test_approve_requires_ready_status(client):
     assert "ready" in r.json()["detail"]
 
 
-def test_approve_requires_editor(client, author_client, engine):
-    client.post("/api/manuscripts", json={"doi_suffix": "CCR2025.1.1.APPR3"})
+def test_token_author_can_approve(client, engine):
+    """Token-scoped authors can approve their manuscript."""
+    doi = "CCR2025.1.1.APPR3"
+    client.post("/api/manuscripts", json={"doi_suffix": doi})
+    _create_manuscript_token(engine, doi, "author-approve-tok")
     with Session(engine) as session:
-        ms = session.get(Manuscript, "CCR2025.1.1.APPR3")
+        ms = session.get(Manuscript, doi)
         ms.status = "ready"
         session.add(ms)
-        session.add(ManuscriptAuthor(
-            manuscript_id="CCR2025.1.1.APPR3", orcid=AUTHOR_ORCID, name="Author", order=0,
-        ))
         session.commit()
-    r = author_client.post("/api/manuscripts/CCR2025.1.1.APPR3/approve")
-    assert r.status_code == 403
+
+    tc = TestClient(app, raise_server_exceptions=False)
+    tc.headers.update({"Authorization": "Bearer author-approve-tok"})
+    r = tc.post(f"/api/manuscripts/{doi}/approve")
+    assert r.status_code == 200
+    assert r.json()["status"] == "approved"
+
+
+def test_approve_denied_for_wrong_manuscript(client, engine):
+    """Token-scoped author cannot approve a different manuscript."""
+    _create(client, "CCR.APPR.A")
+    _create(client, "CCR.APPR.B")
+    _create_manuscript_token(engine, "CCR.APPR.A", "author-appr-wrong")
+    with Session(engine) as session:
+        ms = session.get(Manuscript, "CCR.APPR.B")
+        ms.status = "ready"
+        session.add(ms)
+        session.commit()
+
+    tc = TestClient(app, raise_server_exceptions=False)
+    tc.headers.update({"Authorization": "Bearer author-appr-wrong"})
+    r = tc.post("/api/manuscripts/CCR.APPR.B/approve")
+    assert r.status_code == 404
 
 
 def test_withdraw_approval(client, engine):
@@ -692,18 +834,22 @@ def test_withdraw_requires_approved_status(client):
     assert "approved" in r.json()["detail"]
 
 
-def test_withdraw_requires_editor(client, author_client, engine):
-    client.post("/api/manuscripts", json={"doi_suffix": "CCR2025.1.1.WD3"})
+def test_token_author_can_withdraw(client, engine):
+    """Token-scoped authors can withdraw approval on their manuscript."""
+    doi = "CCR2025.1.1.WD3"
+    client.post("/api/manuscripts", json={"doi_suffix": doi})
+    _create_manuscript_token(engine, doi, "author-withdraw-tok")
     with Session(engine) as session:
-        ms = session.get(Manuscript, "CCR2025.1.1.WD3")
+        ms = session.get(Manuscript, doi)
         ms.status = "approved"
         session.add(ms)
-        session.add(ManuscriptAuthor(
-            manuscript_id="CCR2025.1.1.WD3", orcid=AUTHOR_ORCID, name="Author", order=0,
-        ))
         session.commit()
-    r = author_client.post("/api/manuscripts/CCR2025.1.1.WD3/withdraw-approval")
-    assert r.status_code == 403
+
+    tc = TestClient(app, raise_server_exceptions=False)
+    tc.headers.update({"Authorization": "Bearer author-withdraw-tok"})
+    r = tc.post(f"/api/manuscripts/{doi}/withdraw-approval")
+    assert r.status_code == 200
+    assert r.json()["status"] == "ready"
 
 
 def test_withdraw_blocked_when_ojs_in_production(client, engine, monkeypatch):

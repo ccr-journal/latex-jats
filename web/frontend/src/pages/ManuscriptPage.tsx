@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -14,7 +15,7 @@ import { PipelineProgress } from "@/components/PipelineProgress";
 import { MetadataCard } from "@/components/MetadataCard";
 import { UploadZone } from "@/components/UploadZone";
 import { useAuth } from "@/auth/AuthContext";
-import { getManuscript, getStatus, uploadFiles, startProcessing, updateManuscript, reimportOjsMetadata, approveManuscript, withdrawApproval, downloadUrl, outputUrl, presign } from "@/api/client";
+import { getManuscript, getStatus, uploadFiles, startProcessing, updateManuscript, reimportOjsMetadata, approveManuscript, withdrawApproval, downloadUrl, outputUrl, presign, getAuthorToken, regenerateAuthorToken } from "@/api/client";
 import { ApiError } from "@/api/client";
 import type { Manuscript, PipelineStep } from "@/api/types";
 
@@ -103,6 +104,7 @@ export function ManuscriptPage() {
   const checkStep = pipelineSteps.find((s) => s.name === "check");
   const checkStepDone = checkStep != null && ["ok", "warnings", "errors"].includes(checkStep.status);
   const isEditor = user?.role === "editor";
+  const isTokenScoped = !!user?.manuscript_token_scope;
 
   const handleUpload = async (files: File[]) => {
     const updated = await uploadFiles(doiSuffix, files);
@@ -159,11 +161,13 @@ export function ManuscriptPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">
-          &larr; Manuscripts
-        </Link>
-      </div>
+      {!isTokenScoped && (
+        <div>
+          <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">
+            &larr; Manuscripts
+          </Link>
+        </div>
+      )}
 
       {/* Header */}
       <Card>
@@ -258,6 +262,9 @@ export function ManuscriptPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Author link — editor only */}
+      {isEditor && <AuthorLinkCard doiSuffix={doiSuffix} />}
 
       {/* Source — always visible; upload button opens a dialog */}
       <Card>
@@ -427,7 +434,7 @@ export function ManuscriptPage() {
                   View PDF
                 </Link>
               </div>
-              {isReady && isEditor && (
+              {isReady && (
                 <Button onClick={() => setApproveDialogOpen(true)}>
                   Approve for publication
                 </Button>
@@ -437,7 +444,7 @@ export function ManuscriptPage() {
                   Thanks for checking and approving the proofs. We will now proceed to publish the article. You will be notified when the article is published.
                 </p>
               )}
-              {isApproved && isEditor && (
+              {isApproved && (
                 <div className="flex items-center gap-3">
                   <Button variant="outline" size="sm" onClick={handleWithdrawApproval} disabled={withdrawing}>
                     {withdrawing ? "Withdrawing\u2026" : "Withdraw approval"}
@@ -456,5 +463,86 @@ export function ManuscriptPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+
+function AuthorLinkCard({ doiSuffix }: { doiSuffix: string }) {
+  const [url, setUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
+
+  const fetchToken = async () => {
+    setLoading(true);
+    try {
+      const data = await getAuthorToken(doiSuffix);
+      setUrl(data.url);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRegenerate = async () => {
+    setRegenerating(true);
+    try {
+      const data = await regenerateAuthorToken(doiSuffix);
+      setUrl(data.url);
+    } finally {
+      setRegenerating(false);
+    }
+  };
+
+  const handleCopy = async () => {
+    if (!url) return;
+    await navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Author link</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {url == null ? (
+          <div>
+            <p className="text-sm text-muted-foreground mb-2">
+              Generate a link that gives authors access to view and upload to this manuscript.
+            </p>
+            <Button variant="outline" size="sm" onClick={fetchToken} disabled={loading}>
+              {loading ? "Generating..." : "Get author link"}
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">
+              Share this link with the authors. Anyone with the link can view and upload to this manuscript.
+            </p>
+            <div className="flex gap-2">
+              <Input
+                readOnly
+                value={url}
+                className="font-mono text-xs"
+                onClick={(e) => (e.target as HTMLInputElement).select()}
+              />
+              <Button variant="outline" size="sm" onClick={handleCopy}>
+                {copied ? "Copied" : "Copy"}
+              </Button>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground"
+              onClick={handleRegenerate}
+              disabled={regenerating}
+            >
+              {regenerating ? "Regenerating..." : "Regenerate link (invalidates previous)"}
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

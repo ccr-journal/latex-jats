@@ -188,6 +188,7 @@ def test_me_returns_current_user_with_role(client, engine):
         "orcid": "0000-0000-0000-0006",
         "name": "Ed",
         "role": "editor",
+        "manuscript_token_scope": None,
     }
 
 

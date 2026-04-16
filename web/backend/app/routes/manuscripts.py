@@ -2,6 +2,8 @@
 
 import json
 import logging
+import os
+import secrets
 from pathlib import Path
 from typing import Literal
 
@@ -26,6 +28,7 @@ from ..models import (
     ManuscriptCreate,
     ManuscriptRead,
     ManuscriptStatus,
+    ManuscriptToken,
 )
 from ..storage import Storage
 
@@ -44,13 +47,12 @@ def list_manuscripts(
         manuscripts = session.exec(
             select(Manuscript).order_by(Manuscript.created_at.desc())
         ).all()
+    elif user.manuscript_token_scope is not None:
+        # Token-scoped authors can only see their single manuscript
+        ms = session.get(Manuscript, user.manuscript_token_scope)
+        manuscripts = [ms] if ms else []
     else:
-        manuscripts = session.exec(
-            select(Manuscript)
-            .join(ManuscriptAuthor, ManuscriptAuthor.manuscript_id == Manuscript.doi_suffix)
-            .where(ManuscriptAuthor.orcid == user.orcid)
-            .order_by(Manuscript.created_at.desc())
-        ).all()
+        manuscripts = []
     return [manuscript_to_read(ms, session) for ms in manuscripts]
 
 
@@ -94,12 +96,11 @@ def update_manuscript(
 @router.post("/{doi_suffix}/approve", response_model=ManuscriptRead)
 def approve_manuscript(
     doi_suffix: str,
-    _editor: str = Depends(require_editor),
+    user: CurrentUser = Depends(get_current_user),
+    role: Literal["editor", "author"] = Depends(get_current_role),
     session: Session = Depends(get_session),
 ):
-    ms = session.get(Manuscript, doi_suffix)
-    if ms is None:
-        raise HTTPException(404, detail=f"Manuscript '{doi_suffix}' not found")
+    ms = load_manuscript_for_user(doi_suffix, session, user, role)
     if ms.status != ManuscriptStatus.ready:
         raise HTTPException(
             400, detail=f"Only manuscripts with status 'ready' can be approved (current: {ms.status.value})"
@@ -114,12 +115,11 @@ def approve_manuscript(
 @router.post("/{doi_suffix}/withdraw-approval", response_model=ManuscriptRead)
 async def withdraw_approval(
     doi_suffix: str,
-    _editor: str = Depends(require_editor),
+    user: CurrentUser = Depends(get_current_user),
+    role: Literal["editor", "author"] = Depends(get_current_role),
     session: Session = Depends(get_session),
 ):
-    ms = session.get(Manuscript, doi_suffix)
-    if ms is None:
-        raise HTTPException(404, detail=f"Manuscript '{doi_suffix}' not found")
+    ms = load_manuscript_for_user(doi_suffix, session, user, role)
     if ms.status != ManuscriptStatus.approved:
         raise HTTPException(
             400, detail=f"Only approved manuscripts can have approval withdrawn (current: {ms.status.value})"
@@ -153,6 +153,84 @@ def get_manuscript(
 ):
     ms = load_manuscript_for_user(doi_suffix, session, user, role)
     return manuscript_to_read(ms, session)
+
+
+# ── Author token management ──────────────────────────────────────────────────
+
+
+class AuthorTokenRead(BaseModel):
+    token: str
+    url: str
+    created_at: str  # ISO datetime
+
+
+def _build_author_url(doi_suffix: str, token: str) -> str:
+    frontend_url = os.environ.get("FRONTEND_URL", "http://127.0.0.1:5173")
+    return f"{frontend_url}/m/{doi_suffix}?token={token}"
+
+
+@router.get("/{doi_suffix}/author-token", response_model=AuthorTokenRead)
+def get_author_token(
+    doi_suffix: str,
+    _editor: str = Depends(require_editor),
+    session: Session = Depends(get_session),
+):
+    """Return the author access token for a manuscript, creating one if needed."""
+    ms = session.get(Manuscript, doi_suffix)
+    if ms is None:
+        raise HTTPException(404, detail=f"Manuscript '{doi_suffix}' not found")
+
+    mt = session.exec(
+        select(ManuscriptToken).where(ManuscriptToken.manuscript_id == doi_suffix)
+    ).first()
+    if mt is None:
+        mt = ManuscriptToken(
+            manuscript_id=doi_suffix,
+            token=secrets.token_urlsafe(32),
+        )
+        session.add(mt)
+        session.commit()
+        session.refresh(mt)
+
+    return AuthorTokenRead(
+        token=mt.token,
+        url=_build_author_url(doi_suffix, mt.token),
+        created_at=mt.created_at.isoformat(),
+    )
+
+
+@router.post("/{doi_suffix}/author-token/regenerate", response_model=AuthorTokenRead)
+def regenerate_author_token(
+    doi_suffix: str,
+    _editor: str = Depends(require_editor),
+    session: Session = Depends(get_session),
+):
+    """Regenerate the author access token, invalidating any previous link."""
+    ms = session.get(Manuscript, doi_suffix)
+    if ms is None:
+        raise HTTPException(404, detail=f"Manuscript '{doi_suffix}' not found")
+
+    # Delete existing token
+    existing = session.exec(
+        select(ManuscriptToken).where(ManuscriptToken.manuscript_id == doi_suffix)
+    ).first()
+    if existing:
+        session.delete(existing)
+        session.flush()
+
+    mt = ManuscriptToken(
+        manuscript_id=doi_suffix,
+        token=secrets.token_urlsafe(32),
+    )
+    session.add(mt)
+    session.commit()
+    session.refresh(mt)
+
+    return AuthorTokenRead(
+        token=mt.token,
+        url=_build_author_url(doi_suffix, mt.token),
+        created_at=mt.created_at.isoformat(),
+    )
 
 
 # ── OJS metadata re-import ────────────────────────────────────────────────────

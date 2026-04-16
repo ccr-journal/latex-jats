@@ -80,6 +80,13 @@ class AccessToken(SQLModel, table=True):
     expires_at: Optional[datetime] = None
 
 
+class ManuscriptToken(SQLModel, table=True):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    manuscript_id: str = Field(foreign_key="manuscript.doi_suffix", unique=True, index=True)
+    token: str = Field(index=True, unique=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
 class LoginState(SQLModel, table=True):
     state: str = Field(primary_key=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -94,14 +101,16 @@ class ManuscriptCreate(SQLModel):
 
 
 class CurrentUser(SQLModel):
-    orcid: str
+    orcid: Optional[str] = None
     name: Optional[str] = None
+    manuscript_token_scope: Optional[str] = None  # doi_suffix if token-based
 
 
 class CurrentUserWithRole(SQLModel):
-    orcid: str
+    orcid: Optional[str] = None
     name: Optional[str] = None
     role: str  # "editor" | "author"
+    manuscript_token_scope: Optional[str] = None
 
 
 class AuthorRead(SQLModel):

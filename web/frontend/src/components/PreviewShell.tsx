@@ -31,7 +31,7 @@ export function PreviewShell({ activeTab, children }: PreviewShellProps) {
   }, [doiSuffix]);
 
   useEffect(() => {
-    if (!doiSuffix || !manuscript || manuscript.status !== "ready") return;
+    if (!doiSuffix || !manuscript || (manuscript.status !== "ready" && manuscript.status !== "approved")) return;
     presign(doiSuffix)
       .then(setPresignToken)
       .catch((err) => setError(err.message));
@@ -40,7 +40,7 @@ export function PreviewShell({ activeTab, children }: PreviewShellProps) {
   if (error) return <p className="text-red-600">{error}</p>;
   if (!manuscript || !doiSuffix) return <p className="text-muted-foreground">Loading...</p>;
 
-  if (manuscript.status !== "ready") {
+  if (manuscript.status !== "ready" && manuscript.status !== "approved") {
     return (
       <div className="space-y-4">
         <Link to={`/manuscripts/${doiSuffix}`} className="text-sm text-muted-foreground hover:text-foreground">

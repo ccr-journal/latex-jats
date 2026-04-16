@@ -158,6 +158,24 @@ export async function presign(doiSuffix: string): Promise<string> {
   return data.token;
 }
 
+// ── Author tokens ────────────────────────────────────────────────────────────
+
+export interface AuthorToken {
+  token: string;
+  url: string;
+  created_at: string;
+}
+
+export function getAuthorToken(doiSuffix: string): Promise<AuthorToken> {
+  return apiFetch(`/api/manuscripts/${doiSuffix}/author-token`);
+}
+
+export function regenerateAuthorToken(doiSuffix: string): Promise<AuthorToken> {
+  return apiFetch(`/api/manuscripts/${doiSuffix}/author-token/regenerate`, {
+    method: "POST",
+  });
+}
+
 // ── OJS ───────────────────────────────────────────────────────────────────────
 
 export function listOjsSubmissions(): Promise<OjsSubmission[]> {
