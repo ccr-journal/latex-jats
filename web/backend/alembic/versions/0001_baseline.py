@@ -1,12 +1,8 @@
-"""Baseline schema with manuscriptauthor
+"""Baseline schema — all tables.
 
 Revision ID: 0001_baseline
 Revises:
-Create Date: 2026-04-15
-
-Creates all tables (manuscript, accesstoken, loginstate, manuscriptauthor).
-For databases created before Alembic was introduced (dev sqlite files),
-`alembic stamp 0001_baseline` after confirming the schema already matches.
+Create Date: 2026-04-16
 """
 
 from __future__ import annotations
@@ -31,6 +27,14 @@ def upgrade() -> None:
             sa.Column("doi_suffix", sa.String(), primary_key=True),
             sa.Column("ojs_submission_id", sa.Integer(), nullable=True),
             sa.Column("status", sa.String(), nullable=False),
+            sa.Column("title", sa.String(), nullable=True),
+            sa.Column("abstract", sa.Text(), nullable=True),
+            sa.Column("keywords", sa.JSON(), nullable=True),
+            sa.Column("doi", sa.String(), nullable=True),
+            sa.Column("volume", sa.String(), nullable=True),
+            sa.Column("issue_number", sa.String(), nullable=True),
+            sa.Column("year", sa.Integer(), nullable=True),
+            sa.Column("fix_source", sa.Boolean(), nullable=False, server_default="0"),
             sa.Column("created_at", sa.DateTime(), nullable=False),
             sa.Column("updated_at", sa.DateTime(), nullable=False),
             sa.Column("uploaded_at", sa.DateTime(), nullable=True),
@@ -39,6 +43,27 @@ def upgrade() -> None:
             sa.Column("job_started_at", sa.DateTime(), nullable=True),
             sa.Column("job_completed_at", sa.DateTime(), nullable=True),
             sa.Column("pipeline_steps", sa.JSON(), nullable=True),
+        )
+
+    if "manuscriptauthor" not in existing:
+        op.create_table(
+            "manuscriptauthor",
+            sa.Column("id", sa.Integer(), primary_key=True, autoincrement=True),
+            sa.Column(
+                "manuscript_id",
+                sa.String(),
+                sa.ForeignKey("manuscript.doi_suffix"),
+                nullable=False,
+            ),
+            sa.Column("orcid", sa.String(), nullable=True),
+            sa.Column("name", sa.String(), nullable=True),
+            sa.Column("order", sa.Integer(), nullable=False, server_default="0"),
+        )
+        op.create_index(
+            "ix_manuscriptauthor_orcid", "manuscriptauthor", ["orcid"]
+        )
+        op.create_index(
+            "ix_manuscriptauthor_manuscript_id", "manuscriptauthor", ["manuscript_id"]
         )
 
     if "accesstoken" not in existing:
@@ -61,25 +86,9 @@ def upgrade() -> None:
             sa.Column("created_at", sa.DateTime(), nullable=False),
         )
 
-    if "manuscriptauthor" not in existing:
-        op.create_table(
-            "manuscriptauthor",
-            sa.Column(
-                "manuscript_id",
-                sa.String(),
-                sa.ForeignKey("manuscript.doi_suffix"),
-                primary_key=True,
-            ),
-            sa.Column("orcid", sa.String(), primary_key=True),
-            sa.Column("name", sa.String(), nullable=True),
-            sa.Column("order", sa.Integer(), nullable=False, server_default="0"),
-        )
-        op.create_index(
-            "ix_manuscriptauthor_orcid", "manuscriptauthor", ["orcid"]
-        )
-
 
 def downgrade() -> None:
+    op.drop_index("ix_manuscriptauthor_manuscript_id", table_name="manuscriptauthor")
     op.drop_index("ix_manuscriptauthor_orcid", table_name="manuscriptauthor")
     op.drop_table("manuscriptauthor")
     op.drop_table("loginstate")
