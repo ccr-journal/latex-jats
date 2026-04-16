@@ -468,6 +468,7 @@ export function ManuscriptPage() {
 function AuthorLink({ doiSuffix }: { doiSuffix: string }) {
   const [url, setUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
 
   useEffect(() => {
@@ -477,7 +478,15 @@ function AuthorLink({ doiSuffix }: { doiSuffix: string }) {
       .finally(() => setLoading(false));
   }, [doiSuffix]);
 
+  const handleCopy = async () => {
+    if (!url) return;
+    await navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   const handleRegenerate = async () => {
+    if (!window.confirm("Regenerate the author link? The previous link will stop working.")) return;
     setRegenerating(true);
     try {
       const data = await regenerateAuthorToken(doiSuffix);
@@ -493,7 +502,9 @@ function AuthorLink({ doiSuffix }: { doiSuffix: string }) {
     <div className="text-muted-foreground flex items-center gap-2 text-sm">
       {url ? (
         <>
-          <a href={url} className="hover:underline">Author link</a>
+          <button type="button" onClick={handleCopy} className="hover:underline">
+            {copied ? "Copied!" : "Copy author link"}
+          </button>
           <button
             type="button"
             onClick={handleRegenerate}
