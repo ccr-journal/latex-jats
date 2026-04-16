@@ -17,18 +17,32 @@ from fastapi.testclient import TestClient
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine
 
-from web.backend.app import deps
+from web.backend.app import deps, ojs as ojs_client
 from web.backend.app.main import app
 from web.backend.app.models import (  # noqa: F401
     AccessToken,
     LoginState,
     Manuscript,
+    ManuscriptAuthor,
 )
 from web.backend.app.storage import Storage
 
 
 EDITOR_TOKEN = "editor-test-token"
 EDITOR_ORCID = "0000-0000-0000-0001"
+AUTHOR_TOKEN = "author-test-token"
+AUTHOR_ORCID = "0000-0000-0000-0002"
+OTHER_ORCID = "0000-0000-0000-0003"
+
+
+@pytest.fixture(autouse=True)
+def _editor_orcid_override(monkeypatch):
+    """Pin the editor ORCID set so get_current_role doesn't hit the network."""
+    async def fake_fetch(cfg=None):
+        return frozenset({EDITOR_ORCID})
+    monkeypatch.setattr(ojs_client, "fetch_editor_orcids", fake_fetch)
+    yield
+    ojs_client.set_production_submissions_override(None)
 
 
 @pytest.fixture
@@ -74,9 +88,29 @@ def client(anon_client: TestClient, engine):
                 name="Test Editor",
             )
         )
+        session.add(
+            AccessToken(
+                token=AUTHOR_TOKEN,
+                orcid=AUTHOR_ORCID,
+                name="Test Author",
+            )
+        )
         session.commit()
     anon_client.headers.update({"Authorization": f"Bearer {EDITOR_TOKEN}"})
     return anon_client
+
+
+@pytest.fixture
+def author_client(client: TestClient):
+    """Separate client sharing the same engine/overrides, authed as non-editor.
+
+    Must be used alongside `client` — both point at the same FastAPI app and
+    dependency overrides, so requests through either see the same database.
+    """
+    from fastapi.testclient import TestClient as _TC
+    ac = _TC(app, raise_server_exceptions=False)
+    ac.headers.update({"Authorization": f"Bearer {AUTHOR_TOKEN}"})
+    return ac
 
 
 # ── Auth negatives ────────────────────────────────────────────────────────────
@@ -399,6 +433,204 @@ def test_classify_step_status_errors():
 
 def test_classify_step_status_errors_over_warnings():
     assert classify_step_status("WARNING: minor\nERROR: critical") == "errors"
+
+
+# ── Author access control ────────────────────────────────────────────────────
+
+
+def _link_author(engine, doi: str, orcid: str) -> None:
+    with Session(engine) as session:
+        session.add(ManuscriptAuthor(manuscript_id=doi, orcid=orcid, order=0))
+        session.commit()
+
+
+def test_me_role_editor(client):
+    r = client.get("/api/auth/me")
+    assert r.status_code == 200
+    assert r.json()["role"] == "editor"
+
+
+def test_me_role_author(author_client):
+    r = author_client.get("/api/auth/me")
+    assert r.status_code == 200
+    assert r.json()["role"] == "author"
+
+
+def test_author_sees_only_own_manuscripts(client, author_client, engine):
+    client.post("/api/manuscripts", json={"doi_suffix": "CCR.A"})
+    client.post("/api/manuscripts", json={"doi_suffix": "CCR.B"})
+    _link_author(engine, "CCR.A", AUTHOR_ORCID)
+
+    r = author_client.get("/api/manuscripts")
+    assert r.status_code == 200
+    suffixes = [m["doi_suffix"] for m in r.json()]
+    assert suffixes == ["CCR.A"]
+
+
+def test_author_get_linked_manuscript(client, author_client, engine):
+    client.post("/api/manuscripts", json={"doi_suffix": "CCR.A"})
+    _link_author(engine, "CCR.A", AUTHOR_ORCID)
+    r = author_client.get("/api/manuscripts/CCR.A")
+    assert r.status_code == 200
+
+
+def test_author_get_unlinked_manuscript_404(client, author_client):
+    client.post("/api/manuscripts", json={"doi_suffix": "CCR.B"})
+    r = author_client.get("/api/manuscripts/CCR.B")
+    assert r.status_code == 404
+
+
+def test_author_cannot_create_manuscript(author_client):
+    r = author_client.post("/api/manuscripts", json={"doi_suffix": "CCR.X"})
+    assert r.status_code == 403
+
+
+def test_editor_sees_all(client):
+    client.post("/api/manuscripts", json={"doi_suffix": "CCR.A"})
+    client.post("/api/manuscripts", json={"doi_suffix": "CCR.B"})
+    r = client.get("/api/manuscripts")
+    assert {m["doi_suffix"] for m in r.json()} == {"CCR.A", "CCR.B"}
+
+
+def test_author_status_of_unlinked_is_404(client, author_client):
+    client.post("/api/manuscripts", json={"doi_suffix": "CCR.B"})
+    r = author_client.get("/api/manuscripts/CCR.B/status")
+    assert r.status_code == 404
+
+
+@patch("web.backend.app.routes.upload.run_pipeline")
+def test_author_can_upload_to_linked_manuscript(mock_pipeline, client, author_client, engine, test_storage):
+    client.post("/api/manuscripts", json={"doi_suffix": "CCR.A"})
+    _link_author(engine, "CCR.A", AUTHOR_ORCID)
+    r = author_client.post(
+        "/api/manuscripts/CCR.A/upload",
+        files=[("files", ("main.tex", b"x", "text/plain"))],
+    )
+    assert r.status_code == 201
+    assert r.json()["uploaded_by"] == "author"
+
+
+def test_author_cannot_upload_to_unlinked(client, author_client):
+    client.post("/api/manuscripts", json={"doi_suffix": "CCR.B"})
+    r = author_client.post(
+        "/api/manuscripts/CCR.B/upload",
+        files=[("files", ("main.tex", b"x", "text/plain"))],
+    )
+    assert r.status_code == 404
+
+
+# ── OJS import ────────────────────────────────────────────────────────────────
+
+
+def _set_ojs_subs(submissions):
+    ojs_client.set_production_submissions_override(submissions)
+
+
+def test_list_ojs_submissions_editor(client):
+    _set_ojs_subs([
+        ojs_client.OjsSubmission(
+            submission_id=42,
+            doi_suffix="CCR2025.1.3.Z",
+            title="Something",
+            authors=(ojs_client.OjsAuthor(orcid=AUTHOR_ORCID, name="A Author"),),
+        )
+    ])
+    r = client.get("/api/ojs/submissions")
+    assert r.status_code == 200
+    body = r.json()
+    assert len(body) == 1
+    assert body[0]["submission_id"] == 42
+    assert body[0]["already_imported"] is False
+
+
+def test_list_ojs_submissions_forbidden_for_authors(author_client):
+    r = author_client.get("/api/ojs/submissions")
+    assert r.status_code == 403
+
+
+def test_import_ojs_submission_creates_authors(client, engine):
+    _set_ojs_subs([
+        ojs_client.OjsSubmission(
+            submission_id=42,
+            doi_suffix="CCR2025.1.3.Z",
+            title="Something",
+            authors=(
+                ojs_client.OjsAuthor(orcid=AUTHOR_ORCID, name="A Author", order=0),
+                ojs_client.OjsAuthor(orcid=OTHER_ORCID, name="Other", order=1),
+            ),
+        )
+    ])
+    r = client.post("/api/ojs/submissions/42/import")
+    assert r.status_code == 201
+    assert r.json()["doi_suffix"] == "CCR2025.1.3.Z"
+    assert r.json()["ojs_submission_id"] == 42
+
+    with Session(engine) as session:
+        from sqlmodel import select
+        authors = session.exec(
+            select(ManuscriptAuthor).where(
+                ManuscriptAuthor.manuscript_id == "CCR2025.1.3.Z"
+            )
+        ).all()
+    assert {a.orcid for a in authors} == {AUTHOR_ORCID, OTHER_ORCID}
+
+
+def test_import_ojs_submission_duplicate(client):
+    _set_ojs_subs([
+        ojs_client.OjsSubmission(
+            submission_id=42,
+            doi_suffix="CCR2025.1.3.Z",
+            title="Something",
+            authors=(),
+        )
+    ])
+    client.post("/api/ojs/submissions/42/import")
+    r = client.post("/api/ojs/submissions/42/import")
+    assert r.status_code == 409
+
+
+def test_import_unknown_submission_404(client):
+    _set_ojs_subs([])
+    r = client.post("/api/ojs/submissions/999/import")
+    assert r.status_code == 404
+
+
+def test_author_cannot_import(author_client):
+    r = author_client.post("/api/ojs/submissions/42/import")
+    assert r.status_code == 403
+
+
+def test_already_imported_flag(client):
+    _set_ojs_subs([
+        ojs_client.OjsSubmission(
+            submission_id=42,
+            doi_suffix="CCR2025.1.3.Z",
+            title="Something",
+            authors=(),
+        )
+    ])
+    client.post("/api/ojs/submissions/42/import")
+    r = client.get("/api/ojs/submissions")
+    assert r.json()[0]["already_imported"] is True
+
+
+# ── OJS DOI suffix extraction ─────────────────────────────────────────────────
+
+
+def test_extract_doi_suffix_with_prefix():
+    from web.backend.app.ojs import _extract_doi_suffix
+    assert _extract_doi_suffix("10.5117/CCR2025.1.2.YAO", "10.5117/") == "CCR2025.1.2.YAO"
+
+
+def test_extract_doi_suffix_fallback():
+    from web.backend.app.ojs import _extract_doi_suffix
+    assert _extract_doi_suffix("10.9999/CCR2025.1.2.YAO", "10.5117/") == "CCR2025.1.2.YAO"
+
+
+def test_extract_doi_suffix_none():
+    from web.backend.app.ojs import _extract_doi_suffix
+    assert _extract_doi_suffix(None, "10.5117/") is None
+    assert _extract_doi_suffix("", "10.5117/") is None
 
 
 # ── Integration: full upload → convert → download ────────────────────────────

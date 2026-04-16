@@ -102,6 +102,8 @@ npm install                      # root (concurrently)
 npm run install:frontend         # React frontend
 ```
 
+Copy [.env.dev.example](.env.dev.example) to `.env` and fill in the ORCID **sandbox** credentials and your own sandbox ORCID in `OJS_EDITOR_OVERRIDE_ORCIDS`. This file is tuned for local dev: `FRONTEND_URL`/`ORCID_REDIRECT_URI` point at localhost, `ORCID_ENV=sandbox`, and OJS is optional. Do **not** use [.env.example](.env.example) locally — its `SITE_ADDRESS` value is a Caddy placeholder for production and will break the OAuth redirect.
+
 Run the dev servers (backend on :8000, frontend on :5173):
 
 ```sh

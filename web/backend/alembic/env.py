@@ -6,17 +6,30 @@ from pathlib import Path
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
-
-# Make the app package importable when running alembic from web/backend/
-sys.path.insert(0, str(Path(__file__).parents[1]))
-
-# Import all table classes so SQLModel metadata is fully populated.
-from app.models import (  # noqa: F401
-    AccessToken,
-    LoginState,
-    Manuscript,
-)
 from sqlmodel import SQLModel
+
+# Populate SQLModel metadata with all table classes. When alembic is invoked
+# from *inside* the running FastAPI app (startup stamp), the models module is
+# already loaded as `web.backend.app.models`; importing it here under the
+# alternate name `app.models` would register the same tables twice on the
+# shared SQLModel.metadata and raise InvalidRequestError. So prefer the
+# package path the running app uses, and only fall back to the plain `app.*`
+# path when running alembic standalone from web/backend/.
+try:
+    from web.backend.app.models import (  # noqa: F401
+        AccessToken,
+        LoginState,
+        Manuscript,
+        ManuscriptAuthor,
+    )
+except ImportError:
+    sys.path.insert(0, str(Path(__file__).parents[1]))
+    from app.models import (  # noqa: F401
+        AccessToken,
+        LoginState,
+        Manuscript,
+        ManuscriptAuthor,
+    )
 
 config = context.config
 target_metadata = SQLModel.metadata

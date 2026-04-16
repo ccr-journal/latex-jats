@@ -1,4 +1,9 @@
-import type { CurrentUser, Manuscript, ManuscriptCreate } from "./types";
+import type {
+  CurrentUser,
+  Manuscript,
+  ManuscriptCreate,
+  OjsSubmission,
+} from "./types";
 
 const BASE = import.meta.env.VITE_API_URL ?? "";
 const SESSION_KEY = "ccr_session";
@@ -83,6 +88,17 @@ export function getManuscript(doiSuffix: string): Promise<Manuscript> {
   return apiFetch(`/api/manuscripts/${doiSuffix}`);
 }
 
+export function updateManuscript(
+  doiSuffix: string,
+  data: { fix_source?: boolean },
+): Promise<Manuscript> {
+  return apiFetch(`/api/manuscripts/${doiSuffix}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+}
+
 export function getStatus(doiSuffix: string): Promise<Manuscript> {
   return apiFetch(`/api/manuscripts/${doiSuffix}/status`);
 }
@@ -120,6 +136,18 @@ export function downloadUrl(doiSuffix: string): string {
 
 export function outputUrl(doiSuffix: string, path: string): string {
   return `${BASE}/api/manuscripts/${doiSuffix}/output/${path}`;
+}
+
+// ── OJS ───────────────────────────────────────────────────────────────────────
+
+export function listOjsSubmissions(): Promise<OjsSubmission[]> {
+  return apiFetch("/api/ojs/submissions");
+}
+
+export function importOjsSubmission(submissionId: number): Promise<Manuscript> {
+  return apiFetch(`/api/ojs/submissions/${submissionId}/import`, {
+    method: "POST",
+  });
 }
 
 export { ApiError };

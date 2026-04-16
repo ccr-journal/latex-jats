@@ -42,14 +42,30 @@ class Manuscript(SQLModel, table=True):
     doi_suffix: str = Field(primary_key=True)
     ojs_submission_id: Optional[int] = None
     status: ManuscriptStatus = ManuscriptStatus.draft
+    # OJS-imported metadata (populated on /api/ojs/submissions/{id}/import)
+    title: Optional[str] = None
+    abstract: Optional[str] = None  # HTML
+    keywords: Optional[list] = Field(default=None, sa_column=Column(JSON, nullable=True))
+    doi: Optional[str] = None
+    volume: Optional[str] = None
+    issue_number: Optional[str] = None
+    year: Optional[int] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
+    fix_source: bool = False
     uploaded_at: Optional[datetime] = None
     uploaded_by: Optional[str] = None  # "editor" | "author"
     job_log: str = ""
     job_started_at: Optional[datetime] = None
     job_completed_at: Optional[datetime] = None
     pipeline_steps: Optional[list] = Field(default=None, sa_column=Column(JSON, nullable=True))
+
+
+class ManuscriptAuthor(SQLModel, table=True):
+    manuscript_id: str = Field(foreign_key="manuscript.doi_suffix", primary_key=True)
+    orcid: str = Field(primary_key=True, index=True)
+    name: Optional[str] = None
+    order: int = 0
 
 
 class AccessToken(SQLModel, table=True):
@@ -79,6 +95,18 @@ class CurrentUser(SQLModel):
     name: Optional[str] = None
 
 
+class CurrentUserWithRole(SQLModel):
+    orcid: str
+    name: Optional[str] = None
+    role: str  # "editor" | "author"
+
+
+class AuthorRead(SQLModel):
+    orcid: str
+    name: Optional[str] = None
+    order: int = 0
+
+
 class StepLogEntry(SQLModel):
     name: str
     content: str
@@ -96,10 +124,20 @@ class ManuscriptRead(SQLModel):
     doi_suffix: str
     ojs_submission_id: Optional[int]
     status: ManuscriptStatus
+    title: Optional[str] = None
+    abstract: Optional[str] = None
+    keywords: Optional[list[str]] = None
+    doi: Optional[str] = None
+    volume: Optional[str] = None
+    issue_number: Optional[str] = None
+    year: Optional[int] = None
+    authors: list[AuthorRead] = []
+    fix_source: bool = False
     created_at: datetime
     updated_at: datetime
     uploaded_at: Optional[datetime]
     uploaded_by: Optional[str]
+    upload_file_count: Optional[int] = None  # computed, not stored
     job_log: str
     job_started_at: Optional[datetime]
     job_completed_at: Optional[datetime]

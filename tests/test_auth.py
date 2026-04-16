@@ -26,6 +26,7 @@ TEST_CFG = AuthConfig(
     ojs_base_url="https://ojs",
     ojs_journal_path="ccr",
     ojs_admin_token="admintok",
+    ojs_doi_prefix="10.5117/",
     ojs_editor_cache_ttl_seconds=300,
     session_token_ttl_days=30,
     editor_override_orcids=frozenset(),
@@ -106,20 +107,23 @@ def test_callback_editor_success(client, engine):
         assert row.orcid == "0000-0000-0000-0002"
 
 
-def test_callback_rejected_non_editor(client, engine):
+def test_callback_non_editor_allowed(client, engine):
+    """Non-editor ORCID users also get a session token; role is derived later."""
     _seed_state(engine, "s3")
     with patch(
         "web.backend.app.routes.auth.orcid_client.exchange_code",
-        new=AsyncMock(return_value=OrcidIdentity(orcid="0000-0000-0000-0004", name="Stranger")),
+        new=AsyncMock(return_value=OrcidIdentity(orcid="0000-0000-0000-0004", name="Author")),
     ), patch(
         "web.backend.app.routes.auth.ojs_client.fetch_editor_orcids",
         new=AsyncMock(return_value=frozenset()),
     ):
         r = client.get("/api/auth/orcid/callback?code=xyz&state=s3")
     assert r.status_code == 302
-    assert r.headers["location"] == "http://frontend/auth/complete#error=not_authorized"
+    assert r.headers["location"].startswith("http://frontend/auth/complete#token=")
     with Session(engine) as session:
-        assert session.exec(select(AccessToken)).first() is None
+        row = session.exec(select(AccessToken)).first()
+        assert row is not None
+        assert row.orcid == "0000-0000-0000-0004"
 
 
 def test_callback_invalid_state(client, engine):
@@ -147,8 +151,9 @@ def test_callback_orcid_unavailable(client, engine):
     assert r.status_code == 502
 
 
-def test_callback_ojs_unavailable_fails_closed(client, engine):
-    """When OJS is unreachable we can't verify editor status — reject login."""
+def test_callback_ojs_unavailable_still_allows_login(client, engine):
+    """OJS unreachable during login should not block the session — the role
+    lookup is deferred to later requests."""
     _seed_state(engine, "s6")
     with patch(
         "web.backend.app.routes.auth.orcid_client.exchange_code",
@@ -158,23 +163,32 @@ def test_callback_ojs_unavailable_fails_closed(client, engine):
         new=AsyncMock(side_effect=OjsUnavailable("down")),
     ):
         r = client.get("/api/auth/orcid/callback?code=xyz&state=s6")
-    assert r.status_code == 502
+    assert r.status_code == 302
+    assert r.headers["location"].startswith("http://frontend/auth/complete#token=")
     with Session(engine) as session:
-        assert session.exec(select(AccessToken)).first() is None
+        assert session.exec(select(AccessToken)).first() is not None
 
 
 # ── /me and /logout ──────────────────────────────────────────────────────────
 
 
-def test_me_returns_current_user(client, engine):
+def test_me_returns_current_user_with_role(client, engine):
     with Session(engine) as session:
         session.add(
             AccessToken(token="tok1", orcid="0000-0000-0000-0006", name="Ed")
         )
         session.commit()
-    r = client.get("/api/auth/me", headers={"Authorization": "Bearer tok1"})
+    with patch(
+        "web.backend.app.deps.ojs_client.fetch_editor_orcids",
+        new=AsyncMock(return_value=frozenset({"0000-0000-0000-0006"})),
+    ):
+        r = client.get("/api/auth/me", headers={"Authorization": "Bearer tok1"})
     assert r.status_code == 200
-    assert r.json() == {"orcid": "0000-0000-0000-0006", "name": "Ed"}
+    assert r.json() == {
+        "orcid": "0000-0000-0000-0006",
+        "name": "Ed",
+        "role": "editor",
+    }
 
 
 def test_me_without_token(client):

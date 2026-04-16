@@ -21,6 +21,7 @@ def cfg():
         ojs_base_url="https://ojs.example.org",
         ojs_journal_path="ccr",
         ojs_admin_token="admin",
+        ojs_doi_prefix="10.5117/",
         ojs_editor_cache_ttl_seconds=300,
         session_token_ttl_days=30,
         editor_override_orcids=frozenset({"0000-0000-0000-9999"}),

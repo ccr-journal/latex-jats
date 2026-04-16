@@ -20,6 +20,7 @@ class AuthConfig:
     ojs_base_url: str
     ojs_journal_path: str
     ojs_admin_token: str
+    ojs_doi_prefix: str
     ojs_editor_cache_ttl_seconds: int
     session_token_ttl_days: int
     # Dev-only: merged into the fetched editor set. Comma-separated ORCIDs.
@@ -87,6 +88,7 @@ def _load() -> AuthConfig:
         ojs_base_url=ojs_req("OJS_BASE_URL"),
         ojs_journal_path=ojs_req("OJS_JOURNAL_PATH", "ccr"),
         ojs_admin_token=ojs_req("OJS_ADMIN_TOKEN"),
+        ojs_doi_prefix=opt("OJS_DOI_PREFIX", "10.5117/"),
         ojs_editor_cache_ttl_seconds=int(opt("OJS_EDITOR_CACHE_TTL_SECONDS", "300")),
         session_token_ttl_days=int(opt("SESSION_TOKEN_TTL_DAYS", "30")),
         editor_override_orcids=frozenset(overrides),

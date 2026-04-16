@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { LogViewer } from "@/components/LogViewer";
 import { getManuscript, downloadUrl, outputUrl } from "@/api/client";
 import type { Manuscript } from "@/api/types";
@@ -50,16 +50,21 @@ export function PreviewPage() {
           <Button variant="outline" size="sm" onClick={() => setShowLog(!showLog)}>
             {showLog ? "Hide Log" : "Show Log"}
           </Button>
-          <Button variant="outline" size="sm" asChild>
-            <a href={outputUrl(doiSuffix, `${doiSuffix}.pdf`)} target="_blank" rel="noopener">
-              View PDF
-            </a>
-          </Button>
-          <Button size="sm" asChild>
-            <a href={downloadUrl(doiSuffix)} download>
-              Download ZIP
-            </a>
-          </Button>
+          <a
+            href={outputUrl(doiSuffix, `${doiSuffix}.pdf`)}
+            target="_blank"
+            rel="noopener"
+            className={buttonVariants({ variant: "outline", size: "sm" })}
+          >
+            View PDF
+          </a>
+          <a
+            href={downloadUrl(doiSuffix)}
+            download
+            className={buttonVariants({ size: "sm" })}
+          >
+            Download ZIP
+          </a>
         </div>
       </div>
 

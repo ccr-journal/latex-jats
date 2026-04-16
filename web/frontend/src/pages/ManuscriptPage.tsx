@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -13,7 +13,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { LogViewer } from "@/components/LogViewer";
 import { PipelineProgress } from "@/components/PipelineProgress";
 import { UploadZone } from "@/components/UploadZone";
-import { getManuscript, getStatus, uploadFiles, startProcessing, downloadUrl, outputUrl } from "@/api/client";
+import { getManuscript, getStatus, uploadFiles, startProcessing, updateManuscript, downloadUrl, outputUrl } from "@/api/client";
 import type { Manuscript, PipelineStep } from "@/api/types";
 
 const PENDING_STEPS: PipelineStep[] = [
@@ -22,6 +22,14 @@ const PENDING_STEPS: PipelineStep[] = [
   { name: "convert",  status: "pending", logs: [], started_at: null, completed_at: null },
   { name: "validate", status: "pending", logs: [], started_at: null, completed_at: null },
 ];
+
+function formatAuthors(authors: { name: string | null }[]): string {
+  const names = authors.map((a) => a.name ?? "Unknown");
+  if (names.length === 0) return "";
+  if (names.length === 1) return names[0];
+  if (names.length === 2) return `${names[0]} & ${names[1]}`;
+  return `${names[0]} et al.`;
+}
 
 function formatDate(iso: string | null): string {
   if (!iso) return "\u2014";
@@ -41,7 +49,7 @@ export function ManuscriptPage() {
   const [error, setError] = useState<string | null>(null);
   const [showFullLog, setShowFullLog] = useState(false);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
-  const [fix, setFix] = useState(false);
+  const [abstractExpanded, setAbstractExpanded] = useState(false);
 
   // Initial fetch
   useEffect(() => {
@@ -88,8 +96,13 @@ export function ManuscriptPage() {
     setUploadDialogOpen(false);
   };
 
+  const handleFixToggle = async (checked: boolean) => {
+    const updated = await updateManuscript(doiSuffix, { fix_source: checked });
+    setManuscript(updated);
+  };
+
   const handleStartProcessing = async () => {
-    const updated = await startProcessing(doiSuffix, fix);
+    const updated = await startProcessing(doiSuffix, manuscript.fix_source);
     setManuscript(updated);
   };
 
@@ -109,25 +122,72 @@ export function ManuscriptPage() {
             <StatusBadge status={manuscript.status} />
           </div>
         </CardHeader>
-        <CardContent>
-          <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-4">
-            <div>
-              <dt className="text-muted-foreground">Created</dt>
-              <dd>{formatDate(manuscript.created_at)}</dd>
+        <CardContent className="space-y-3 text-sm">
+          {manuscript.title && (
+            <div className="text-base font-medium">{manuscript.title}</div>
+          )}
+
+          {manuscript.authors.length > 0 && (
+            <div className="text-muted-foreground text-sm">
+              {formatAuthors(manuscript.authors)}
             </div>
-            <div>
-              <dt className="text-muted-foreground">Updated</dt>
-              <dd>{formatDate(manuscript.updated_at)}</dd>
+          )}
+
+          {(manuscript.volume ||
+            manuscript.issue_number ||
+            manuscript.year ||
+            manuscript.doi) && (
+            <div className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1">
+              {manuscript.volume && (
+                <span>Vol. {manuscript.volume}</span>
+              )}
+              {manuscript.issue_number && (
+                <span>No. {manuscript.issue_number}</span>
+              )}
+              {manuscript.year && <span>{manuscript.year}</span>}
+              {manuscript.doi && (
+                <a
+                  href={`https://doi.org/${manuscript.doi}`}
+                  target="_blank"
+                  rel="noopener"
+                  className="hover:underline"
+                >
+                  {manuscript.doi}
+                </a>
+              )}
             </div>
+          )}
+
+          {manuscript.abstract && (
             <div>
-              <dt className="text-muted-foreground">Uploaded</dt>
-              <dd>{formatDate(manuscript.uploaded_at)}</dd>
+              <div
+                className={`prose prose-sm max-w-none [&_p]:my-1 ${
+                  abstractExpanded ? "" : "line-clamp-2"
+                }`}
+                dangerouslySetInnerHTML={{ __html: manuscript.abstract }}
+              />
+              <button
+                type="button"
+                onClick={() => setAbstractExpanded(!abstractExpanded)}
+                className="text-muted-foreground mt-1 text-xs hover:underline"
+              >
+                {abstractExpanded ? "Show less" : "Show more"}
+              </button>
             </div>
-            <div>
-              <dt className="text-muted-foreground">Uploaded by</dt>
-              <dd>{manuscript.uploaded_by ?? "\u2014"}</dd>
+          )}
+
+          {manuscript.keywords && manuscript.keywords.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {manuscript.keywords.map((kw) => (
+                <span
+                  key={kw}
+                  className="bg-muted text-muted-foreground rounded px-2 py-0.5 text-xs"
+                >
+                  {kw}
+                </span>
+              ))}
             </div>
-          </dl>
+          )}
         </CardContent>
       </Card>
 
@@ -149,7 +209,10 @@ export function ManuscriptPage() {
         <CardContent className="space-y-4">
           {hasBeenUploaded ? (
             <p className="text-sm text-muted-foreground">
-              Last uploaded {formatDate(manuscript.uploaded_at)}
+              {manuscript.upload_file_count != null
+                ? `${manuscript.upload_file_count} file${manuscript.upload_file_count === 1 ? "" : "s"} uploaded`
+                : "Uploaded"}{" "}
+              {formatDate(manuscript.uploaded_at)}
               {manuscript.uploaded_by ? ` by ${manuscript.uploaded_by}` : ""}.
             </p>
           ) : (
@@ -161,8 +224,8 @@ export function ManuscriptPage() {
             <input
               type="checkbox"
               id="fix-source"
-              checked={fix}
-              onChange={(e) => setFix(e.target.checked)}
+              checked={manuscript.fix_source}
+              onChange={(e) => handleFixToggle(e.target.checked)}
               disabled={isProcessing}
               className="h-4 w-4 rounded border-input accent-primary"
             />
@@ -211,19 +274,23 @@ export function ManuscriptPage() {
         <CardContent>
           {isReady ? (
             <div className="flex gap-3">
-              <Button asChild>
-                <a href={downloadUrl(doiSuffix)} download>
-                  Download ZIP
-                </a>
-              </Button>
-              <Button variant="outline" asChild>
-                <Link to={`/manuscripts/${doiSuffix}/preview`}>View HTML Proof</Link>
-              </Button>
-              <Button variant="outline" asChild>
-                <a href={outputUrl(doiSuffix, `${doiSuffix}.pdf`)} target="_blank" rel="noopener">
-                  View PDF
-                </a>
-              </Button>
+              <a href={downloadUrl(doiSuffix)} download className={buttonVariants()}>
+                Download ZIP
+              </a>
+              <Link
+                to={`/manuscripts/${doiSuffix}/preview`}
+                className={buttonVariants({ variant: "outline" })}
+              >
+                View HTML Proof
+              </Link>
+              <a
+                href={outputUrl(doiSuffix, `${doiSuffix}.pdf`)}
+                target="_blank"
+                rel="noopener"
+                className={buttonVariants({ variant: "outline" })}
+              >
+                View PDF
+              </a>
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">

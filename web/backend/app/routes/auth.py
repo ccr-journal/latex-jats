@@ -10,11 +10,13 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from fastapi.responses import RedirectResponse
 from sqlmodel import Session, select
 
+from typing import Literal
+
 from .. import orcid as orcid_client
 from .. import ojs as ojs_client
 from ..config import get_config
-from ..deps import get_current_user, get_session
-from ..models import AccessToken, CurrentUser, LoginState
+from ..deps import get_current_role, get_current_user, get_session
+from ..models import AccessToken, CurrentUser, CurrentUserWithRole, LoginState
 
 logger = logging.getLogger("latex_jats.web.auth")
 
@@ -66,18 +68,13 @@ async def orcid_callback(
         logger.error("ORCID unavailable: %s", exc)
         raise HTTPException(502, detail="ORCID service unavailable")
 
+    # Warm the editor cache so the first role lookup after login is cheap.
+    # Failures here are non-fatal: any ORCID user is allowed a session;
+    # editor-gated endpoints will re-check and report cleanly if OJS is down.
     try:
-        editors = await ojs_client.fetch_editor_orcids()
+        await ojs_client.fetch_editor_orcids()
     except (ojs_client.OjsAdminTokenInvalid, ojs_client.OjsUnavailable) as exc:
-        logger.error("OJS editor lookup failed: %s", exc)
-        raise HTTPException(502, detail="Unable to verify editor status with OJS")
-
-    if identity.orcid not in editors:
-        logger.info("Rejected ORCID %s — not a CCR editor", identity.orcid)
-        return RedirectResponse(
-            f"{cfg.frontend_url}/auth/complete#error=not_authorized",
-            status_code=302,
-        )
+        logger.warning("OJS editor lookup failed during login: %s", exc)
 
     token = secrets.token_urlsafe(32)
     expires_at = datetime.utcnow() + timedelta(days=cfg.session_token_ttl_days)
@@ -110,6 +107,9 @@ def logout(
         session.commit()
 
 
-@router.get("/me", response_model=CurrentUser)
-def me(user: CurrentUser = Depends(get_current_user)):
-    return user
+@router.get("/me", response_model=CurrentUserWithRole)
+async def me(
+    user: CurrentUser = Depends(get_current_user),
+    role: Literal["editor", "author"] = Depends(get_current_role),
+):
+    return CurrentUserWithRole(orcid=user.orcid, name=user.name, role=role)

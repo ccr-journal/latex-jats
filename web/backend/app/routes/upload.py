@@ -5,12 +5,21 @@ import zipfile
 from datetime import datetime
 from pathlib import Path
 
+from typing import Literal
+
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
 from sqlmodel import Session
 
 from .. import deps
-from ..deps import get_current_user, get_session, get_storage
-from ..models import CurrentUser, ManuscriptRead, ManuscriptStatus, Manuscript
+from ..deps import (
+    get_current_role,
+    get_current_user,
+    get_session,
+    get_storage,
+    load_manuscript_for_user,
+    manuscript_to_read,
+)
+from ..models import CurrentUser, ManuscriptRead, ManuscriptStatus
 from ..storage import Storage
 from ..worker import run_pipeline, init_pipeline_steps
 
@@ -51,13 +60,12 @@ async def upload_source(
     doi_suffix: str,
     files: list[UploadFile] = File(...),
     uploaded_by: str = Form("editor"),
-    _user: CurrentUser = Depends(get_current_user),
+    user: CurrentUser = Depends(get_current_user),
+    role: Literal["editor", "author"] = Depends(get_current_role),
     session: Session = Depends(get_session),
     storage: Storage = Depends(get_storage),
 ):
-    ms = session.get(Manuscript, doi_suffix)
-    if not ms:
-        raise HTTPException(404, detail=f"Manuscript '{doi_suffix}' not found")
+    ms = load_manuscript_for_user(doi_suffix, session, user, role)
 
     if ms.status in (ManuscriptStatus.queued, ManuscriptStatus.processing):
         raise HTTPException(
@@ -98,7 +106,7 @@ async def upload_source(
 
     now = datetime.utcnow()
     ms.uploaded_at = now
-    ms.uploaded_by = "editor"
+    ms.uploaded_by = role
     ms.updated_at = now
     ms.status = ManuscriptStatus.uploaded
     ms.job_log = ""
@@ -109,7 +117,7 @@ async def upload_source(
     session.commit()
     session.refresh(ms)
 
-    return ms
+    return manuscript_to_read(ms, session)
 
 
 @router.post("/{doi_suffix}/process", response_model=ManuscriptRead)
@@ -117,14 +125,13 @@ async def start_processing(
     doi_suffix: str,
     background_tasks: BackgroundTasks,
     fix: bool = Form(False),
-    _user: CurrentUser = Depends(get_current_user),
+    user: CurrentUser = Depends(get_current_user),
+    role: Literal["editor", "author"] = Depends(get_current_role),
     session: Session = Depends(get_session),
     storage: Storage = Depends(get_storage),
 ):
     """Start the conversion pipeline on previously uploaded source."""
-    ms = session.get(Manuscript, doi_suffix)
-    if not ms:
-        raise HTTPException(404, detail=f"Manuscript '{doi_suffix}' not found")
+    ms = load_manuscript_for_user(doi_suffix, session, user, role)
 
     if ms.status in (ManuscriptStatus.queued, ManuscriptStatus.processing):
         raise HTTPException(
@@ -136,6 +143,7 @@ async def start_processing(
             400, detail="No source files uploaded yet — upload before starting processing"
         )
 
+    ms.fix_source = fix
     ms.status = ManuscriptStatus.queued
     ms.job_log = ""
     ms.job_started_at = None
@@ -148,4 +156,4 @@ async def start_processing(
 
     background_tasks.add_task(run_pipeline, doi_suffix, deps._engine, storage, fix=fix)
 
-    return ms
+    return manuscript_to_read(ms, session)
