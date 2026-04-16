@@ -18,6 +18,7 @@ class ManuscriptStatus(str, Enum):
     queued = "queued"
     processing = "processing"
     ready = "ready"
+    approved = "approved"
     failed = "failed"
     published = "published"
 

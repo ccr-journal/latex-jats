@@ -4,6 +4,7 @@ export type ManuscriptStatus =
   | "queued"
   | "processing"
   | "ready"
+  | "approved"
   | "failed"
   | "published";
 

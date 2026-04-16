@@ -28,6 +28,7 @@ logger = logging.getLogger("latex_jats.web.ojs")
 _ROLE_MANAGER = 16
 _ROLE_SECTION_EDITOR = 17
 _STAGE_COPYEDITING = 4
+_STAGE_PRODUCTION = 5
 _PAGE_SIZE = 100
 
 
@@ -325,6 +326,37 @@ async def fetch_submission(
                     if issue is not None:
                         sub = _enrich_from_issue(sub, issue)
             return sub
+    except httpx.RequestError as exc:
+        raise OjsUnavailable(str(exc)) from exc
+
+
+async def is_submission_in_production(
+    submission_id: int, cfg: AuthConfig | None = None
+) -> bool:
+    """Check whether an OJS submission has moved to production stage (stageId 5)."""
+    cfg = cfg or get_config()
+    if not cfg.ojs_admin_token or not cfg.ojs_base_url:
+        return False
+
+    base = (
+        f"{cfg.ojs_base_url.rstrip('/')}"
+        f"/index.php/{cfg.ojs_journal_path}/api/v1"
+    )
+    headers = {"Authorization": f"Bearer {cfg.ojs_admin_token}"}
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.get(
+                f"{base}/submissions/{submission_id}", headers=headers
+            )
+            if resp.status_code in (401, 403):
+                raise OjsAdminTokenInvalid(
+                    f"OJS rejected admin token ({resp.status_code}): {resp.text[:200]}"
+                )
+            if resp.status_code >= 400:
+                raise OjsUnavailable(
+                    f"OJS returned {resp.status_code}: {resp.text[:200]}"
+                )
+            return resp.json().get("stageId") == _STAGE_PRODUCTION
     except httpx.RequestError as exc:
         raise OjsUnavailable(str(exc)) from exc
 

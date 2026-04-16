@@ -14,7 +14,8 @@ import { PipelineProgress } from "@/components/PipelineProgress";
 import { MetadataCard } from "@/components/MetadataCard";
 import { UploadZone } from "@/components/UploadZone";
 import { useAuth } from "@/auth/AuthContext";
-import { getManuscript, getStatus, uploadFiles, startProcessing, updateManuscript, reimportOjsMetadata, downloadUrl, outputUrl, presign } from "@/api/client";
+import { getManuscript, getStatus, uploadFiles, startProcessing, updateManuscript, reimportOjsMetadata, approveManuscript, withdrawApproval, downloadUrl, outputUrl, presign } from "@/api/client";
+import { ApiError } from "@/api/client";
 import type { Manuscript, PipelineStep } from "@/api/types";
 
 const PENDING_STEPS: PipelineStep[] = [
@@ -54,6 +55,10 @@ export function ManuscriptPage() {
   const [abstractExpanded, setAbstractExpanded] = useState(false);
   const [reimporting, setReimporting] = useState(false);
   const [metadataRefreshKey, setMetadataRefreshKey] = useState(0);
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
+  const [approving, setApproving] = useState(false);
+  const [withdrawing, setWithdrawing] = useState(false);
+  const [withdrawError, setWithdrawError] = useState<string | null>(null);
 
   // Initial fetch
   useEffect(() => {
@@ -90,8 +95,10 @@ export function ManuscriptPage() {
 
   const isProcessing = manuscript.status === "queued" || manuscript.status === "processing";
   const isReady = manuscript.status === "ready";
+  const isApproved = manuscript.status === "approved";
+  const hasOutput = isReady || isApproved;
   const hasBeenUploaded = manuscript.uploaded_at !== null;
-  const canProcess = hasBeenUploaded && !isProcessing;
+  const canProcess = hasBeenUploaded && !isProcessing && !isApproved;
   const pipelineSteps = manuscript.pipeline_steps ?? PENDING_STEPS;
   const checkStep = pipelineSteps.find((s) => s.name === "check");
   const checkStepDone = checkStep != null && ["ok", "warnings", "errors"].includes(checkStep.status);
@@ -118,6 +125,30 @@ export function ManuscriptPage() {
       // Ignore — user will see stale data
     } finally {
       setReimporting(false);
+    }
+  };
+
+  const handleApprove = async () => {
+    setApproving(true);
+    try {
+      const updated = await approveManuscript(doiSuffix);
+      setManuscript(updated);
+      setApproveDialogOpen(false);
+    } finally {
+      setApproving(false);
+    }
+  };
+
+  const handleWithdrawApproval = async () => {
+    setWithdrawing(true);
+    setWithdrawError(null);
+    try {
+      const updated = await withdrawApproval(doiSuffix);
+      setManuscript(updated);
+    } catch (err) {
+      setWithdrawError(err instanceof ApiError ? err.message : "Failed to withdraw approval");
+    } finally {
+      setWithdrawing(false);
     }
   };
 
@@ -236,8 +267,8 @@ export function ManuscriptPage() {
             <Button
               variant={hasBeenUploaded ? "outline" : "default"}
               onClick={() => setUploadDialogOpen(true)}
-              disabled={isProcessing}
-              title={isProcessing ? "Wait for the current conversion to finish" : undefined}
+              disabled={isProcessing || isApproved}
+              title={isApproved ? "Manuscript has been approved — upload is locked" : isProcessing ? "Wait for the current conversion to finish" : undefined}
             >
               {hasBeenUploaded ? "Upload new version" : "Upload source"}
             </Button>
@@ -263,7 +294,7 @@ export function ManuscriptPage() {
               id="fix-source"
               checked={manuscript.fix_source}
               onChange={(e) => handleFixToggle(e.target.checked)}
-              disabled={isProcessing}
+              disabled={isProcessing || isApproved}
               className="h-4 w-4 rounded border-input accent-primary"
             />
             <Label htmlFor="fix-source" className="text-sm font-normal cursor-pointer">
@@ -272,7 +303,7 @@ export function ManuscriptPage() {
           </div>
           {canProcess && (
             <Button onClick={handleStartProcessing}>
-              {isReady || manuscript.status === "failed"
+              {isReady || isApproved || manuscript.status === "failed"
                 ? "Re-run conversion"
                 : "Start conversion"}
             </Button>
@@ -288,6 +319,34 @@ export function ManuscriptPage() {
             </DialogTitle>
           </DialogHeader>
           <UploadZone onUpload={handleUpload} />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Approve for publication</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm">
+            {pipelineSteps.some((s) => s.status === "warnings") && (
+              <p className="text-amber-700 bg-amber-50 rounded p-2">
+                This manuscript has pipeline warnings. Please review them before approving.
+              </p>
+            )}
+            <p className="text-muted-foreground">
+              After publication, the PDF and HTML proof will be locked and can no longer be changed.
+              To make further changes, you will need to withdraw approval, upload a new version and re-run the conversion.
+            </p>
+            <p>Are you sure you want to approve this manuscript for publication?</p>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setApproveDialogOpen(false)} disabled={approving}>
+              Cancel
+            </Button>
+            <Button onClick={handleApprove} disabled={approving}>
+              {approving ? "Approving\u2026" : "Approve"}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -309,6 +368,7 @@ export function ManuscriptPage() {
           <MetadataCard
             doiSuffix={doiSuffix}
             isEditor={isEditor}
+            readOnly={isApproved}
             refreshKey={metadataRefreshKey}
             onSync={() => {
               getManuscript(doiSuffix).then(setManuscript);
@@ -331,40 +391,62 @@ export function ManuscriptPage() {
       {/* Output — always visible */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Output</CardTitle>
+          <CardTitle className="text-base">View proofs</CardTitle>
         </CardHeader>
         <CardContent>
-          {isReady ? (
-            <div className="flex gap-3">
-              <Button
-                onClick={async () => {
-                  const token = await presign(doiSuffix);
-                  const a = document.createElement("a");
-                  a.href = downloadUrl(doiSuffix, token);
-                  a.download = "";
-                  a.click();
-                }}
-              >
-                Download ZIP
-              </Button>
-              <Link
-                to={`/manuscripts/${doiSuffix}/preview`}
-                className={buttonVariants({ variant: "outline" })}
-              >
-                View HTML Proof
-              </Link>
-              <Link
-                to={`/manuscripts/${doiSuffix}/xml`}
-                className={buttonVariants({ variant: "outline" })}
-              >
-                View XML
-              </Link>
-              <Link
-                to={`/manuscripts/${doiSuffix}/pdf`}
-                className={buttonVariants({ variant: "outline" })}
-              >
-                View PDF
-              </Link>
+          {hasOutput ? (
+            <div className="space-y-3">
+              <div className="flex gap-3">
+                <Button
+                  onClick={async () => {
+                    const token = await presign(doiSuffix);
+                    const a = document.createElement("a");
+                    a.href = downloadUrl(doiSuffix, token);
+                    a.download = "";
+                    a.click();
+                  }}
+                >
+                  Download ZIP
+                </Button>
+                <Link
+                  to={`/manuscripts/${doiSuffix}/preview`}
+                  className={buttonVariants({ variant: "outline" })}
+                >
+                  View HTML Proof
+                </Link>
+                <Link
+                  to={`/manuscripts/${doiSuffix}/xml`}
+                  className={buttonVariants({ variant: "outline" })}
+                >
+                  View XML
+                </Link>
+                <Link
+                  to={`/manuscripts/${doiSuffix}/pdf`}
+                  className={buttonVariants({ variant: "outline" })}
+                >
+                  View PDF
+                </Link>
+              </div>
+              {isReady && isEditor && (
+                <Button onClick={() => setApproveDialogOpen(true)}>
+                  Approve for publication
+                </Button>
+              )}
+              {isApproved && (
+                <p className="text-sm text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-950 rounded p-3">
+                  Thanks for checking and approving the proofs. We will now proceed to publish the article. You will be notified when the article is published.
+                </p>
+              )}
+              {isApproved && isEditor && (
+                <div className="flex items-center gap-3">
+                  <Button variant="outline" size="sm" onClick={handleWithdrawApproval} disabled={withdrawing}>
+                    {withdrawing ? "Withdrawing\u2026" : "Withdraw approval"}
+                  </Button>
+                  {withdrawError && (
+                    <span className="text-sm text-red-600">{withdrawError}</span>
+                  )}
+                </div>
+              )}
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">

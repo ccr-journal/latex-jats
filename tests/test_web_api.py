@@ -637,6 +637,111 @@ def test_author_cannot_upload_to_unlinked(client, author_client):
     assert r.status_code == 404
 
 
+# ── Approval ─────────────────────────────────────────────────────────────────
+
+
+def test_approve_manuscript(client, engine):
+    client.post("/api/manuscripts", json={"doi_suffix": "CCR2025.1.1.APPR"})
+    with Session(engine) as session:
+        ms = session.get(Manuscript, "CCR2025.1.1.APPR")
+        ms.status = "ready"
+        session.add(ms)
+        session.commit()
+    r = client.post("/api/manuscripts/CCR2025.1.1.APPR/approve")
+    assert r.status_code == 200
+    assert r.json()["status"] == "approved"
+
+
+def test_approve_requires_ready_status(client):
+    client.post("/api/manuscripts", json={"doi_suffix": "CCR2025.1.1.APPR2"})
+    r = client.post("/api/manuscripts/CCR2025.1.1.APPR2/approve")
+    assert r.status_code == 400
+    assert "ready" in r.json()["detail"]
+
+
+def test_approve_requires_editor(client, author_client, engine):
+    client.post("/api/manuscripts", json={"doi_suffix": "CCR2025.1.1.APPR3"})
+    with Session(engine) as session:
+        ms = session.get(Manuscript, "CCR2025.1.1.APPR3")
+        ms.status = "ready"
+        session.add(ms)
+        session.add(ManuscriptAuthor(
+            manuscript_id="CCR2025.1.1.APPR3", orcid=AUTHOR_ORCID, name="Author", order=0,
+        ))
+        session.commit()
+    r = author_client.post("/api/manuscripts/CCR2025.1.1.APPR3/approve")
+    assert r.status_code == 403
+
+
+def test_withdraw_approval(client, engine):
+    client.post("/api/manuscripts", json={"doi_suffix": "CCR2025.1.1.WD1"})
+    with Session(engine) as session:
+        ms = session.get(Manuscript, "CCR2025.1.1.WD1")
+        ms.status = "approved"
+        session.add(ms)
+        session.commit()
+    r = client.post("/api/manuscripts/CCR2025.1.1.WD1/withdraw-approval")
+    assert r.status_code == 200
+    assert r.json()["status"] == "ready"
+
+
+def test_withdraw_requires_approved_status(client):
+    client.post("/api/manuscripts", json={"doi_suffix": "CCR2025.1.1.WD2"})
+    r = client.post("/api/manuscripts/CCR2025.1.1.WD2/withdraw-approval")
+    assert r.status_code == 400
+    assert "approved" in r.json()["detail"]
+
+
+def test_withdraw_requires_editor(client, author_client, engine):
+    client.post("/api/manuscripts", json={"doi_suffix": "CCR2025.1.1.WD3"})
+    with Session(engine) as session:
+        ms = session.get(Manuscript, "CCR2025.1.1.WD3")
+        ms.status = "approved"
+        session.add(ms)
+        session.add(ManuscriptAuthor(
+            manuscript_id="CCR2025.1.1.WD3", orcid=AUTHOR_ORCID, name="Author", order=0,
+        ))
+        session.commit()
+    r = author_client.post("/api/manuscripts/CCR2025.1.1.WD3/withdraw-approval")
+    assert r.status_code == 403
+
+
+def test_withdraw_blocked_when_ojs_in_production(client, engine, monkeypatch):
+    client.post("/api/manuscripts", json={"doi_suffix": "CCR2025.1.1.WD4"})
+    with Session(engine) as session:
+        ms = session.get(Manuscript, "CCR2025.1.1.WD4")
+        ms.status = "approved"
+        ms.ojs_submission_id = 99
+        session.add(ms)
+        session.commit()
+
+    async def fake_in_production(sid, cfg=None):
+        return True
+    monkeypatch.setattr(ojs_client, "is_submission_in_production", fake_in_production)
+
+    r = client.post("/api/manuscripts/CCR2025.1.1.WD4/withdraw-approval")
+    assert r.status_code == 409
+    assert "production" in r.json()["detail"]
+
+
+def test_withdraw_allowed_when_ojs_not_in_production(client, engine, monkeypatch):
+    client.post("/api/manuscripts", json={"doi_suffix": "CCR2025.1.1.WD5"})
+    with Session(engine) as session:
+        ms = session.get(Manuscript, "CCR2025.1.1.WD5")
+        ms.status = "approved"
+        ms.ojs_submission_id = 99
+        session.add(ms)
+        session.commit()
+
+    async def fake_not_in_production(sid, cfg=None):
+        return False
+    monkeypatch.setattr(ojs_client, "is_submission_in_production", fake_not_in_production)
+
+    r = client.post("/api/manuscripts/CCR2025.1.1.WD5/withdraw-approval")
+    assert r.status_code == 200
+    assert r.json()["status"] == "ready"
+
+
 # ── OJS import ────────────────────────────────────────────────────────────────
 
 

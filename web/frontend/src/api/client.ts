@@ -100,6 +100,18 @@ export function updateManuscript(
   });
 }
 
+export function approveManuscript(doiSuffix: string): Promise<Manuscript> {
+  return apiFetch(`/api/manuscripts/${doiSuffix}/approve`, {
+    method: "POST",
+  });
+}
+
+export function withdrawApproval(doiSuffix: string): Promise<Manuscript> {
+  return apiFetch(`/api/manuscripts/${doiSuffix}/withdraw-approval`, {
+    method: "POST",
+  });
+}
+
 export function getStatus(doiSuffix: string): Promise<Manuscript> {
   return apiFetch(`/api/manuscripts/${doiSuffix}/status`);
 }

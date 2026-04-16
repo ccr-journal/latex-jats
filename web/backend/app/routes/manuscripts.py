@@ -25,6 +25,7 @@ from ..models import (
     ManuscriptAuthor,
     ManuscriptCreate,
     ManuscriptRead,
+    ManuscriptStatus,
 )
 from ..storage import Storage
 
@@ -84,6 +85,59 @@ def update_manuscript(
     ms = load_manuscript_for_user(doi_suffix, session, user, role)
     if body.fix_source is not None:
         ms.fix_source = body.fix_source
+    session.add(ms)
+    session.commit()
+    session.refresh(ms)
+    return manuscript_to_read(ms, session)
+
+
+@router.post("/{doi_suffix}/approve", response_model=ManuscriptRead)
+def approve_manuscript(
+    doi_suffix: str,
+    _editor: str = Depends(require_editor),
+    session: Session = Depends(get_session),
+):
+    ms = session.get(Manuscript, doi_suffix)
+    if ms is None:
+        raise HTTPException(404, detail=f"Manuscript '{doi_suffix}' not found")
+    if ms.status != ManuscriptStatus.ready:
+        raise HTTPException(
+            400, detail=f"Only manuscripts with status 'ready' can be approved (current: {ms.status.value})"
+        )
+    ms.status = ManuscriptStatus.approved
+    session.add(ms)
+    session.commit()
+    session.refresh(ms)
+    return manuscript_to_read(ms, session)
+
+
+@router.post("/{doi_suffix}/withdraw-approval", response_model=ManuscriptRead)
+async def withdraw_approval(
+    doi_suffix: str,
+    _editor: str = Depends(require_editor),
+    session: Session = Depends(get_session),
+):
+    ms = session.get(Manuscript, doi_suffix)
+    if ms is None:
+        raise HTTPException(404, detail=f"Manuscript '{doi_suffix}' not found")
+    if ms.status != ManuscriptStatus.approved:
+        raise HTTPException(
+            400, detail=f"Only approved manuscripts can have approval withdrawn (current: {ms.status.value})"
+        )
+    if ms.ojs_submission_id:
+        try:
+            in_production = await ojs_client.is_submission_in_production(ms.ojs_submission_id)
+        except ojs_client.OjsAdminTokenInvalid as exc:
+            logger.error("OJS admin token invalid: %s", exc)
+            raise HTTPException(502, detail="OJS admin token invalid")
+        except ojs_client.OjsUnavailable as exc:
+            logger.error("OJS unavailable: %s", exc)
+            raise HTTPException(502, detail=f"OJS unavailable: {exc}")
+        if in_production:
+            raise HTTPException(
+                409, detail="Cannot withdraw approval: the submission has already moved to production in OJS"
+            )
+    ms.status = ManuscriptStatus.ready
     session.add(ms)
     session.commit()
     session.refresh(ms)
