@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { StatusBadge } from "@/components/StatusBadge";
-import { LogViewer } from "@/components/LogViewer";
 import { PipelineProgress } from "@/components/PipelineProgress";
 import { MetadataCard } from "@/components/MetadataCard";
 import { UploadZone } from "@/components/UploadZone";
@@ -51,7 +50,6 @@ export function ManuscriptPage() {
   const [manuscript, setManuscript] = useState<Manuscript | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showFullLog, setShowFullLog] = useState(false);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [abstractExpanded, setAbstractExpanded] = useState(false);
   const [reimporting, setReimporting] = useState(false);
@@ -305,17 +303,30 @@ export function ManuscriptPage() {
         </CardContent>
       </Card>
 
-      {/* Metadata comparison — visible after check step for OJS-linked manuscripts */}
-      {manuscript.ojs_submission_id && checkStepDone && (
-        <MetadataCard
-          doiSuffix={doiSuffix}
-          isEditor={isEditor}
-          refreshKey={metadataRefreshKey}
-          onSync={() => {
-            getManuscript(doiSuffix).then(setManuscript);
-          }}
-        />
-      )}
+      {/* Metadata comparison */}
+      {manuscript.ojs_submission_id ? (
+        checkStepDone ? (
+          <MetadataCard
+            doiSuffix={doiSuffix}
+            isEditor={isEditor}
+            refreshKey={metadataRefreshKey}
+            onSync={() => {
+              getManuscript(doiSuffix).then(setManuscript);
+            }}
+          />
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Metadata Discrepancies</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Metadata comparison will be available after the check step completes.
+              </p>
+            </CardContent>
+          </Card>
+        )
+      ) : null}
 
       {/* Output — always visible */}
       <Card>
@@ -348,15 +359,12 @@ export function ManuscriptPage() {
               >
                 View XML
               </Link>
-              <Button
-                variant="outline"
-                onClick={async () => {
-                  const token = await presign(doiSuffix);
-                  window.open(outputUrl(doiSuffix, `${doiSuffix}.pdf`, token), "_blank");
-                }}
+              <Link
+                to={`/manuscripts/${doiSuffix}/pdf`}
+                className={buttonVariants({ variant: "outline" })}
               >
                 View PDF
-              </Button>
+              </Link>
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">
@@ -365,29 +373,6 @@ export function ManuscriptPage() {
           )}
         </CardContent>
       </Card>
-
-      {/* Full log (collapsible) */}
-      {!isProcessing && manuscript.job_log && (
-        <Card>
-          <CardHeader>
-            <button
-              type="button"
-              className="flex items-center gap-2 text-left"
-              onClick={() => setShowFullLog(!showFullLog)}
-            >
-              <CardTitle className="text-base">Full Log</CardTitle>
-              <span className="text-xs text-muted-foreground">
-                {showFullLog ? "▾ hide" : "▸ show"}
-              </span>
-            </button>
-          </CardHeader>
-          {showFullLog && (
-            <CardContent>
-              <LogViewer log={manuscript.job_log} />
-            </CardContent>
-          )}
-        </Card>
-      )}
     </div>
   );
 }

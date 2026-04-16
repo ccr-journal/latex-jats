@@ -1,16 +1,16 @@
 import { PreviewShell } from "@/components/PreviewShell";
 import { outputUrl } from "@/api/client";
 
-export function PreviewPage() {
+export function PdfPreviewPage() {
   return (
-    <PreviewShell activeTab="preview">
+    <PreviewShell activeTab="pdf">
       {({ doiSuffix, presignToken }) => {
-        const htmlUrl = outputUrl(doiSuffix, `${doiSuffix}.html`, presignToken);
+        const pdfUrl = outputUrl(doiSuffix, `${doiSuffix}.pdf`, presignToken);
         return (
           <iframe
-            src={htmlUrl}
-            title="HTML Proof Preview"
-            className="w-full rounded-md border bg-white"
+            src={pdfUrl}
+            title="PDF Preview"
+            className="w-full rounded-md border"
             style={{ height: "80vh" }}
           />
         );

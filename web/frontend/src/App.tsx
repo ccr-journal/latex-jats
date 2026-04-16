@@ -5,6 +5,7 @@ import { RequireAuth } from "@/auth/RequireAuth";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { ManuscriptPage } from "@/pages/ManuscriptPage";
 import { PreviewPage } from "@/pages/PreviewPage";
+import { PdfPreviewPage } from "@/pages/PdfPreviewPage";
 import { XmlPreviewPage } from "@/pages/XmlPreviewPage";
 import { LoginPage } from "@/pages/LoginPage";
 import { AuthCompletePage } from "@/pages/AuthCompletePage";
@@ -28,6 +29,10 @@ export default function App() {
             <Route
               path="/manuscripts/:doiSuffix/preview"
               element={<PreviewPage />}
+            />
+            <Route
+              path="/manuscripts/:doiSuffix/pdf"
+              element={<PdfPreviewPage />}
             />
             <Route
               path="/manuscripts/:doiSuffix/xml"

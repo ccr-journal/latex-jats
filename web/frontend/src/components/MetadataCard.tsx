@@ -78,7 +78,7 @@ export function MetadataCard({ doiSuffix, isEditor, refreshKey, onSync }: Metada
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Metadata</CardTitle>
+        <CardTitle className="text-base">Metadata Discrepancies</CardTitle>
       </CardHeader>
       <CardContent>
         {mismatches.length === 0 ? (
