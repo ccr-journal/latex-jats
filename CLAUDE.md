@@ -4,7 +4,7 @@
 
 This tool converts CCR (Computational Communication Research) journal articles from LaTeX to JATS XML for submission to the AUP Online publishing platform. It uses LaTeXML with custom bindings and a Python post-processing pipeline, and can optionally produce an HTML proof preview.
 
-A web service (see `website-design.md`) is built on top of this pipeline, where editors and authors can upload LaTeX source and check the conversion status. The FastAPI backend is in `web/backend/` (with pipeline integration), and a React frontend is in `web/frontend/`. Remaining steps are auth, OJS integration, and Docker packaging.
+A web service (see `website-design.md`) is built on top of this pipeline, where editors and authors can upload LaTeX source and check the conversion status. The FastAPI backend is in `web/backend/` (with pipeline integration), and a React frontend is in `web/frontend/`.
 
 ## Running the tool
 
@@ -35,7 +35,7 @@ npm run start:api                    # backend only (FastAPI on port 8000)
 npm run start:web                    # frontend only (Vite dev server on port 5173)
 ```
 
-Install dependencies: `uv sync --extra web` for the backend, `npm install` in root (for concurrently) and `npm run install:frontend` for the React frontend. The SQLite database and file storage are created automatically under `storage/` on first startup. Swagger UI is available at `http://localhost:8000/docs`.
+Install dependencies: `uv sync --extra web` for the backend, `npm install` in root (for concurrently) and `npm run install:frontend` for the React frontend. Copy `.env.dev.example` to `.env` and fill in ORCID sandbox credentials (see comments in that file). The SQLite database, migrations, and file storage are created automatically under `storage/` on first startup. Swagger UI is available at `http://localhost:8000/docs`.
 
 **Other CLI tools:**
 ```sh
@@ -137,20 +137,51 @@ web/
     app/
       main.py             FastAPI app, CORS, lifespan
       deps.py             get_session / get_storage dependency callables
-      models.py           SQLModel tables (Manuscript, AccessToken)
+      models.py           SQLModel tables (Manuscript, ManuscriptAuthor, AccessToken)
+      config.py           AuthConfig from env vars (ORCID, OJS, session settings)
+      deps.py             get_session / get_storage / get_current_user / get_current_role / require_editor
       storage.py          file storage abstraction (local filesystem, S3-ready interface)
       worker.py           background pipeline runner (prepare → convert → zip)
-      routes/             manuscripts.py, upload.py, status.py, download.py, output.py
-    alembic/              database migrations
+      ojs.py              OJS REST client (editor lookup, production submissions, DOI extraction)
+      orcid.py            ORCID OAuth code exchange
+      routes/             manuscripts.py, upload.py, status.py, download.py, output.py, auth.py, ojs.py
+    alembic/              database migrations (auto-run on startup)
     alembic.ini
   frontend/               Vite + React + TypeScript + shadcn/ui SPA
     src/
+      auth/               AuthContext (ORCID login state, role)
       api/                typed API client (client.ts, types.ts)
       pages/              DashboardPage, ManuscriptPage, PreviewPage
       components/         Layout, StatusBadge, UploadZone, LogViewer, CreateManuscriptDialog
-      components/ui/      shadcn/ui primitives (badge, button, card, dialog, input, label, table)
+      components/ui/      base-ui/shadcn primitives (badge, button, card, dialog, input, label, table)
 storage/                  runtime file storage (gitignored) — manuscripts/<doi_suffix>/source|output
 ```
+
+## Authentication and access control
+
+- **ORCID login** — any ORCID user can log in. Role (editor vs author) is derived per-request by comparing the user's ORCID against the OJS editor set (cached from `fetch_editor_orcids`). Dev override via `OJS_EDITOR_OVERRIDE_ORCIDS`.
+- **Editors** see all manuscripts and can create/import new ones from OJS.
+- **Authors** see only manuscripts where their ORCID appears in `ManuscriptAuthor`. Denied access returns 404 (not 403) to avoid leaking manuscript existence.
+- **`require_editor`** dependency gates editor-only endpoints (manuscript creation, OJS import).
+- **OJS integration** — editors import manuscripts from OJS production stage (stageId 5). Import populates `ManuscriptAuthor` rows (with ORCIDs), title, abstract, keywords, DOI, volume, issue, year. The production submissions list is cached for 60s.
+- The frontend UI component library uses `@base-ui/react`, not Radix. Use `render` prop (not `asChild`) for composition and `buttonVariants()` for link-styled buttons.
+
+## Database
+
+SQLite via SQLModel. Alembic migrations in `web/backend/alembic/versions/`. Migrations run automatically on startup (`alembic upgrade head` in `_init_db_schema`). For a fresh DB the full migration chain runs; for an already-current DB it's a no-op. Pre-alembic DBs (tables but no `alembic_version` row) require a manual `alembic stamp <revision>`.
+
+When adding new columns or tables, create a new migration in `web/backend/alembic/versions/` following the `0001`/`0002`/`0003` naming convention. Use `batch_alter_table` for SQLite compatibility.
+
+## Releasing
+
+Bump version in `pyproject.toml`, commit, then tag and push:
+
+```sh
+git tag v0.2.0
+git push origin v0.2.0
+```
+
+CI builds and pushes Docker images (`ccsamsterdam/latex-jats-api`, `ccsamsterdam/latex-jats-caddy`) on `v*` tags.
 
 The `gold/` directory under CCR2025.1.2.YAO contains the JATS XML produced by the professional typesetting company. Use it as a reference when evaluating output quality. It may contain minor imperfections, so it does not need to be matched exactly. See `todo.md` in the project root for a tracked list of discrepancies.
 
@@ -172,3 +203,5 @@ Integration tests are skipped automatically if `latexmlc` is not installed.
 - Every new LaTeXML binding feature (new macro or constructor in `ccr.cls.ltxml` or `biblatex.sty.ltxml`) should have an integration test in `test_integration.py`. Reuse existing fixture `.tex` files where possible, or add a new minimal fixture under `tests/fixtures/latex/`.
 - The `authors.tex` fixture is a good general-purpose base: it exercises authors, affiliations, abstract, keywords, and a bibliography. Use it for tests that need a complete front matter.
 - New FastAPI routes should have tests in `tests/test_web_api.py`, using `TestClient` with dependency overrides for `get_session` (in-memory SQLite with `StaticPool`) and `get_storage` (`tmp_path`). See existing tests there for the pattern.
+- The test suite has an `autouse` fixture that pins `fetch_editor_orcids` to return `{EDITOR_ORCID}` so role checks don't hit the network. OJS production submissions are injected via `ojs_client.set_production_submissions_override([...])`. Both are reset between tests.
+- Auth tests are in `tests/test_auth.py` (ORCID callback flow, session management). OJS client tests in `tests/test_ojs_client.py` (uses `respx` to mock HTTP).
