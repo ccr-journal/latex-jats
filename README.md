@@ -117,14 +117,32 @@ Swagger UI is available at http://localhost:8000/docs.
 Copy [.env.example](.env.example) to `.env` and fill in ORCID and OJS credentials (see the comments in that file), then:
 
 ```sh
-docker compose up -d --build
+docker compose up -d
 ```
 
 This starts two containers:
 - **caddy** — serves the React frontend and reverse-proxies `/api` to the backend; handles TLS certificates automatically when `SITE_ADDRESS` is set to a public domain
 - **api** — FastAPI backend with the full conversion pipeline (TeX Live, LaTeXML, inkscape)
 
-Data (SQLite database, uploaded manuscripts, conversion output) is stored in the `app_storage` Docker volume.
+Data (SQLite database, uploaded manuscripts, conversion output) is stored in the `app_storage` Docker volume. Database migrations run automatically on startup.
+
+#### Releasing a new version
+
+Pushing a `v*` tag triggers CI ([.github/workflows/release.yml](.github/workflows/release.yml)) which builds and pushes the `caddy` and `api` Docker images to Docker Hub, and creates a GitHub release.
+
+```sh
+# 1. Bump version in pyproject.toml, commit
+# 2. Tag and push
+git tag v0.2.0
+git push origin v0.2.0
+```
+
+On the VPS, pull the new images and restart:
+
+```sh
+docker compose pull
+docker compose up -d
+```
 
 #### Rebuilding the base image
 
