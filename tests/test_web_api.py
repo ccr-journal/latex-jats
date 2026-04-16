@@ -8,9 +8,10 @@ No real filesystem storage or network calls are made.
 """
 
 import io
+import json
 import zipfile
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -796,7 +797,7 @@ def test_upload_convert_download(client, test_storage):
     steps = data["pipeline_steps"]
     assert steps is not None
     assert len(steps) == 5
-    assert [s["name"] for s in steps] == ["prepare", "compile", "convert", "metadata", "validate"]
+    assert [s["name"] for s in steps] == ["prepare", "compile", "convert", "check", "validate"]
     for step in steps:
         assert step["status"] not in ("pending", "running"), f"Step {step['name']} still {step['status']}"
         assert step["started_at"] is not None
@@ -808,3 +809,138 @@ def test_upload_convert_download(client, test_storage):
     assert r.status_code == 200
     assert "application/zip" in r.headers.get("content-type", "")
     assert len(r.content) > 0
+
+
+# ── OJS metadata sync ───────────────────────────────────────────────────────
+
+
+def _setup_manuscript_with_comparison(engine, test_storage, doi="CCR.SYNC"):
+    """Create a manuscript with OJS link and a metadata_comparison.json."""
+    with Session(engine) as session:
+        session.add(Manuscript(
+            doi_suffix=doi,
+            ojs_submission_id=42,
+            title="OJS Title",
+            abstract="OJS abstract",
+            keywords=["kw1", "kw2"],
+        ))
+        session.add(ManuscriptAuthor(
+            manuscript_id=doi, orcid=AUTHOR_ORCID, name="A Author", order=0,
+        ))
+        session.commit()
+
+    convert_dir = test_storage.convert_output_dir(doi)
+    convert_dir.mkdir(parents=True, exist_ok=True)
+
+    comparison = [
+        {"field": "title", "status": "mismatch", "ojs": "OJS Title", "latex": "LaTeX Title"},
+        {"field": "abstract", "status": "ok", "ojs": "OJS abstract", "latex": "OJS abstract"},
+        {"field": "keywords", "status": "mismatch", "ojs": ["kw1", "kw2"], "latex": ["kw1", "kw3"]},
+        {"field": "doi", "status": "mismatch", "ojs": "10.5117/A", "latex": "10.5117/B"},
+    ]
+    (convert_dir / "metadata_comparison.json").write_text(json.dumps(comparison))
+
+    # Also write a minimal JATS XML for regeneration
+    (convert_dir / f"{doi}.xml").write_text(
+        '<?xml version="1.0"?>'
+        '<article><front><article-meta>'
+        '<article-title>LaTeX Title</article-title>'
+        '<article-id pub-id-type="doi">10.5117/B</article-id>'
+        '</article-meta></front></article>'
+    )
+    return doi
+
+
+@patch("web.backend.app.routes.manuscripts.ojs_client.fetch_submission", new_callable=AsyncMock)
+@patch("web.backend.app.routes.manuscripts.ojs_client.update_publication_field", new_callable=AsyncMock)
+def test_sync_ojs_field_title(mock_update, mock_fetch, client, engine, test_storage):
+    doi = _setup_manuscript_with_comparison(engine, test_storage)
+    # After push, re-import returns OJS submission with the updated title
+    mock_fetch.return_value = ojs_client.OjsSubmission(
+        submission_id=42, doi_suffix=doi, title="LaTeX Title",
+        authors=(ojs_client.OjsAuthor(orcid=AUTHOR_ORCID, name="A Author", order=0),),
+    )
+    r = client.post(
+        f"/api/manuscripts/{doi}/sync-ojs",
+        json={"field": "title"},
+    )
+    assert r.status_code == 200
+    mock_update.assert_called_once_with(42, "title", "LaTeX Title")
+
+    # Local DB should reflect re-imported OJS data
+    with Session(engine) as session:
+        ms = session.get(Manuscript, doi)
+        assert ms.title == "LaTeX Title"
+
+
+@patch("web.backend.app.routes.manuscripts.ojs_client.fetch_submission", new_callable=AsyncMock)
+@patch("web.backend.app.routes.manuscripts.ojs_client.update_publication_field", new_callable=AsyncMock)
+def test_sync_ojs_field_keywords(mock_update, mock_fetch, client, engine, test_storage):
+    doi = _setup_manuscript_with_comparison(engine, test_storage)
+    mock_fetch.return_value = ojs_client.OjsSubmission(
+        submission_id=42, doi_suffix=doi, title="OJS Title",
+        keywords=("kw1", "kw3"),
+        authors=(ojs_client.OjsAuthor(orcid=AUTHOR_ORCID, name="A Author", order=0),),
+    )
+    r = client.post(
+        f"/api/manuscripts/{doi}/sync-ojs",
+        json={"field": "keywords"},
+    )
+    assert r.status_code == 200
+    mock_update.assert_called_once_with(42, "keywords", ["kw1", "kw3"])
+
+    with Session(engine) as session:
+        ms = session.get(Manuscript, doi)
+        assert ms.keywords == ["kw1", "kw3"]
+
+
+def test_sync_ojs_rejects_non_updatable_field(client, engine, test_storage):
+    doi = _setup_manuscript_with_comparison(engine, test_storage)
+    r = client.post(
+        f"/api/manuscripts/{doi}/sync-ojs",
+        json={"field": "doi"},
+    )
+    assert r.status_code == 400
+    assert "not updatable" in r.json()["detail"]
+
+
+def test_sync_ojs_rejects_matching_field(client, engine, test_storage):
+    doi = _setup_manuscript_with_comparison(engine, test_storage)
+    r = client.post(
+        f"/api/manuscripts/{doi}/sync-ojs",
+        json={"field": "abstract"},
+    )
+    assert r.status_code == 400
+    assert "already matches" in r.json()["detail"]
+
+
+def test_sync_ojs_requires_editor(client, author_client, engine, test_storage):
+    doi = _setup_manuscript_with_comparison(engine, test_storage)
+    _link_author(engine, doi, AUTHOR_ORCID)
+    r = author_client.post(
+        f"/api/manuscripts/{doi}/sync-ojs",
+        json={"field": "title"},
+    )
+    assert r.status_code == 403
+
+
+def test_sync_ojs_no_ojs_link(client, engine, test_storage):
+    doi = _create(client, "CCR.NOOJS")
+    r = client.post(
+        f"/api/manuscripts/{doi}/sync-ojs",
+        json={"field": "title"},
+    )
+    assert r.status_code == 400
+    assert "not linked" in r.json()["detail"]
+
+
+def test_sync_ojs_no_comparison_file(client, engine, test_storage):
+    with Session(engine) as session:
+        session.add(Manuscript(doi_suffix="CCR.NOCOMP", ojs_submission_id=99))
+        session.commit()
+    r = client.post(
+        "/api/manuscripts/CCR.NOCOMP/sync-ojs",
+        json={"field": "title"},
+    )
+    assert r.status_code == 404
+    assert "comparison" in r.json()["detail"]

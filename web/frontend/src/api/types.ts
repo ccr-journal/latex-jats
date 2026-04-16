@@ -34,6 +34,7 @@ export interface Manuscript {
   ojs_submission_id: number | null;
   status: ManuscriptStatus;
   title: string | null;
+  subtitle: string | null;
   abstract: string | null;
   keywords: string[] | null;
   doi: string | null;
@@ -76,4 +77,11 @@ export interface OjsSubmission {
   title: string;
   authors: OjsAuthor[];
   already_imported: boolean;
+}
+
+export interface MetadataComparison {
+  field: string;
+  status: "ok" | "mismatch";
+  ojs: string | string[];
+  latex: string | string[];
 }

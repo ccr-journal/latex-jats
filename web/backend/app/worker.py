@@ -310,7 +310,7 @@ def run_pipeline(doi_suffix: str, engine: Engine, storage: Storage, *, fix: bool
                      failed=not ok, log_dirs=[log_dir])
 
         if not ok:
-            _skip_remaining_steps(engine, doi_suffix, ["convert", "metadata", "validate"])
+            _skip_remaining_steps(engine, doi_suffix, ["convert", "check", "validate"])
             _update_manuscript(
                 engine,
                 doi_suffix,
@@ -356,8 +356,8 @@ def run_pipeline(doi_suffix: str, engine: Engine, storage: Storage, *, fix: bool
                      log_dirs=[convert_log_dir])
 
         # ── Step 4: compare metadata against OJS ────────────────────────
-        current_step = "metadata"
-        _start_step(engine, doi_suffix, "metadata")
+        current_step = "check"
+        _start_step(engine, doi_suffix, "check")
         with Session(engine) as session:
             ms = session.get(Manuscript, doi_suffix)
             if ms and ms.ojs_submission_id:
@@ -370,7 +370,7 @@ def run_pipeline(doi_suffix: str, engine: Engine, storage: Storage, *, fix: bool
                     output_xml, ms, ms_authors,
                     output_json=convert_output / "metadata_comparison.json",
                 )
-        _finish_step(engine, doi_suffix, "metadata", collector.drain())
+        _finish_step(engine, doi_suffix, "check", collector.drain())
 
         # ── Step 5: validate JATS XML ────────────────────────────────────
         current_step = "validate"

@@ -163,7 +163,7 @@ storage/                  runtime file storage (gitignored) — manuscripts/<doi
 - **Editors** see all manuscripts and can create/import new ones from OJS.
 - **Authors** see only manuscripts where their ORCID appears in `ManuscriptAuthor`. Denied access returns 404 (not 403) to avoid leaking manuscript existence.
 - **`require_editor`** dependency gates editor-only endpoints (manuscript creation, OJS import).
-- **OJS integration** — editors import manuscripts from OJS production stage (stageId 5). Import populates `ManuscriptAuthor` rows (with ORCIDs), title, abstract, keywords, DOI, volume, issue, year. The production submissions list is cached for 60s.
+- **OJS integration** — editors import manuscripts from OJS copyediting stage (stageId 4). Import populates `ManuscriptAuthor` rows (with ORCIDs), title, abstract, keywords, DOI, volume, issue, year. The submissions list is cached for 60s.
 - The frontend UI component library uses `@base-ui/react`, not Radix. Use `render` prop (not `asChild`) for composition and `buttonVariants()` for link-styled buttons.
 
 ## Database

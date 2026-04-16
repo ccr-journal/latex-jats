@@ -2,6 +2,7 @@ import type {
   CurrentUser,
   Manuscript,
   ManuscriptCreate,
+  MetadataComparison,
   OjsSubmission,
 } from "./types";
 
@@ -154,6 +155,31 @@ export function listOjsSubmissions(): Promise<OjsSubmission[]> {
 export function importOjsSubmission(submissionId: number): Promise<Manuscript> {
   return apiFetch(`/api/ojs/submissions/${submissionId}/import`, {
     method: "POST",
+  });
+}
+
+export function reimportOjsMetadata(doiSuffix: string): Promise<Manuscript> {
+  return apiFetch(`/api/manuscripts/${doiSuffix}/reimport-ojs`, {
+    method: "POST",
+  });
+}
+
+// ── Metadata comparison ──────────────────────────────────────────────────────
+
+export function getMetadataComparison(
+  doiSuffix: string,
+): Promise<MetadataComparison[]> {
+  return apiFetch(`/api/manuscripts/${doiSuffix}/output/metadata_comparison.json`);
+}
+
+export function syncOjsField(
+  doiSuffix: string,
+  field: string,
+): Promise<MetadataComparison[]> {
+  return apiFetch(`/api/manuscripts/${doiSuffix}/sync-ojs`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ field }),
   });
 }
 

@@ -27,6 +27,7 @@ export function CreateManuscriptDialog({ onCreated }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [importing, setImporting] = useState<number | null>(null);
 
+  const [filter, setFilter] = useState("");
   const [manualOpen, setManualOpen] = useState(false);
   const [doiSuffix, setDoiSuffix] = useState("");
   const [submittingManual, setSubmittingManual] = useState(false);
@@ -77,9 +78,9 @@ export function CreateManuscriptDialog({ onCreated }: Props) {
       <DialogTrigger render={<Button />}>
         New Manuscript
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Import from OJS Production</DialogTitle>
+          <DialogTitle>Import from OJS Copyediting Queue</DialogTitle>
         </DialogHeader>
 
         {loading && <p className="text-muted-foreground">Loading OJS submissions…</p>}
@@ -87,13 +88,27 @@ export function CreateManuscriptDialog({ onCreated }: Props) {
 
         {!loading && submissions && submissions.length === 0 && (
           <p className="text-muted-foreground py-4 text-sm">
-            No submissions currently in production stage in OJS.
+            No submissions currently in copyediting stage in OJS.
           </p>
         )}
 
         {!loading && submissions && submissions.length > 0 && (
-          <div className="max-h-96 space-y-2 overflow-y-auto">
-            {submissions.map((s) => (
+          <div className="min-w-0 space-y-3">
+            <Input
+              placeholder="Filter by title or DOI suffix…"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+            />
+          <div className="max-h-96 space-y-2 overflow-y-auto overflow-x-hidden">
+            {submissions.filter((s) => {
+              if (!filter.trim()) return true;
+              const q = filter.trim().toLowerCase();
+              return (
+                s.title.toLowerCase().includes(q) ||
+                s.doi_suffix.toLowerCase().includes(q) ||
+                s.authors.some((a) => a.name?.toLowerCase().includes(q))
+              );
+            }).map((s) => (
               <div
                 key={s.submission_id}
                 className="flex items-center justify-between gap-3 rounded-md border p-3"
@@ -117,6 +132,7 @@ export function CreateManuscriptDialog({ onCreated }: Props) {
                 </Button>
               </div>
             ))}
+          </div>
           </div>
         )}
 

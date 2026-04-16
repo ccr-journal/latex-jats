@@ -5,9 +5,9 @@ Used for two things:
 1. Editor-ORCID lookup (see fetch_editor_orcids) — the authoritative set of
    CCR editors, used to determine whether a logged-in ORCID user has editor
    privileges.
-2. Production-submission listing (see fetch_production_submissions) — used by
+2. Copyediting-submission listing (see fetch_production_submissions) — used by
    the "create manuscript" picker in the frontend. Returns submissions
-   currently in OJS production stage (stageId 5), with their DOI suffix and
+   currently in OJS copyediting stage (stageId 4), with their DOI suffix and
    author ORCIDs.
 
 The backend holds a journal-admin OJS API token in `OJS_ADMIN_TOKEN`.
@@ -27,7 +27,7 @@ logger = logging.getLogger("latex_jats.web.ojs")
 
 _ROLE_MANAGER = 16
 _ROLE_SECTION_EDITOR = 17
-_STAGE_PRODUCTION = 5
+_STAGE_COPYEDITING = 4
 _PAGE_SIZE = 100
 
 
@@ -43,6 +43,7 @@ class OjsSubmission:
     submission_id: int
     doi_suffix: str
     title: str
+    subtitle: str | None = None
     authors: tuple[OjsAuthor, ...] = field(default_factory=tuple)
     doi: str | None = None
     abstract: str | None = None  # HTML
@@ -207,7 +208,7 @@ def _localized(value) -> str:
 async def fetch_production_submissions(
     cfg: AuthConfig | None = None,
 ) -> list[OjsSubmission]:
-    """Return OJS submissions currently in production stage.
+    """Return OJS submissions currently in copyediting stage.
 
     Skips submissions without a DOI (we need the DOI suffix as the manuscript
     primary key). Returns an empty list if OJS is not configured.
@@ -239,7 +240,7 @@ async def fetch_production_submissions(
         async with httpx.AsyncClient(timeout=15.0) as client:
             while True:
                 params = [
-                    ("stageIds[]", str(_STAGE_PRODUCTION)),
+                    ("stageIds[]", str(_STAGE_COPYEDITING)),
                     ("count", str(_PAGE_SIZE)),
                     ("offset", str(offset)),
                 ]
@@ -412,6 +413,175 @@ async def _fetch_issue(
     return resp.json()
 
 
+async def update_publication_field(
+    submission_id: int,
+    field: str,
+    latex_value: str | list[str],
+    cfg: AuthConfig | None = None,
+) -> None:
+    """Push a single metadata field from the LaTeX/JATS output to OJS.
+
+    Supported fields: title, abstract, keywords.  Authors are handled
+    separately via ``update_publication_authors``.
+    """
+    if field not in ("title", "subtitle", "abstract", "keywords"):
+        raise ValueError(f"Unsupported field for OJS update: {field!r}")
+
+    cfg = cfg or get_config()
+    if not cfg.ojs_admin_token or not cfg.ojs_base_url:
+        raise OjsUnavailable("OJS not configured")
+
+    base = (
+        f"{cfg.ojs_base_url.rstrip('/')}"
+        f"/index.php/{cfg.ojs_journal_path}/api/v1"
+    )
+    headers = {"Authorization": f"Bearer {cfg.ojs_admin_token}"}
+
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            # Fetch submission to get the current publication ID
+            resp = await client.get(
+                f"{base}/submissions/{submission_id}", headers=headers
+            )
+            if resp.status_code >= 400:
+                raise OjsUnavailable(
+                    f"OJS returned {resp.status_code} fetching submission: {resp.text[:200]}"
+                )
+            parsed = _parse_submission(resp.json(), cfg.ojs_doi_prefix)
+            if parsed is None:
+                raise OjsUnavailable(f"Could not parse submission {submission_id}")
+            _, publication_id = parsed
+
+            # Build the PUT payload
+            if field == "title":
+                payload = {"title": {"en": latex_value}}
+            elif field == "subtitle":
+                payload = {"subtitle": {"en": latex_value or ""}}
+            elif field == "abstract":
+                payload = {"abstract": {"en": latex_value}}
+            elif field == "keywords":
+                payload = {"keywords": {"en": latex_value}}
+
+            # OJS accepts auth via Bearer header or apiToken query param;
+            # some configurations only grant write access via apiToken.
+            resp = await client.put(
+                f"{base}/submissions/{submission_id}/publications/{publication_id}",
+                params={"apiToken": cfg.ojs_admin_token},
+                headers={"Content-Type": "application/json"},
+                json=payload,
+            )
+            if resp.status_code == 401:
+                raise OjsAdminTokenInvalid(
+                    f"OJS rejected token for PUT: {resp.text[:200]}"
+                )
+            if resp.status_code == 403:
+                raise OjsUnavailable(
+                    "OJS refused the update — the publication may already be published"
+                )
+            if resp.status_code >= 400:
+                raise OjsUnavailable(
+                    f"OJS returned {resp.status_code} updating publication: {resp.text[:200]}"
+                )
+    except httpx.RequestError as exc:
+        raise OjsUnavailable(str(exc)) from exc
+
+    logger.info(
+        "Updated OJS publication field %r for submission %s", field, submission_id
+    )
+
+
+async def update_publication_authors(
+    submission_id: int,
+    latex_authors: list[str],
+    cfg: AuthConfig | None = None,
+) -> None:
+    """Update author names in an OJS publication to match LaTeX output.
+
+    Fetches the current publication authors, matches by position, and updates
+    names for mismatched entries.  Preserves OJS author IDs, ORCIDs,
+    affiliations, and other fields.
+    """
+    cfg = cfg or get_config()
+    if not cfg.ojs_admin_token or not cfg.ojs_base_url:
+        raise OjsUnavailable("OJS not configured")
+
+    base = (
+        f"{cfg.ojs_base_url.rstrip('/')}"
+        f"/index.php/{cfg.ojs_journal_path}/api/v1"
+    )
+    headers = {
+        "Authorization": f"Bearer {cfg.ojs_admin_token}",
+        "Content-Type": "application/json",
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            # Get submission + publication ID
+            resp = await client.get(
+                f"{base}/submissions/{submission_id}", headers=headers
+            )
+            if resp.status_code >= 400:
+                raise OjsUnavailable(
+                    f"OJS returned {resp.status_code}: {resp.text[:200]}"
+                )
+            parsed = _parse_submission(resp.json(), cfg.ojs_doi_prefix)
+            if parsed is None:
+                raise OjsUnavailable(f"Could not parse submission {submission_id}")
+            _, publication_id = parsed
+
+            # Fetch current publication to get existing author records
+            publication = await _fetch_publication(
+                client, cfg, submission_id, publication_id, headers
+            )
+            if publication is None:
+                raise OjsUnavailable("Could not fetch publication for author update")
+
+            ojs_authors = publication.get("authors") or []
+            # Update names by position for as many as we can match
+            for i, latex_name in enumerate(latex_authors):
+                if i >= len(ojs_authors):
+                    break
+                author = ojs_authors[i]
+                # Split LaTeX "Given Family" into given/family names
+                parts = latex_name.rsplit(" ", 1)
+                given = parts[0] if len(parts) > 1 else latex_name
+                family = parts[1] if len(parts) > 1 else ""
+
+                author_id = author.get("id")
+                if author_id is None:
+                    continue
+
+                resp = await client.put(
+                    f"{base}/submissions/{submission_id}/publications/{publication_id}",
+                    headers=headers,
+                    json={
+                        "authors": [
+                            {
+                                **a,
+                                **(
+                                    {
+                                        "givenName": {"en": given},
+                                        "familyName": {"en": family},
+                                    }
+                                    if a.get("id") == author_id
+                                    else {}
+                                ),
+                            }
+                            for a in ojs_authors
+                        ]
+                    },
+                )
+                if resp.status_code >= 400:
+                    logger.warning(
+                        "Failed to update author %d for submission %s: %s",
+                        i, submission_id, resp.text[:200],
+                    )
+    except httpx.RequestError as exc:
+        raise OjsUnavailable(str(exc)) from exc
+
+    logger.info("Updated OJS authors for submission %s", submission_id)
+
+
 def _parse_submission(
     item: dict, doi_prefix: str
 ) -> tuple[OjsSubmission, int] | None:
@@ -443,13 +613,18 @@ def _parse_submission(
         )
         return None
 
-    title = _localized(publication.get("fullTitle") or publication.get("title"))
+    title = _localized(publication.get("title"))
+    subtitle = _localized(publication.get("subtitle")) or None
+    # Fall back to fullTitle if title is empty (older OJS)
+    if not title:
+        title = _localized(publication.get("fullTitle"))
     # Author list + abstract/keywords aren't embedded in the submissions-list
     # response; leave blank here and fill them in via a per-publication fetch.
     sub = OjsSubmission(
         submission_id=int(submission_id),
         doi_suffix=doi_suffix,
         title=title or doi_suffix,
+        subtitle=subtitle,
         authors=(),
         doi=doi,
     )

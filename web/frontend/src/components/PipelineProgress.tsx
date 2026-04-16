@@ -12,6 +12,7 @@ const STEP_LABELS: Record<string, string> = {
   prepare: "Prepare",
   compile: "Compile",
   convert: "Convert",
+  check: "Check",
   validate: "Validate",
 };
 

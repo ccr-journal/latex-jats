@@ -12,15 +12,17 @@ import { Label } from "@/components/ui/label";
 import { StatusBadge } from "@/components/StatusBadge";
 import { LogViewer } from "@/components/LogViewer";
 import { PipelineProgress } from "@/components/PipelineProgress";
+import { MetadataCard } from "@/components/MetadataCard";
 import { UploadZone } from "@/components/UploadZone";
-import { getManuscript, getStatus, uploadFiles, startProcessing, updateManuscript, downloadUrl, outputUrl, presign } from "@/api/client";
+import { useAuth } from "@/auth/AuthContext";
+import { getManuscript, getStatus, uploadFiles, startProcessing, updateManuscript, reimportOjsMetadata, downloadUrl, outputUrl, presign } from "@/api/client";
 import type { Manuscript, PipelineStep } from "@/api/types";
 
 const PENDING_STEPS: PipelineStep[] = [
   { name: "prepare",  status: "pending", logs: [], started_at: null, completed_at: null },
   { name: "compile",  status: "pending", logs: [], started_at: null, completed_at: null },
   { name: "convert",  status: "pending", logs: [], started_at: null, completed_at: null },
-  { name: "metadata", status: "pending", logs: [], started_at: null, completed_at: null },
+  { name: "check",    status: "pending", logs: [], started_at: null, completed_at: null },
   { name: "validate", status: "pending", logs: [], started_at: null, completed_at: null },
 ];
 
@@ -45,12 +47,15 @@ function formatDate(iso: string | null): string {
 
 export function ManuscriptPage() {
   const { doiSuffix } = useParams<{ doiSuffix: string }>();
+  const { user } = useAuth();
   const [manuscript, setManuscript] = useState<Manuscript | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showFullLog, setShowFullLog] = useState(false);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [abstractExpanded, setAbstractExpanded] = useState(false);
+  const [reimporting, setReimporting] = useState(false);
+  const [metadataRefreshKey, setMetadataRefreshKey] = useState(0);
 
   // Initial fetch
   useEffect(() => {
@@ -90,6 +95,9 @@ export function ManuscriptPage() {
   const hasBeenUploaded = manuscript.uploaded_at !== null;
   const canProcess = hasBeenUploaded && !isProcessing;
   const pipelineSteps = manuscript.pipeline_steps ?? PENDING_STEPS;
+  const checkStep = pipelineSteps.find((s) => s.name === "check");
+  const checkStepDone = checkStep != null && ["ok", "warnings", "errors"].includes(checkStep.status);
+  const isEditor = user?.role === "editor";
 
   const handleUpload = async (files: File[]) => {
     const updated = await uploadFiles(doiSuffix, files);
@@ -100,6 +108,19 @@ export function ManuscriptPage() {
   const handleFixToggle = async (checked: boolean) => {
     const updated = await updateManuscript(doiSuffix, { fix_source: checked });
     setManuscript(updated);
+  };
+
+  const handleReimport = async () => {
+    setReimporting(true);
+    try {
+      const updated = await reimportOjsMetadata(doiSuffix);
+      setManuscript(updated);
+      setMetadataRefreshKey((k) => k + 1);
+    } catch {
+      // Ignore — user will see stale data
+    } finally {
+      setReimporting(false);
+    }
   };
 
   const handleStartProcessing = async () => {
@@ -120,12 +141,29 @@ export function ManuscriptPage() {
         <CardHeader>
           <div className="flex items-start justify-between gap-4">
             <CardTitle className="text-xl">{manuscript.doi_suffix}</CardTitle>
-            <StatusBadge status={manuscript.status} />
+            <div className="flex items-center gap-2">
+              {isEditor && manuscript.ojs_submission_id && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={reimporting || isProcessing}
+                  onClick={handleReimport}
+                >
+                  {reimporting ? "Importing\u2026" : "Refresh from OJS"}
+                </Button>
+              )}
+              <StatusBadge status={manuscript.status} />
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           {manuscript.title && (
-            <div className="text-base font-medium">{manuscript.title}</div>
+            <div className="text-base font-medium">
+              {manuscript.title}
+              {manuscript.subtitle && (
+                <span className="text-muted-foreground font-normal">: {manuscript.subtitle}</span>
+              )}
+            </div>
           )}
 
           {manuscript.authors.length > 0 && (
@@ -267,6 +305,18 @@ export function ManuscriptPage() {
         </CardContent>
       </Card>
 
+      {/* Metadata comparison — visible after check step for OJS-linked manuscripts */}
+      {manuscript.ojs_submission_id && checkStepDone && (
+        <MetadataCard
+          doiSuffix={doiSuffix}
+          isEditor={isEditor}
+          refreshKey={metadataRefreshKey}
+          onSync={() => {
+            getManuscript(doiSuffix).then(setManuscript);
+          }}
+        />
+      )}
+
       {/* Output — always visible */}
       <Card>
         <CardHeader>
@@ -291,6 +341,12 @@ export function ManuscriptPage() {
                 className={buttonVariants({ variant: "outline" })}
               >
                 View HTML Proof
+              </Link>
+              <Link
+                to={`/manuscripts/${doiSuffix}/xml`}
+                className={buttonVariants({ variant: "outline" })}
+              >
+                View XML
               </Link>
               <Button
                 variant="outline"

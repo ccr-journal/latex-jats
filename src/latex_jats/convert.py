@@ -429,18 +429,27 @@ def _reformat_article_info_cell(html_file):
     year = fields.get("Publication date (electronic)", "")
     vol = fields.get("Volume", "")
     issue = fields.get("Issue", "")
-    page = fields.get("Page", "")
+    page = fields.get("Page", fields.get("Pages", ""))
     doi = fields.get("DOI", "")
+
+    # page may be "fpage–lpage" or just "fpage"
+    if "\u2013" in page:
+        fpage, lpage = page.split("\u2013", 1)
+    elif "-" in page:
+        fpage, lpage = page.split("-", 1)
+    else:
+        fpage, lpage = page, ""
 
     mg = art_cell.find('.//div[@class="metadata-group"]')
     if mg is None:
         return
     mg.clear()
 
-    if vol and issue and year and page:
+    if vol and issue and year:
+        page_range = f" {fpage}\u2013{lpage}" if fpage and lpage else f" {fpage}" if fpage else ""
         cite_line = lxml_html.fragment_fromstring(
             f'<p class="metadata-entry">'
-            f'CCR {vol}.{issue} ({year}) {page}\u2013?'
+            f'CCR {vol}.{issue} ({year}){page_range}'
             f'</p>'
         )
         mg.append(cite_line)
@@ -1861,10 +1870,23 @@ def compare_metadata(jats_file, manuscript, authors, output_json=None):
             meta_logger.warning("Metadata mismatch [%s]:\n  OJS:   %s\n  LaTeX: %s",
                                 field, ojs_val, jats_val)
 
-    # ── Title ────────────────────────────────────────────────────────────
+    # ── Title / Subtitle ──────────────────────────────────────────────────
     jats_title_elem = am.find(".//article-title")
-    jats_title = _elem_text(jats_title_elem)
-    _compare("title", manuscript.title, jats_title)
+    jats_full_title = _elem_text(jats_title_elem)
+    # JATS has no subtitle element in article-title; split on ": " to match
+    # OJS's separate title/subtitle fields.
+    ojs_subtitle = getattr(manuscript, "subtitle", None)
+    if ojs_subtitle:
+        # OJS has a subtitle — split the JATS title accordingly
+        if ": " in jats_full_title:
+            jats_title, jats_subtitle = jats_full_title.split(": ", 1)
+        else:
+            jats_title, jats_subtitle = jats_full_title, ""
+        _compare("title", manuscript.title, jats_title)
+        _compare("subtitle", ojs_subtitle, jats_subtitle)
+    else:
+        # No OJS subtitle — compare the full title as one field
+        _compare("title", manuscript.title, jats_full_title)
 
     # ── Abstract ─────────────────────────────────────────────────────────
     abstract_elem = am.find("abstract")

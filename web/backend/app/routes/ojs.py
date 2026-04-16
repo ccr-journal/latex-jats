@@ -97,6 +97,7 @@ async def import_submission(
         doi_suffix=target.doi_suffix,
         ojs_submission_id=target.submission_id,
         title=target.title or None,
+        subtitle=target.subtitle,
         abstract=target.abstract,
         keywords=list(target.keywords) if target.keywords else None,
         doi=target.doi,

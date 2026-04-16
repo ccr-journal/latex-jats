@@ -34,7 +34,10 @@ def _safe_extract_zip(data: bytes, dest: Path) -> None:
     relative subdirectory structure otherwise.
     """
     with zipfile.ZipFile(io.BytesIO(data)) as zf:
-        names = [n for n in zf.namelist() if not n.endswith("/")]
+        names = [n for n in zf.namelist()
+                 if not n.endswith("/")
+                 and not n.startswith("__MACOSX/")
+                 and not n.endswith(".DS_Store")]
 
         # Detect single top-level directory wrapper
         prefix = ""
@@ -44,6 +47,9 @@ def _safe_extract_zip(data: bytes, dest: Path) -> None:
             prefix = top_dirs.pop() + "/"
 
         for member in zf.namelist():
+            # Skip macOS resource fork junk
+            if member.startswith("__MACOSX/"):
+                continue
             # Strip the single wrapper directory if present
             rel = member[len(prefix):] if prefix and member.startswith(prefix) else member
             if not rel or rel.endswith("/"):

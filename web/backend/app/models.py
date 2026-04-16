@@ -32,7 +32,7 @@ class StepStatus(str, Enum):
     skipped = "skipped"
 
 
-PIPELINE_STEPS = ["prepare", "compile", "convert", "metadata", "validate"]
+PIPELINE_STEPS = ["prepare", "compile", "convert", "check", "validate"]
 
 
 # ── Tables ────────────────────────────────────────────────────────────────────
@@ -44,6 +44,7 @@ class Manuscript(SQLModel, table=True):
     status: ManuscriptStatus = ManuscriptStatus.draft
     # OJS-imported metadata (populated on /api/ojs/submissions/{id}/import)
     title: Optional[str] = None
+    subtitle: Optional[str] = None
     abstract: Optional[str] = None  # HTML
     keywords: Optional[list] = Field(default=None, sa_column=Column(JSON, nullable=True))
     doi: Optional[str] = None
@@ -126,6 +127,7 @@ class ManuscriptRead(SQLModel):
     ojs_submission_id: Optional[int]
     status: ManuscriptStatus
     title: Optional[str] = None
+    subtitle: Optional[str] = None
     abstract: Optional[str] = None
     keywords: Optional[list[str]] = None
     doi: Optional[str] = None
