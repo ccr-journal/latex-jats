@@ -33,7 +33,7 @@ _PAGE_SIZE = 100
 
 @dataclass(frozen=True)
 class OjsAuthor:
-    orcid: str
+    orcid: str | None
     name: str | None = None
     order: int = 0
 
@@ -186,8 +186,6 @@ def _parse_authors(publication: dict) -> tuple[OjsAuthor, ...]:
     out: list[OjsAuthor] = []
     for idx, a in enumerate(authors_raw):
         orcid = normalize_orcid(a.get("orcid"))
-        if not orcid:
-            continue
         given = (a.get("givenName") or {}).get("en") or a.get("givenName") or ""
         family = (a.get("familyName") or {}).get("en") or a.get("familyName") or ""
         if isinstance(given, dict):
