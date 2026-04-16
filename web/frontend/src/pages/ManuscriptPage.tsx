@@ -13,7 +13,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { LogViewer } from "@/components/LogViewer";
 import { PipelineProgress } from "@/components/PipelineProgress";
 import { UploadZone } from "@/components/UploadZone";
-import { getManuscript, getStatus, uploadFiles, startProcessing, updateManuscript, downloadUrl, outputUrl } from "@/api/client";
+import { getManuscript, getStatus, uploadFiles, startProcessing, updateManuscript, downloadUrl, outputUrl, presign } from "@/api/client";
 import type { Manuscript, PipelineStep } from "@/api/types";
 
 const PENDING_STEPS: PipelineStep[] = [
@@ -274,23 +274,32 @@ export function ManuscriptPage() {
         <CardContent>
           {isReady ? (
             <div className="flex gap-3">
-              <a href={downloadUrl(doiSuffix)} download className={buttonVariants()}>
+              <Button
+                onClick={async () => {
+                  const token = await presign(doiSuffix);
+                  const a = document.createElement("a");
+                  a.href = downloadUrl(doiSuffix, token);
+                  a.download = "";
+                  a.click();
+                }}
+              >
                 Download ZIP
-              </a>
+              </Button>
               <Link
                 to={`/manuscripts/${doiSuffix}/preview`}
                 className={buttonVariants({ variant: "outline" })}
               >
                 View HTML Proof
               </Link>
-              <a
-                href={outputUrl(doiSuffix, `${doiSuffix}.pdf`)}
-                target="_blank"
-                rel="noopener"
-                className={buttonVariants({ variant: "outline" })}
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  const token = await presign(doiSuffix);
+                  window.open(outputUrl(doiSuffix, `${doiSuffix}.pdf`, token), "_blank");
+                }}
               >
                 View PDF
-              </a>
+              </Button>
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">

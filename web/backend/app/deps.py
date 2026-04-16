@@ -38,10 +38,8 @@ def get_storage() -> Storage:
     return _storage
 
 
-def get_current_user(
-    authorization: Optional[str] = Header(default=None),
-    session: Session = Depends(get_session),
-) -> CurrentUser:
+def _authenticate_bearer(authorization: str | None, session: Session) -> CurrentUser:
+    """Validate a Bearer token and return the user. Raises HTTPException on failure."""
     if not authorization or not authorization.lower().startswith("bearer "):
         raise HTTPException(401, detail="Missing or malformed Authorization header")
     token = authorization.split(None, 1)[1].strip()
@@ -55,16 +53,26 @@ def get_current_user(
     return CurrentUser(orcid=row.orcid, name=row.name)
 
 
-async def get_current_role(
-    user: CurrentUser = Depends(get_current_user),
-) -> Literal["editor", "author"]:
+def get_current_user(
+    authorization: Optional[str] = Header(default=None),
+    session: Session = Depends(get_session),
+) -> CurrentUser:
+    return _authenticate_bearer(authorization, session)
+
+
+async def resolve_role(user: CurrentUser) -> Literal["editor", "author"]:
+    """Determine role for a user (editor vs author) via OJS lookup."""
     try:
         editors = await ojs_client.fetch_editor_orcids()
     except (ojs_client.OjsAdminTokenInvalid, ojs_client.OjsUnavailable):
-        # If we can't confirm editor status, fall back to author — safer default
-        # (endpoints gated by require_editor will reject; author access still works).
         return "author"
     return "editor" if user.orcid in editors else "author"
+
+
+async def get_current_role(
+    user: CurrentUser = Depends(get_current_user),
+) -> Literal["editor", "author"]:
+    return await resolve_role(user)
 
 
 async def require_editor(

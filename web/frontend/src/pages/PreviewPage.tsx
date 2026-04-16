@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { LogViewer } from "@/components/LogViewer";
-import { getManuscript, downloadUrl, outputUrl } from "@/api/client";
+import { getManuscript, downloadUrl, outputUrl, presign } from "@/api/client";
 import type { Manuscript } from "@/api/types";
 
 export function PreviewPage() {
@@ -10,6 +10,7 @@ export function PreviewPage() {
   const [manuscript, setManuscript] = useState<Manuscript | null>(null);
   const [showLog, setShowLog] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [presignToken, setPresignToken] = useState<string | null>(null);
 
   useEffect(() => {
     if (!doiSuffix) return;
@@ -17,6 +18,14 @@ export function PreviewPage() {
       .then(setManuscript)
       .catch((err) => setError(err.message));
   }, [doiSuffix]);
+
+  // Fetch a presign token once the manuscript is ready (needed for iframe src)
+  useEffect(() => {
+    if (!doiSuffix || !manuscript || manuscript.status !== "ready") return;
+    presign(doiSuffix)
+      .then(setPresignToken)
+      .catch((err) => setError(err.message));
+  }, [doiSuffix, manuscript?.status]);
 
   if (error) return <p className="text-red-600">{error}</p>;
   if (!manuscript || !doiSuffix) return <p className="text-muted-foreground">Loading...</p>;
@@ -32,10 +41,12 @@ export function PreviewPage() {
     );
   }
 
+  if (!presignToken) return <p className="text-muted-foreground">Loading preview...</p>;
+
   // The HTML file is named after the article ID extracted from the DOI suffix.
   // For "CCR2025.1.2.YAO", the article ID is the full doi_suffix.
   // The worker generates {article_id}.html in the convert output dir.
-  const htmlUrl = outputUrl(doiSuffix, `${doiSuffix}.html`);
+  const htmlUrl = outputUrl(doiSuffix, `${doiSuffix}.html`, presignToken);
 
   return (
     <div className="space-y-4">
@@ -50,21 +61,28 @@ export function PreviewPage() {
           <Button variant="outline" size="sm" onClick={() => setShowLog(!showLog)}>
             {showLog ? "Hide Log" : "Show Log"}
           </Button>
-          <a
-            href={outputUrl(doiSuffix, `${doiSuffix}.pdf`)}
-            target="_blank"
-            rel="noopener"
-            className={buttonVariants({ variant: "outline", size: "sm" })}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              const token = await presign(doiSuffix);
+              window.open(outputUrl(doiSuffix, `${doiSuffix}.pdf`, token), "_blank");
+            }}
           >
             View PDF
-          </a>
-          <a
-            href={downloadUrl(doiSuffix)}
-            download
-            className={buttonVariants({ size: "sm" })}
+          </Button>
+          <Button
+            size="sm"
+            onClick={async () => {
+              const token = await presign(doiSuffix);
+              const a = document.createElement("a");
+              a.href = downloadUrl(doiSuffix, token);
+              a.download = "";
+              a.click();
+            }}
           >
             Download ZIP
-          </a>
+          </Button>
         </div>
       </div>
 

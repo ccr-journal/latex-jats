@@ -412,6 +412,123 @@ def test_output_file_path_traversal(client, test_storage):
     assert r.status_code == 404
 
 
+# ── Presigned URLs ───────────────────────────────────────────────────────────
+
+
+def test_presign_returns_token(client):
+    doi = _create(client)
+    r = client.get(f"/api/manuscripts/{doi}/presign")
+    assert r.status_code == 200
+    assert "token" in r.json()
+
+
+def test_presign_requires_auth(client):
+    doi = _create(client)
+    r = client.get(
+        f"/api/manuscripts/{doi}/presign",
+        headers={"Authorization": ""},
+    )
+    assert r.status_code == 401
+
+
+def test_output_file_with_presign_token(client, test_storage):
+    doi = _create(client)
+    output_dir = test_storage.convert_output_dir(doi)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / "test.html").write_text("<html>proof</html>")
+
+    # Get presign token
+    token = client.get(f"/api/manuscripts/{doi}/presign").json()["token"]
+
+    # Access output without Authorization header, using presign token
+    r = client.get(
+        f"/api/manuscripts/{doi}/output/test.html",
+        params={"token": token},
+        headers={"Authorization": ""},  # clear the default auth
+    )
+    assert r.status_code == 200
+    assert "proof" in r.text
+
+
+def test_output_file_with_invalid_presign_token(client, test_storage):
+    doi = _create(client)
+    output_dir = test_storage.convert_output_dir(doi)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / "test.html").write_text("<html>proof</html>")
+
+    r = client.get(
+        f"/api/manuscripts/{doi}/output/test.html",
+        params={"token": "invalid-token"},
+        headers={"Authorization": ""},
+    )
+    assert r.status_code == 401
+
+
+def test_presign_token_scoped_to_manuscript(client, test_storage):
+    """A presign token for manuscript A must not grant access to manuscript B."""
+    doi_a = _create(client, "CCR2025.1.1.AAA")
+    doi_b = _create(client, "CCR2025.1.1.BBB")
+    output_dir = test_storage.convert_output_dir(doi_b)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / "test.html").write_text("<html>secret</html>")
+
+    token_a = client.get(f"/api/manuscripts/{doi_a}/presign").json()["token"]
+
+    r = client.get(
+        f"/api/manuscripts/{doi_b}/output/test.html",
+        params={"token": token_a},
+        headers={"Authorization": ""},
+    )
+    assert r.status_code == 401
+
+
+def test_download_with_presign_token(client, test_storage):
+    doi = _create(client)
+    # Create a fake zip
+    output_dir = test_storage.convert_output_dir(doi)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    zip_path = output_dir / f"{doi}.zip"
+    zip_path.write_bytes(b"PK fake zip")
+
+    token = client.get(f"/api/manuscripts/{doi}/presign").json()["token"]
+
+    r = client.get(
+        f"/api/manuscripts/{doi}/download",
+        params={"token": token},
+        headers={"Authorization": ""},
+    )
+    assert r.status_code == 200
+
+
+def test_presign_sets_cookie_for_subresources(client, test_storage):
+    """First request with ?token= should set a cookie for subsequent requests."""
+    doi = _create(client)
+    output_dir = test_storage.convert_output_dir(doi)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / "proof.html").write_text("<html>proof</html>")
+    (output_dir / "style.css").write_text("body{}")
+
+    token = client.get(f"/api/manuscripts/{doi}/presign").json()["token"]
+
+    # First request sets the cookie
+    r1 = client.get(
+        f"/api/manuscripts/{doi}/output/proof.html",
+        params={"token": token},
+        headers={"Authorization": ""},
+    )
+    assert r1.status_code == 200
+    assert "presign_token" in r1.cookies
+
+    # Subsequent request uses only the cookie (no token param, no Authorization)
+    r2 = client.get(
+        f"/api/manuscripts/{doi}/output/style.css",
+        headers={"Authorization": ""},
+        cookies={"presign_token": r1.cookies["presign_token"]},
+    )
+    assert r2.status_code == 200
+    assert "body{}" in r2.text
+
+
 # ── classify_step_status ─────────────────────────────────────────────────────
 
 from web.backend.app.worker import classify_step_status

@@ -130,12 +130,19 @@ export async function startProcessing(
   });
 }
 
-export function downloadUrl(doiSuffix: string): string {
-  return `${BASE}/api/manuscripts/${doiSuffix}/download`;
+export function downloadUrl(doiSuffix: string, token?: string): string {
+  const url = `${BASE}/api/manuscripts/${doiSuffix}/download`;
+  return token ? `${url}?token=${encodeURIComponent(token)}` : url;
 }
 
-export function outputUrl(doiSuffix: string, path: string): string {
-  return `${BASE}/api/manuscripts/${doiSuffix}/output/${path}`;
+export function outputUrl(doiSuffix: string, path: string, token?: string): string {
+  const url = `${BASE}/api/manuscripts/${doiSuffix}/output/${path}`;
+  return token ? `${url}?token=${encodeURIComponent(token)}` : url;
+}
+
+export async function presign(doiSuffix: string): Promise<string> {
+  const data = await apiFetch<{ token: string }>(`/api/manuscripts/${doiSuffix}/presign`);
+  return data.token;
 }
 
 // ── OJS ───────────────────────────────────────────────────────────────────────
