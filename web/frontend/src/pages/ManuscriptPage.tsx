@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -260,11 +259,10 @@ export function ManuscriptPage() {
               ))}
             </div>
           )}
+
+          {isEditor && <AuthorLink doiSuffix={doiSuffix} />}
         </CardContent>
       </Card>
-
-      {/* Author link — editor only */}
-      {isEditor && <AuthorLinkCard doiSuffix={doiSuffix} />}
 
       {/* Source — always visible; upload button opens a dialog */}
       <Card>
@@ -467,21 +465,17 @@ export function ManuscriptPage() {
 }
 
 
-function AuthorLinkCard({ doiSuffix }: { doiSuffix: string }) {
+function AuthorLink({ doiSuffix }: { doiSuffix: string }) {
   const [url, setUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [regenerating, setRegenerating] = useState(false);
 
-  const fetchToken = async () => {
-    setLoading(true);
-    try {
-      const data = await getAuthorToken(doiSuffix);
-      setUrl(data.url);
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    getAuthorToken(doiSuffix)
+      .then((data) => setUrl(data.url))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [doiSuffix]);
 
   const handleRegenerate = async () => {
     setRegenerating(true);
@@ -493,56 +487,25 @@ function AuthorLinkCard({ doiSuffix }: { doiSuffix: string }) {
     }
   };
 
-  const handleCopy = async () => {
-    if (!url) return;
-    await navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  if (loading) return null;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Author link</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {url == null ? (
-          <div>
-            <p className="text-sm text-muted-foreground mb-2">
-              Generate a link that gives authors access to view and upload to this manuscript.
-            </p>
-            <Button variant="outline" size="sm" onClick={fetchToken} disabled={loading}>
-              {loading ? "Generating..." : "Get author link"}
-            </Button>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <p className="text-sm text-muted-foreground">
-              Share this link with the authors. Anyone with the link can view and upload to this manuscript.
-            </p>
-            <div className="flex gap-2">
-              <Input
-                readOnly
-                value={url}
-                className="font-mono text-xs"
-                onClick={(e) => (e.target as HTMLInputElement).select()}
-              />
-              <Button variant="outline" size="sm" onClick={handleCopy}>
-                {copied ? "Copied" : "Copy"}
-              </Button>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground"
-              onClick={handleRegenerate}
-              disabled={regenerating}
-            >
-              {regenerating ? "Regenerating..." : "Regenerate link (invalidates previous)"}
-            </Button>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+    <div className="text-muted-foreground flex items-center gap-2 text-sm">
+      {url ? (
+        <>
+          <a href={url} className="hover:underline">Author link</a>
+          <button
+            type="button"
+            onClick={handleRegenerate}
+            disabled={regenerating}
+            className="text-xs hover:underline"
+          >
+            {regenerating ? "(regenerating...)" : "(regenerate)"}
+          </button>
+        </>
+      ) : (
+        <span>Author link unavailable</span>
+      )}
+    </div>
   );
 }
