@@ -43,12 +43,31 @@ def prepare_quarto_workspace(example_dir: Path, workspace_dir: Path) -> bool:
     Mirrors prepare_workspace() for LaTeX but without LaTeX-specific validation.
     Always recreates the workspace from scratch so a stale render does not leak
     into the new run.
+
+    If the workspace contains an ``renv.lock`` file, R package dependencies are
+    restored via ``renv::restore()`` so that code chunks can execute.
     """
     if workspace_dir.exists():
         shutil.rmtree(workspace_dir)
     workspace_dir.parent.mkdir(parents=True, exist_ok=True)
     shutil.copytree(example_dir, workspace_dir)
     logger.info("Prepared Quarto workspace at %s", workspace_dir)
+
+    # Restore R package dependencies if renv.lock is present
+    renv_lock = workspace_dir / "renv.lock"
+    if renv_lock.exists() and shutil.which("R"):
+        logger.info("Found renv.lock — restoring R packages...")
+        result = subprocess.run(
+            ["R", "-e", "if (!requireNamespace('renv', quietly=TRUE)) install.packages('renv', repos='https://cloud.r-project.org'); renv::restore(prompt=FALSE)"],
+            cwd=workspace_dir,
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            logger.warning("renv::restore() failed:\n%s", result.stderr)
+        else:
+            logger.info("R packages restored from renv.lock")
+
     return True
 
 
