@@ -13,7 +13,7 @@ dependencies = ["lxml", "pyyaml"]
 where = ["src"]
 
 [project.optional-dependencies]
-test = ["pytest", "httpx", "respx"]
+test = ["pytest", "httpx", "respx", "aiosmtpd"]
 web = [
     "fastapi>=0.111",
     "uvicorn[standard]>=0.29",
@@ -21,6 +21,7 @@ web = [
     "alembic>=1.13",
     "python-multipart>=0.0.9",
     "httpx>=0.27",
+    "markdown>=3.6",
 ]
 
 [tool.pytest.ini_options]

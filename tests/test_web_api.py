@@ -1213,3 +1213,98 @@ def test_sync_ojs_no_comparison_file(client, engine, test_storage):
     )
     assert r.status_code == 404
     assert "comparison" in r.json()["detail"]
+
+
+# ── Invite authors ───────────────────────────────────────────────────────────
+
+
+INVITE_BODY = {"subject": "Test invite", "body": "Dear {name}, please check."}
+
+
+def test_invite_authors_requires_editor(author_client, engine):
+    with Session(engine) as session:
+        session.add(Manuscript(doi_suffix="CCR.INV"))
+        session.commit()
+    r = author_client.post(
+        "/api/manuscripts/CCR.INV/invite-authors", json=INVITE_BODY
+    )
+    assert r.status_code == 403
+
+
+def test_invite_authors_no_emails(client, engine):
+    cfg_with_smtp = AuthConfig(
+        **{**TEST_CFG.__dict__, "smtp_host": "smtp.test", "smtp_from": "test@test.com"}
+    )
+    set_for_tests(cfg_with_smtp)
+    with Session(engine) as session:
+        session.add(Manuscript(doi_suffix="CCR.NOEMAIL", title="Test"))
+        session.add(ManuscriptAuthor(manuscript_id="CCR.NOEMAIL", name="Alice", order=0))
+        session.commit()
+    r = client.post(
+        "/api/manuscripts/CCR.NOEMAIL/invite-authors", json=INVITE_BODY
+    )
+    assert r.status_code == 422
+    assert "No authors have email" in r.json()["detail"]
+
+
+def test_invite_authors_smtp_not_configured(client, engine):
+    with Session(engine) as session:
+        session.add(Manuscript(doi_suffix="CCR.NOSMTP", title="Test"))
+        session.add(ManuscriptAuthor(
+            manuscript_id="CCR.NOSMTP", name="Alice",
+            email="alice@example.com", order=0,
+        ))
+        session.commit()
+    r = client.post(
+        "/api/manuscripts/CCR.NOSMTP/invite-authors", json=INVITE_BODY
+    )
+    assert r.status_code == 400
+    assert "SMTP" in r.json()["detail"]
+
+
+def test_invite_template(client, engine):
+    with Session(engine) as session:
+        session.add(Manuscript(doi_suffix="CCR.TPL", title="My Paper"))
+        session.commit()
+    r = client.get("/api/manuscripts/CCR.TPL/invite-authors")
+    assert r.status_code == 200
+    data = r.json()
+    assert "My Paper" in data["subject"]
+    assert "{name}" in data["body"]
+    assert "CCR.TPL" in data["body"]
+
+
+def test_invite_authors_success(client, engine):
+    cfg_with_smtp = AuthConfig(
+        **{**TEST_CFG.__dict__, "smtp_host": "smtp.test", "smtp_from": "test@test.com"}
+    )
+    set_for_tests(cfg_with_smtp)
+    with Session(engine) as session:
+        session.add(Manuscript(doi_suffix="CCR.INVITE", title="My Paper"))
+        session.add(ManuscriptAuthor(
+            manuscript_id="CCR.INVITE", name="Alice",
+            email="alice@example.com", order=0,
+        ))
+        session.add(ManuscriptAuthor(
+            manuscript_id="CCR.INVITE", name="Bob", order=1,
+        ))
+        session.commit()
+
+    with patch(
+        "web.backend.app.email._send_one"
+    ) as mock_send:
+        r = client.post(
+            "/api/manuscripts/CCR.INVITE/invite-authors",
+            json={"subject": "Check your paper", "body": "Dear {name}, please review."},
+        )
+
+    assert r.status_code == 200
+    data = r.json()
+    assert data["sent"] == ["Alice"]
+    assert data["skipped"] == ["Bob"]
+    assert data["failed"] == []
+    mock_send.assert_called_once()
+    call_args = mock_send.call_args
+    assert call_args[0][0] == "Alice"
+    assert call_args[0][1] == "alice@example.com"
+    assert call_args[0][2] == "Check your paper"

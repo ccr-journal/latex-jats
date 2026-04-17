@@ -36,6 +36,7 @@ _PAGE_SIZE = 100
 class OjsAuthor:
     orcid: str | None
     name: str | None = None
+    email: str | None = None
     order: int = 0
 
 
@@ -195,7 +196,8 @@ def _parse_authors(publication: dict) -> tuple[OjsAuthor, ...]:
         if isinstance(family, dict):
             family = next(iter(family.values()), "")
         name = f"{given} {family}".strip() or None
-        out.append(OjsAuthor(orcid=orcid, name=name, order=a.get("seq", idx)))
+        email = a.get("email") or None
+        out.append(OjsAuthor(orcid=orcid, name=name, email=email, order=a.get("seq", idx)))
     out.sort(key=lambda x: x.order)
     return tuple(out)
 

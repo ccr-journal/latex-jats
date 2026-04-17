@@ -114,6 +114,7 @@ async def import_submission(
                 manuscript_id=target.doi_suffix,
                 orcid=a.orcid,
                 name=a.name,
+                email=a.email,
                 order=a.order,
             )
         )

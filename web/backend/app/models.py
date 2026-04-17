@@ -68,6 +68,7 @@ class ManuscriptAuthor(SQLModel, table=True):
     manuscript_id: str = Field(foreign_key="manuscript.doi_suffix", index=True)
     orcid: Optional[str] = Field(default=None, index=True)
     name: Optional[str] = None
+    email: Optional[str] = None
     order: int = 0
 
 
@@ -116,6 +117,7 @@ class CurrentUserWithRole(SQLModel):
 class AuthorRead(SQLModel):
     orcid: Optional[str] = None
     name: Optional[str] = None
+    email: Optional[str] = None
     order: int = 0
 
 

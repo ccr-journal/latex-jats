@@ -70,6 +70,7 @@ export interface CurrentUser {
 export interface OjsAuthor {
   orcid: string;
   name: string | null;
+  email: string | null;
   order: number;
 }
 

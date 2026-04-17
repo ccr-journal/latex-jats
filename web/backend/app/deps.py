@@ -136,7 +136,8 @@ def manuscript_to_read(
     ).all()
     data = ms.model_dump()
     data["authors"] = [
-        AuthorRead(orcid=a.orcid, name=a.name, order=a.order) for a in authors
+        AuthorRead(orcid=a.orcid, name=a.name, email=a.email, order=a.order)
+        for a in authors
     ]
     if storage is None:
         storage = _storage

@@ -25,6 +25,16 @@ class AuthConfig:
     session_token_ttl_days: int
     # Dev-only: merged into the fetched editor set. Comma-separated ORCIDs.
     editor_override_orcids: frozenset[str]
+    # SMTP (optional — enables "Invite authors" email)
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from: str = ""
+
+    @property
+    def smtp_configured(self) -> bool:
+        return bool(self.smtp_host and self.smtp_from)
 
     @property
     def orcid_base_url(self) -> str:
@@ -92,6 +102,11 @@ def _load() -> AuthConfig:
         ojs_editor_cache_ttl_seconds=int(opt("OJS_EDITOR_CACHE_TTL_SECONDS", "300")),
         session_token_ttl_days=int(opt("SESSION_TOKEN_TTL_DAYS", "30")),
         editor_override_orcids=frozenset(overrides),
+        smtp_host=opt("SMTP_HOST", ""),
+        smtp_port=int(opt("SMTP_PORT", "587")),
+        smtp_user=opt("SMTP_USER", ""),
+        smtp_password=opt("SMTP_PASSWORD", ""),
+        smtp_from=opt("SMTP_FROM", ""),
     )
 
 

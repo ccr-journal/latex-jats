@@ -176,6 +176,34 @@ export function regenerateAuthorToken(doiSuffix: string): Promise<AuthorToken> {
   });
 }
 
+// ── Author invitations ──────────────────────────────────────────────────────
+
+export interface InviteTemplate {
+  subject: string;
+  body: string;
+}
+
+export interface InviteResult {
+  sent: string[];
+  failed: string[];
+  skipped: string[];
+}
+
+export function getInviteTemplate(doiSuffix: string): Promise<InviteTemplate> {
+  return apiFetch(`/api/manuscripts/${doiSuffix}/invite-authors`);
+}
+
+export function inviteAuthors(
+  doiSuffix: string,
+  data: { subject: string; body: string },
+): Promise<InviteResult> {
+  return apiFetch(`/api/manuscripts/${doiSuffix}/invite-authors`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+}
+
 // ── OJS ───────────────────────────────────────────────────────────────────────
 
 export function listOjsSubmissions(): Promise<OjsSubmission[]> {

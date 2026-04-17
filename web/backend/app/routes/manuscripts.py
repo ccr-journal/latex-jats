@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session, SQLModel, select
 
+from .. import email as email_module
 from .. import ojs as ojs_client
 from ..deps import (
     get_current_role,
@@ -232,6 +233,101 @@ def regenerate_author_token(
     )
 
 
+# ── Author invitations ───────────────────────────────────────────────────────
+
+
+class InviteTemplateRead(BaseModel):
+    subject: str
+    body: str  # markdown with {name} placeholder
+
+
+class InviteRequest(BaseModel):
+    subject: str
+    body: str  # markdown with {name} placeholder
+
+
+class InviteResult(BaseModel):
+    sent: list[str]
+    failed: list[str]
+    skipped: list[str]
+
+
+def _get_or_create_token(doi_suffix: str, session: Session) -> ManuscriptToken:
+    mt = session.exec(
+        select(ManuscriptToken).where(ManuscriptToken.manuscript_id == doi_suffix)
+    ).first()
+    if mt is None:
+        mt = ManuscriptToken(
+            manuscript_id=doi_suffix,
+            token=secrets.token_urlsafe(32),
+        )
+        session.add(mt)
+        session.commit()
+        session.refresh(mt)
+    return mt
+
+
+@router.get("/{doi_suffix}/invite-authors", response_model=InviteTemplateRead)
+def get_invite_template(
+    doi_suffix: str,
+    _editor: str = Depends(require_editor),
+    session: Session = Depends(get_session),
+):
+    """Return the default invitation email template for editing."""
+    ms = session.get(Manuscript, doi_suffix)
+    if ms is None:
+        raise HTTPException(404, detail=f"Manuscript '{doi_suffix}' not found")
+
+    mt = _get_or_create_token(doi_suffix, session)
+    author_url = _build_author_url(doi_suffix, mt.token)
+    title = ms.title or ms.doi_suffix
+
+    return InviteTemplateRead(
+        subject=f"Your manuscript is ready for review: {title}",
+        body=email_module.default_template(title, author_url),
+    )
+
+
+@router.post("/{doi_suffix}/invite-authors", response_model=InviteResult)
+async def invite_authors(
+    doi_suffix: str,
+    req: InviteRequest,
+    _editor: str = Depends(require_editor),
+    session: Session = Depends(get_session),
+):
+    """Send invitation emails to all authors with email addresses."""
+    from ..config import get_config
+
+    cfg = get_config()
+    if not cfg.smtp_configured:
+        raise HTTPException(400, detail="SMTP is not configured")
+
+    ms = session.get(Manuscript, doi_suffix)
+    if ms is None:
+        raise HTTPException(404, detail=f"Manuscript '{doi_suffix}' not found")
+
+    # Partition authors into those with and without email
+    authors = session.exec(
+        select(ManuscriptAuthor)
+        .where(ManuscriptAuthor.manuscript_id == doi_suffix)
+        .order_by(ManuscriptAuthor.order)
+    ).all()
+
+    to_send = [(a.name or "Author", a.email) for a in authors if a.email]
+    skipped = [a.name or "Author" for a in authors if not a.email]
+
+    if not to_send:
+        raise HTTPException(
+            422, detail="No authors have email addresses. Import from OJS or add emails manually."
+        )
+
+    result = await email_module.send_invite_emails(
+        req.subject, req.body, to_send, cfg
+    )
+    result["skipped"] = skipped
+    return InviteResult(**result)
+
+
 # ── OJS metadata re-import ────────────────────────────────────────────────────
 
 
@@ -289,7 +385,8 @@ def _apply_ojs_submission(ms, sub, doi_suffix, session):
         session.delete(a)
     for a in sub.authors:
         session.add(ManuscriptAuthor(
-            manuscript_id=doi_suffix, orcid=a.orcid, name=a.name, order=a.order,
+            manuscript_id=doi_suffix, orcid=a.orcid, name=a.name,
+            email=a.email, order=a.order,
         ))
     session.commit()
     session.refresh(ms)

@@ -14,7 +14,7 @@ import { PipelineProgress } from "@/components/PipelineProgress";
 import { MetadataCard } from "@/components/MetadataCard";
 import { UploadZone } from "@/components/UploadZone";
 import { useAuth } from "@/auth/AuthContext";
-import { getManuscript, getStatus, uploadFiles, startProcessing, updateManuscript, reimportOjsMetadata, approveManuscript, withdrawApproval, downloadUrl, outputUrl, presign, getAuthorToken, regenerateAuthorToken } from "@/api/client";
+import { getManuscript, getStatus, uploadFiles, startProcessing, updateManuscript, reimportOjsMetadata, approveManuscript, withdrawApproval, downloadUrl, outputUrl, presign, getAuthorToken, regenerateAuthorToken, getInviteTemplate, inviteAuthors } from "@/api/client";
 import { ApiError } from "@/api/client";
 import type { Manuscript, PipelineStep } from "@/api/types";
 
@@ -260,7 +260,7 @@ export function ManuscriptPage() {
             </div>
           )}
 
-          {isEditor && <AuthorLink doiSuffix={doiSuffix} />}
+          {isEditor && <AuthorLink doiSuffix={doiSuffix} authors={manuscript.authors} />}
         </CardContent>
       </Card>
 
@@ -465,11 +465,20 @@ export function ManuscriptPage() {
 }
 
 
-function AuthorLink({ doiSuffix }: { doiSuffix: string }) {
+function AuthorLink({ doiSuffix, authors }: { doiSuffix: string; authors: { name: string | null; email: string | null }[] }) {
   const [url, setUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [inviting, setInviting] = useState(false);
+  const [inviteMessage, setInviteMessage] = useState<string | null>(null);
+  const [subject, setSubject] = useState("");
+  const [body, setBody] = useState("");
+  const [loadingTemplate, setLoadingTemplate] = useState(false);
+
+  const authorsWithEmail = authors.filter((a) => a.email);
+  const authorsWithoutEmail = authors.filter((a) => !a.email);
 
   useEffect(() => {
     getAuthorToken(doiSuffix)
@@ -496,27 +505,127 @@ function AuthorLink({ doiSuffix }: { doiSuffix: string }) {
     }
   };
 
+  const handleOpenInvite = async () => {
+    setInviteMessage(null);
+    setInviteDialogOpen(true);
+    setLoadingTemplate(true);
+    try {
+      const tpl = await getInviteTemplate(doiSuffix);
+      setSubject(tpl.subject);
+      setBody(tpl.body);
+    } catch {
+      setSubject("");
+      setBody("");
+    } finally {
+      setLoadingTemplate(false);
+    }
+  };
+
+  const handleInvite = async () => {
+    setInviting(true);
+    setInviteMessage(null);
+    try {
+      const result = await inviteAuthors(doiSuffix, { subject, body });
+      const parts: string[] = [];
+      if (result.sent.length) parts.push(`Sent to ${result.sent.join(", ")}`);
+      if (result.failed.length) parts.push(`Failed: ${result.failed.join(", ")}`);
+      setInviteMessage(parts.join(". "));
+      setInviteDialogOpen(false);
+    } catch (err) {
+      setInviteMessage(err instanceof Error ? err.message : "Failed to send invitations");
+    } finally {
+      setInviting(false);
+    }
+  };
+
   if (loading) return null;
 
   return (
-    <div className="text-muted-foreground flex items-center gap-2 text-sm">
-      {url ? (
-        <>
-          <button type="button" onClick={handleCopy} className="hover:underline">
-            {copied ? "Copied!" : "Copy author link"}
-          </button>
-          <button
-            type="button"
-            onClick={handleRegenerate}
-            disabled={regenerating}
-            className="text-xs hover:underline"
-          >
-            {regenerating ? "(regenerating...)" : "(regenerate)"}
-          </button>
-        </>
-      ) : (
-        <span>Author link unavailable</span>
-      )}
-    </div>
+    <>
+      <div className="text-muted-foreground flex items-center gap-2 text-sm">
+        {url ? (
+          <>
+            <button type="button" onClick={handleCopy} className="hover:underline">
+              {copied ? "Copied!" : "Copy author link"}
+            </button>
+            <button
+              type="button"
+              onClick={handleRegenerate}
+              disabled={regenerating}
+              className="text-xs hover:underline"
+            >
+              {regenerating ? "(regenerating...)" : "(regenerate)"}
+            </button>
+            <span className="text-muted-foreground/50">|</span>
+            <button
+              type="button"
+              onClick={handleOpenInvite}
+              disabled={authorsWithEmail.length === 0}
+              className="hover:underline disabled:opacity-50 disabled:no-underline"
+              title={authorsWithEmail.length === 0 ? "No authors have email addresses" : undefined}
+            >
+              Invite authors
+            </button>
+          </>
+        ) : (
+          <span>Author link unavailable</span>
+        )}
+        {inviteMessage && (
+          <span className={inviteMessage.includes("Failed") ? "text-red-600" : "text-green-700"}>
+            {inviteMessage}
+          </span>
+        )}
+      </div>
+
+      <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Invite authors</DialogTitle>
+          </DialogHeader>
+          {loadingTemplate ? (
+            <p className="text-sm text-muted-foreground">Loading template...</p>
+          ) : (
+            <div className="space-y-3">
+              <div className="text-sm text-muted-foreground">
+                Sending to: {authorsWithEmail.map((a) => `${a.name ?? "Unknown"} (${a.email})`).join(", ")}
+                {authorsWithoutEmail.length > 0 && (
+                  <> — skipped (no email): {authorsWithoutEmail.map((a) => a.name ?? "Unknown").join(", ")}</>
+                )}
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="invite-subject" className="text-sm font-medium">Subject</Label>
+                <input
+                  id="invite-subject"
+                  type="text"
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  className="w-full rounded border border-input bg-background px-3 py-2 text-sm"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="invite-body" className="text-sm font-medium">
+                  Message <span className="font-normal text-muted-foreground">(markdown — {"{name}"} is replaced per author)</span>
+                </Label>
+                <textarea
+                  id="invite-body"
+                  value={body}
+                  onChange={(e) => setBody(e.target.value)}
+                  rows={16}
+                  className="w-full rounded border border-input bg-background px-3 py-2 text-sm font-mono"
+                />
+              </div>
+            </div>
+          )}
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setInviteDialogOpen(false)} disabled={inviting}>
+              Cancel
+            </Button>
+            <Button onClick={handleInvite} disabled={inviting || loadingTemplate}>
+              {inviting ? "Sending\u2026" : "Send invitations"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
