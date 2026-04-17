@@ -185,7 +185,6 @@ export interface InviteTemplate {
 
 export interface InviteResult {
   sent: string[];
-  failed: string[];
   skipped: string[];
 }
 

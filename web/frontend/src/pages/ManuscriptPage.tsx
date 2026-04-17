@@ -526,10 +526,7 @@ function AuthorLink({ doiSuffix, authors }: { doiSuffix: string; authors: { name
     setInviteMessage(null);
     try {
       const result = await inviteAuthors(doiSuffix, { subject, body });
-      const parts: string[] = [];
-      if (result.sent.length) parts.push(`Sent to ${result.sent.join(", ")}`);
-      if (result.failed.length) parts.push(`Failed: ${result.failed.join(", ")}`);
-      setInviteMessage(parts.join(". "));
+      setInviteMessage(`Sent to ${result.sent.join(", ")}`);
       setInviteDialogOpen(false);
     } catch (err) {
       setInviteMessage(err instanceof Error ? err.message : "Failed to send invitations");
@@ -604,7 +601,7 @@ function AuthorLink({ doiSuffix, authors }: { doiSuffix: string; authors: { name
               </div>
               <div className="space-y-1">
                 <Label htmlFor="invite-body" className="text-sm font-medium">
-                  Message <span className="font-normal text-muted-foreground">(markdown — {"{name}"} is replaced per author)</span>
+                  Message <span className="font-normal text-muted-foreground">(markdown — {"{names}"} is replaced with author names)</span>
                 </Label>
                 <textarea
                   id="invite-body"

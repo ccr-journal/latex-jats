@@ -238,18 +238,17 @@ def regenerate_author_token(
 
 class InviteTemplateRead(BaseModel):
     subject: str
-    body: str  # markdown with {name} placeholder
+    body: str  # markdown with {names} placeholder
 
 
 class InviteRequest(BaseModel):
     subject: str
-    body: str  # markdown with {name} placeholder
+    body: str  # markdown with {names} placeholder
 
 
 class InviteResult(BaseModel):
-    sent: list[str]
-    failed: list[str]
-    skipped: list[str]
+    sent: list[str]     # authors who received the email
+    skipped: list[str]  # authors without email
 
 
 def _get_or_create_token(doi_suffix: str, session: Session) -> ManuscriptToken:
@@ -321,11 +320,11 @@ async def invite_authors(
             422, detail="No authors have email addresses. Import from OJS or add emails manually."
         )
 
-    result = await email_module.send_invite_emails(
-        req.subject, req.body, to_send, cfg
+    await email_module.send_invite_email(req.subject, req.body, to_send, cfg)
+    return InviteResult(
+        sent=[name for name, _ in to_send],
+        skipped=skipped,
     )
-    result["skipped"] = skipped
-    return InviteResult(**result)
 
 
 # ── OJS metadata re-import ────────────────────────────────────────────────────

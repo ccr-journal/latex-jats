@@ -1218,7 +1218,7 @@ def test_sync_ojs_no_comparison_file(client, engine, test_storage):
 # ── Invite authors ───────────────────────────────────────────────────────────
 
 
-INVITE_BODY = {"subject": "Test invite", "body": "Dear {name}, please check."}
+INVITE_BODY = {"subject": "Test invite", "body": "Dear {names}, please check."}
 
 
 def test_invite_authors_requires_editor(author_client, engine):
@@ -1270,7 +1270,7 @@ def test_invite_template(client, engine):
     assert r.status_code == 200
     data = r.json()
     assert "My Paper" in data["subject"]
-    assert "{name}" in data["body"]
+    assert "{names}" in data["body"]
     assert "CCR.TPL" in data["body"]
 
 
@@ -1291,20 +1291,20 @@ def test_invite_authors_success(client, engine):
         session.commit()
 
     with patch(
-        "web.backend.app.email._send_one"
+        "web.backend.app.email._send"
     ) as mock_send:
         r = client.post(
             "/api/manuscripts/CCR.INVITE/invite-authors",
-            json={"subject": "Check your paper", "body": "Dear {name}, please review."},
+            json={"subject": "Check your paper", "body": "Dear {names}, please review."},
         )
 
     assert r.status_code == 200
     data = r.json()
     assert data["sent"] == ["Alice"]
     assert data["skipped"] == ["Bob"]
-    assert data["failed"] == []
     mock_send.assert_called_once()
     call_args = mock_send.call_args
-    assert call_args[0][0] == "Alice"
-    assert call_args[0][1] == "alice@example.com"
-    assert call_args[0][2] == "Check your paper"
+    # recipients list
+    assert call_args[0][0] == [("Alice", "alice@example.com")]
+    # subject
+    assert call_args[0][1] == "Check your paper"

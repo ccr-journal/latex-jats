@@ -2,8 +2,9 @@
 
 Uses stdlib smtplib + email.mime, wrapped in asyncio.to_thread() to avoid
 blocking the event loop.  The editor provides a markdown template with
-``{name}`` as a placeholder; we substitute per recipient, then convert to
-HTML via the ``markdown`` library.
+``{names}`` as a placeholder; we format a natural-language name list
+(e.g. "Alice, Bob, and Carol") and convert the markdown to HTML via the
+``markdown`` library.  A single email is sent to all authors.
 """
 
 from __future__ import annotations
@@ -22,7 +23,7 @@ logger = logging.getLogger("latex_jats.web.email")
 
 
 DEFAULT_TEMPLATE = """\
-Dear {name},
+Dear {names},
 
 Your manuscript "{title}" is now in production at Computational Communication Research (CCR).
 
@@ -43,28 +44,39 @@ Best regards,
 Computational Communication Research"""
 
 
+def _format_names(names: list[str]) -> str:
+    """Format a list of names as natural-language enumeration."""
+    if len(names) == 0:
+        return "Authors"
+    if len(names) == 1:
+        return names[0]
+    if len(names) == 2:
+        return f"{names[0]} and {names[1]}"
+    return ", ".join(names[:-1]) + f", and {names[-1]}"
+
+
 def default_template(title: str, author_url: str) -> str:
     """Return the default invitation template with title and URL filled in."""
     return DEFAULT_TEMPLATE.format(
-        name="{name}", title=title, author_url=author_url,
+        names="{names}", title=title, author_url=author_url,
     )
 
 
-def _send_one(
-    name: str,
-    email: str,
+def _send(
+    recipients: list[tuple[str, str]],  # (name, email) pairs
     subject: str,
     body_md: str,
     cfg: AuthConfig,
 ) -> None:
-    """Send a single invitation email (blocking)."""
-    plain = body_md.replace("{name}", name)
+    """Send a single invitation email to all authors (blocking)."""
+    names = _format_names([name for name, _ in recipients])
+    plain = body_md.replace("{names}", names)
     html = md.markdown(plain)
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
     msg["From"] = cfg.smtp_from
-    msg["To"] = email
+    msg["To"] = ", ".join(f"{name} <{email}>" for name, email in recipients)
     msg["Reply-To"] = cfg.smtp_from
 
     msg.attach(MIMEText(plain, "plain"))
@@ -77,30 +89,20 @@ def _send_one(
         server.send_message(msg)
 
 
-async def send_invite_emails(
+async def send_invite_email(
     subject: str,
     body_md: str,
     authors: list[tuple[str, str]],  # (name, email) pairs
     cfg: AuthConfig | None = None,
-) -> dict[str, list[str]]:
-    """Send invitation emails to authors.
+) -> None:
+    """Send a single invitation email to all authors.
 
-    ``body_md`` is a markdown template; ``{name}`` is replaced per recipient.
-    Returns {"sent": [...names], "failed": [...names]}.
+    ``body_md`` is a markdown template; ``{names}`` is replaced with a
+    formatted name list (e.g. "Alice, Bob, and Carol").
     """
     cfg = cfg or get_config()
-    sent: list[str] = []
-    failed: list[str] = []
-
-    for name, email in authors:
-        try:
-            await asyncio.to_thread(
-                _send_one, name, email, subject, body_md, cfg
-            )
-            sent.append(name)
-            logger.info("Sent invite email to %s <%s>", name, email)
-        except Exception:
-            failed.append(name)
-            logger.exception("Failed to send invite email to %s <%s>", name, email)
-
-    return {"sent": sent, "failed": failed}
+    await asyncio.to_thread(_send, authors, subject, body_md, cfg)
+    logger.info(
+        "Sent invite email to %s",
+        ", ".join(f"{name} <{email}>" for name, email in authors),
+    )
