@@ -4,7 +4,7 @@
 
 This tool converts CCR (Computational Communication Research) journal articles from LaTeX to JATS XML for submission to the AUP Online publishing platform. It uses LaTeXML with custom bindings and a Python post-processing pipeline, and can optionally produce an HTML proof preview.
 
-A web service (see `website-design.md`) is built on top of this pipeline, where editors and authors can upload LaTeX source and check the conversion status. The FastAPI backend is in `web/backend/` (with pipeline integration), and a React frontend is in `web/frontend/`.
+A web service is built on top of this pipeline, where editors and authors can upload LaTeX source and check the conversion status. The FastAPI backend is in `web/backend/` (with pipeline integration), and a React frontend is in `web/frontend/`.
 
 ## Running the tool
 
@@ -42,6 +42,7 @@ Install dependencies: `uv sync --extra web` for the backend, `npm install` in ro
 uv run fixbib bibliography.bib            # clean up bibliography file
 uv run fix-input main.tex                 # resolve \input{} commands
 uv run prepare-source path/to/dir/        # validate and compile LaTeX source
+uv run check-zip output.zip              # verify publisher-ready zip files
 ```
 
 ## Pipeline
@@ -89,6 +90,7 @@ src/
     prepare_source.py validates and compiles LaTeX (prepare-source CLI)
     fixbib.py         standalone bibliography cleaner (fixbib CLI)
     fix_input.py      resolves \input{} commands for the converter (fix-input CLI)
+    check_zip.py      publisher-ready zip validator (check-zip CLI)
   latexml/
     ccr.cls.ltxml       LaTeXML bindings for ccr.cls (authors, abstract, keywords, metadata macros)
     biblatex.sty.ltxml  LaTeXML bindings for biblatex (citation labels, bibliography)
@@ -126,7 +128,7 @@ tests/
   fixtures/latex/              minimal .tex files used by integration tests
 examples/
   CCR2023.1.004.KATH/     each example has main.tex + source files directly in the folder
-  CCR2025.1.2.YAO/        article with gold/ JATS XML from the typesetting company for comparison
+  CCR2025.1.2.YAO/        example article
 output/                   centralized output tree (gitignored), also the Netlify deploy dir
   <article-id>/
     prepare/              compilation logs + status.json
@@ -136,7 +138,6 @@ web/
   backend/
     app/
       main.py             FastAPI app, CORS, lifespan
-      deps.py             get_session / get_storage dependency callables
       models.py           SQLModel tables (Manuscript, ManuscriptAuthor, AccessToken)
       config.py           AuthConfig from env vars (ORCID, OJS, session settings)
       deps.py             get_session / get_storage / get_current_user / get_current_role / require_editor
@@ -154,7 +155,12 @@ web/
       pages/              DashboardPage, ManuscriptPage, PreviewPage
       components/         Layout, StatusBadge, UploadZone, LogViewer, CreateManuscriptDialog
       components/ui/      base-ui/shadcn primitives (badge, button, card, dialog, input, label, table)
-storage/                  runtime file storage (gitignored) — manuscripts/<doi_suffix>/source|output
+deploy/
+  docker-compose.yml        production compose (pre-built images, attached to releases)
+  docker-compose.build.yml  build overlay for local image builds
+  .env.example              production env template (attached to releases as .env)
+  update.sh                 helper script for pulling updates on VPS
+storage/                    runtime file storage (gitignored) — manuscripts/<doi_suffix>/source|output
 ```
 
 ## Authentication and access control
@@ -182,8 +188,6 @@ git push origin v0.2.0
 ```
 
 CI builds and pushes Docker images (`ccsamsterdam/latex-jats-api`, `ccsamsterdam/latex-jats-caddy`) on `v*` tags.
-
-The `gold/` directory under CCR2025.1.2.YAO contains the JATS XML produced by the professional typesetting company. Use it as a reference when evaluating output quality. It may contain minor imperfections, so it does not need to be matched exactly. See `todo.md` in the project root for a tracked list of discrepancies.
 
 ## Tests
 
