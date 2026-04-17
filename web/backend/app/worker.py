@@ -28,6 +28,13 @@ from latex_jats.convert import (
     validate_jats,
 )
 from latex_jats.prepare_source import compile_latex, prepare_workspace
+from latex_jats.quarto import (
+    convert_quarto,
+    find_qmd,
+    get_doi_suffix_from_qmd,
+    prepare_quarto_workspace,
+    render_quarto_pdf,
+)
 
 from .models import (
     Manuscript, ManuscriptAuthor, ManuscriptStatus, PIPELINE_STEPS, StepStatus,
@@ -235,6 +242,11 @@ def _skip_remaining_steps(engine: Engine, doi_suffix: str, step_names: list[str]
         _update_step(engine, doi_suffix, name, status=StepStatus.skipped)
 
 
+def _is_quarto_source(source_dir: Path) -> bool:
+    """Return True if the source directory contains .qmd files but no main.tex."""
+    return not (source_dir / "main.tex").exists() and bool(list(source_dir.glob("*.qmd")))
+
+
 def _pdf_page_count(pdf_path) -> int | None:
     """Return the number of pages in a PDF using pdfinfo, or None on failure."""
     if not shutil.which("pdfinfo"):
@@ -254,12 +266,214 @@ def _pdf_page_count(pdf_path) -> int | None:
 # ── Main pipeline ────────────────────────────────────────────────────────────
 
 
+def _run_latex_pipeline(
+    doi_suffix: str, engine: Engine, storage: Storage, collector: _LogCollector,
+    step_tracker: list[str], *, fix: bool = False,
+) -> None:
+    """LaTeX-specific pipeline: prepare → compile → convert → check → validate."""
+    source_dir = storage.source_dir(doi_suffix)
+    workspace_dir = storage.prepare_output_dir(doi_suffix)
+    convert_output = storage.convert_output_dir(doi_suffix)
+
+    # ── Step 1: prepare workspace ────────────────────────────────────
+    workspace_tex = prepare_workspace(source_dir, workspace_dir, fix_problems=fix)
+
+    # Inject missing journal metadata from OJS before compilation
+    with Session(engine) as session:
+        ms = session.get(Manuscript, doi_suffix)
+        if ms and ms.ojs_submission_id:
+            inject_ojs_metadata(workspace_tex, ms)
+
+    _finish_step(engine, doi_suffix, "prepare", collector.drain())
+
+    # ── Step 2: compile LaTeX ────────────────────────────────────────
+    step_tracker[0] = "compile"
+    _start_step(engine, doi_suffix, "compile")
+    log_dir = storage.prepare_output_dir(doi_suffix)
+    ok = compile_latex(workspace_dir, log_dir=log_dir)
+    _finish_step(engine, doi_suffix, "compile", collector.drain(),
+                 failed=not ok, log_dirs=[log_dir])
+
+    if not ok:
+        _skip_remaining_steps(engine, doi_suffix, ["convert", "check", "validate"])
+        _update_manuscript(
+            engine,
+            doi_suffix,
+            status=ManuscriptStatus.failed,
+            job_completed_at=datetime.utcnow(),
+        )
+        return
+
+    # Copy main.pdf back to source_dir for lastpage / future reference
+    pdf_src = workspace_dir / "main.pdf"
+    if pdf_src.exists():
+        shutil.copy2(pdf_src, source_dir / "main.pdf")
+
+    # ── Step 3: convert (preprocess + latexmlc + post-processing + zip)
+    step_tracker[0] = "convert"
+    _start_step(engine, doi_suffix, "convert")
+    preprocess_for_latexml(workspace_dir)
+
+    # Determine article ID from the LaTeX preamble
+    try:
+        article_id = get_doi_suffix(workspace_tex)
+    except Exception:
+        article_id = doi_suffix
+
+    output_xml = convert_output / f"{article_id}.xml"
+
+    lastpage = None
+    if pdf_src.exists():
+        lastpage = _pdf_page_count(pdf_src)
+
+    convert(workspace_tex, output_xml, html=True, lastpage=lastpage)
+
+    # Copy PDF to convert output for web preview
+    pdf_path = source_dir / "main.pdf" if (source_dir / "main.pdf").exists() else None
+    if pdf_path:
+        shutil.copy2(pdf_path, convert_output / f"{article_id}.pdf")
+
+    # Create publisher zip
+    zip_path = convert_output / f"{article_id}.zip"
+    create_publisher_zip(output_xml, pdf_path, zip_path)
+    convert_log_dir = convert_output / "logs"
+    _finish_step(engine, doi_suffix, "convert", collector.drain(),
+                 log_dirs=[convert_log_dir])
+
+    # ── Step 4: compare metadata against OJS ────────────────────────
+    step_tracker[0] = "check"
+    _start_step(engine, doi_suffix, "check")
+    with Session(engine) as session:
+        ms = session.get(Manuscript, doi_suffix)
+        if ms and ms.ojs_submission_id:
+            ms_authors = session.exec(
+                select(ManuscriptAuthor)
+                .where(ManuscriptAuthor.manuscript_id == doi_suffix)
+                .order_by(ManuscriptAuthor.order)
+            ).all()
+            compare_metadata(
+                output_xml, ms, ms_authors,
+                output_json=convert_output / "metadata_comparison.json",
+            )
+    _finish_step(engine, doi_suffix, "check", collector.drain())
+
+    # ── Step 5: validate JATS XML ────────────────────────────────────
+    step_tracker[0] = "validate"
+    _start_step(engine, doi_suffix, "validate")
+    validate_jats(str(output_xml))
+    _finish_step(engine, doi_suffix, "validate", collector.drain())
+
+    # ── Done ─────────────────────────────────────────────────────────
+    step_tracker[0] = ""
+    _update_manuscript(
+        engine,
+        doi_suffix,
+        status=ManuscriptStatus.ready,
+        job_completed_at=datetime.utcnow(),
+    )
+
+
+def _run_quarto_pipeline(
+    doi_suffix: str, engine: Engine, storage: Storage, collector: _LogCollector,
+    step_tracker: list[str],
+) -> None:
+    """Quarto-specific pipeline: prepare → compile (PDF) → convert → check → validate."""
+    source_dir = storage.source_dir(doi_suffix)
+    workspace_dir = storage.prepare_output_dir(doi_suffix)
+    convert_output = storage.convert_output_dir(doi_suffix)
+
+    # ── Step 1: prepare workspace ────────────────────────────────────
+    prepare_quarto_workspace(source_dir, workspace_dir)
+    _finish_step(engine, doi_suffix, "prepare", collector.drain())
+
+    workspace_qmd = find_qmd(workspace_dir)
+    if workspace_qmd is None:
+        raise FileNotFoundError(f"No .qmd file found in {workspace_dir}")
+
+    # ── Step 2: compile PDF (for page count and publisher zip) ───────
+    step_tracker[0] = "compile"
+    _start_step(engine, doi_suffix, "compile")
+    pdf_path = None
+    lastpage = None
+    try:
+        rendered_pdf = render_quarto_pdf(workspace_qmd, log_dir=workspace_dir)
+        pdf_path = convert_output / f"{workspace_qmd.stem}.pdf"
+        pdf_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(rendered_pdf, pdf_path)
+        lastpage = _pdf_page_count(pdf_path)
+    except Exception:
+        logger.warning("Quarto PDF compilation failed; continuing without PDF")
+    _finish_step(engine, doi_suffix, "compile", collector.drain(),
+                 log_dirs=[workspace_dir])
+
+    # ── Step 3: convert (render JATS + post-processing + zip) ────────
+    step_tracker[0] = "convert"
+    _start_step(engine, doi_suffix, "convert")
+
+    # Determine article ID from the qmd YAML
+    try:
+        article_id = get_doi_suffix_from_qmd(workspace_qmd)
+    except Exception:
+        article_id = doi_suffix
+
+    output_xml = convert_output / f"{article_id}.xml"
+    convert_quarto(workspace_qmd, output_xml, html=True, lastpage=lastpage)
+
+    # Copy PDF to convert output for web preview
+    if pdf_path and pdf_path.exists():
+        dest_pdf = convert_output / f"{article_id}.pdf"
+        if dest_pdf != pdf_path:
+            shutil.copy2(pdf_path, dest_pdf)
+
+    # Create publisher zip
+    zip_path = convert_output / f"{article_id}.zip"
+    create_publisher_zip(output_xml, pdf_path, zip_path)
+    convert_log_dir = convert_output / "logs"
+    _finish_step(engine, doi_suffix, "convert", collector.drain(),
+                 log_dirs=[convert_log_dir])
+
+    # ── Step 4: compare metadata against OJS ────────────────────────
+    step_tracker[0] = "check"
+    _start_step(engine, doi_suffix, "check")
+    with Session(engine) as session:
+        ms = session.get(Manuscript, doi_suffix)
+        if ms and ms.ojs_submission_id:
+            ms_authors = session.exec(
+                select(ManuscriptAuthor)
+                .where(ManuscriptAuthor.manuscript_id == doi_suffix)
+                .order_by(ManuscriptAuthor.order)
+            ).all()
+            compare_metadata(
+                output_xml, ms, ms_authors,
+                output_json=convert_output / "metadata_comparison.json",
+            )
+    _finish_step(engine, doi_suffix, "check", collector.drain())
+
+    # ── Step 5: validate JATS XML ────────────────────────────────────
+    step_tracker[0] = "validate"
+    _start_step(engine, doi_suffix, "validate")
+    validate_jats(str(output_xml))
+    _finish_step(engine, doi_suffix, "validate", collector.drain())
+
+    # ── Done ─────────────────────────────────────────────────────────
+    step_tracker[0] = ""
+    _update_manuscript(
+        engine,
+        doi_suffix,
+        status=ManuscriptStatus.ready,
+        job_completed_at=datetime.utcnow(),
+    )
+
+
 def run_pipeline(doi_suffix: str, engine: Engine, storage: Storage, *, fix: bool = False) -> None:
     """Execute the full conversion pipeline for a manuscript.
 
     This function is intended to run as a FastAPI background task.  It creates
     its own DB sessions (the request session is already closed by the time a
     background task runs).
+
+    Automatically detects whether the uploaded source is Quarto (.qmd) or
+    LaTeX (.tex) and delegates to the appropriate pipeline.
     """
     collector = _LogCollector()
     pipeline_logger = logging.getLogger("latex_jats")
@@ -270,7 +484,9 @@ def run_pipeline(doi_suffix: str, engine: Engine, storage: Storage, *, fix: bool
     if pipeline_logger.level > logging.INFO or pipeline_logger.level == logging.NOTSET:
         pipeline_logger.setLevel(logging.INFO)
 
-    current_step = None
+    # Mutable container so sub-pipeline functions can update the current step
+    # for error handling in the outer except block.
+    step_tracker = ["prepare"]
 
     try:
         # ── Transition to processing ─────────────────────────────────────
@@ -284,108 +500,17 @@ def run_pipeline(doi_suffix: str, engine: Engine, storage: Storage, *, fix: bool
         )
 
         source_dir = storage.source_dir(doi_suffix)
-        workspace_dir = storage.prepare_output_dir(doi_suffix)
-        convert_output = storage.convert_output_dir(doi_suffix)
         storage.ensure_dirs(doi_suffix)
 
-        # ── Step 1: prepare workspace ────────────────────────────────────
-        current_step = "prepare"
+        is_quarto = _is_quarto_source(source_dir)
+
+        # ── Step 1: prepare ──────────────────────────────────────────────
         _start_step(engine, doi_suffix, "prepare")
-        workspace_tex = prepare_workspace(source_dir, workspace_dir, fix_problems=fix)
 
-        # Inject missing journal metadata from OJS before compilation
-        with Session(engine) as session:
-            ms = session.get(Manuscript, doi_suffix)
-            if ms and ms.ojs_submission_id:
-                inject_ojs_metadata(workspace_tex, ms)
-
-        _finish_step(engine, doi_suffix, "prepare", collector.drain())
-
-        # ── Step 2: compile LaTeX ────────────────────────────────────────
-        current_step = "compile"
-        _start_step(engine, doi_suffix, "compile")
-        log_dir = storage.prepare_output_dir(doi_suffix)
-        ok = compile_latex(workspace_dir, log_dir=log_dir)
-        _finish_step(engine, doi_suffix, "compile", collector.drain(),
-                     failed=not ok, log_dirs=[log_dir])
-
-        if not ok:
-            _skip_remaining_steps(engine, doi_suffix, ["convert", "check", "validate"])
-            _update_manuscript(
-                engine,
-                doi_suffix,
-                status=ManuscriptStatus.failed,
-                job_completed_at=datetime.utcnow(),
-            )
-            return
-
-        # Copy main.pdf back to source_dir for lastpage / future reference
-        pdf_src = workspace_dir / "main.pdf"
-        if pdf_src.exists():
-            shutil.copy2(pdf_src, source_dir / "main.pdf")
-
-        # ── Step 3: convert (preprocess + latexmlc + post-processing + zip)
-        current_step = "convert"
-        _start_step(engine, doi_suffix, "convert")
-        preprocess_for_latexml(workspace_dir)
-
-        # Determine article ID from the LaTeX preamble
-        try:
-            article_id = get_doi_suffix(workspace_tex)
-        except Exception:
-            article_id = doi_suffix
-
-        output_xml = convert_output / f"{article_id}.xml"
-
-        lastpage = None
-        if pdf_src.exists():
-            lastpage = _pdf_page_count(pdf_src)
-
-        convert(workspace_tex, output_xml, html=True, lastpage=lastpage)
-
-        # Copy PDF to convert output for web preview
-        pdf_path = source_dir / "main.pdf" if (source_dir / "main.pdf").exists() else None
-        if pdf_path:
-            shutil.copy2(pdf_path, convert_output / f"{article_id}.pdf")
-
-        # Create publisher zip
-        zip_path = convert_output / f"{article_id}.zip"
-        create_publisher_zip(output_xml, pdf_path, zip_path)
-        convert_log_dir = convert_output / "logs"
-        _finish_step(engine, doi_suffix, "convert", collector.drain(),
-                     log_dirs=[convert_log_dir])
-
-        # ── Step 4: compare metadata against OJS ────────────────────────
-        current_step = "check"
-        _start_step(engine, doi_suffix, "check")
-        with Session(engine) as session:
-            ms = session.get(Manuscript, doi_suffix)
-            if ms and ms.ojs_submission_id:
-                ms_authors = session.exec(
-                    select(ManuscriptAuthor)
-                    .where(ManuscriptAuthor.manuscript_id == doi_suffix)
-                    .order_by(ManuscriptAuthor.order)
-                ).all()
-                compare_metadata(
-                    output_xml, ms, ms_authors,
-                    output_json=convert_output / "metadata_comparison.json",
-                )
-        _finish_step(engine, doi_suffix, "check", collector.drain())
-
-        # ── Step 5: validate JATS XML ────────────────────────────────────
-        current_step = "validate"
-        _start_step(engine, doi_suffix, "validate")
-        validate_jats(str(output_xml))
-        _finish_step(engine, doi_suffix, "validate", collector.drain())
-
-        # ── Done ─────────────────────────────────────────────────────────
-        current_step = None
-        _update_manuscript(
-            engine,
-            doi_suffix,
-            status=ManuscriptStatus.ready,
-            job_completed_at=datetime.utcnow(),
-        )
+        if is_quarto:
+            _run_quarto_pipeline(doi_suffix, engine, storage, collector, step_tracker)
+        else:
+            _run_latex_pipeline(doi_suffix, engine, storage, collector, step_tracker, fix=fix)
 
     except Exception:
         tb = traceback.format_exc()
@@ -394,6 +519,7 @@ def run_pipeline(doi_suffix: str, engine: Engine, storage: Storage, *, fix: bool
             log_text += "\n"
         log_text += tb
 
+        current_step = step_tracker[0]
         # Mark the current step as failed and remaining steps as skipped
         if current_step:
             step_log_dirs: list[Path] = []
