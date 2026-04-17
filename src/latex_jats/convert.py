@@ -2073,6 +2073,54 @@ def _convert_pdf_figures(jats_file, latex_dir):
             )
 
 
+def _flatten_raster_alpha(jats_file):
+    """Composite PNG/GIF graphics onto opaque white to remove transparency.
+
+    Ingenta's PNG→GIF conversion collapses semi-transparent pixels into
+    full transparency (GIF only supports 1-bit alpha), which blows out
+    brightness in the published article. Flattening against white before
+    submission sidesteps that — publisher pages render on white anyway.
+    """
+    from PIL import Image
+
+    XLINK = "http://www.w3.org/1999/xlink"
+    tree = ET.parse(jats_file)
+    root = tree.getroot()
+    output_dir = Path(jats_file).parent
+    flattened = []
+
+    for el in root.iter("graphic"):
+        href = el.get(f"{{{XLINK}}}href", "")
+        if not href or href.startswith("http"):
+            continue
+        if not href.lower().endswith((".png", ".gif")):
+            continue
+        img_path = output_dir / href
+        if not img_path.exists():
+            continue
+        with Image.open(img_path) as img:
+            has_alpha_channel = img.mode in ("RGBA", "LA") or (
+                img.mode == "P" and "transparency" in img.info
+            )
+            if not has_alpha_channel:
+                continue
+            rgba = img.convert("RGBA")
+            min_alpha, _ = rgba.getchannel("A").getextrema()
+            if min_alpha == 255:
+                continue
+            fmt = img.format
+            background = Image.new("RGB", rgba.size, (255, 255, 255))
+            background.paste(rgba, mask=rgba.split()[3])
+            background.save(img_path, format=fmt)
+        flattened.append(href)
+
+    if flattened:
+        logger.info(
+            "Flattened %d graphic(s) onto white background: %s",
+            len(flattened), ", ".join(flattened),
+        )
+
+
 def fix_graphic_hrefs(jats_file, output_dir: Path):
     """Normalize graphic href paths that don't resolve in the output directory.
 
@@ -2347,7 +2395,11 @@ def convert(input_path: Path, output_path: Path, html: bool = False, lastpage=No
     # (fix_pdf_graphic_refs already rewrote the JATS hrefs to .svg)
     _convert_pdf_figures(output_path, latex_dir)
 
-    # step 2e: rename graphics to publisher format (ID_fig1.ext, ID_fig2.ext, ...)
+    # step 2e: flatten PNG/GIF alpha onto white so Ingenta's PNG→GIF step
+    # doesn't blow out brightness from partial transparency
+    _flatten_raster_alpha(str(output_path))
+
+    # step 2f: rename graphics to publisher format (ID_fig1.ext, ID_fig2.ext, ...)
     rename_graphics(str(output_path))
 
     # step 3 (optional): generate HTML preview

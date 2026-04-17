@@ -7,7 +7,7 @@ name = "latex-jats"
 version = "0.5.4"
 description = "Convert CCR journal LaTeX manuscripts to JATS XML"
 requires-python = ">=3.10"
-dependencies = ["lxml", "pyyaml"]
+dependencies = ["lxml", "pyyaml", "Pillow"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
