@@ -15,7 +15,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # Python
     python3 python3-pip python3-venv \
     # R (for Quarto .qmd articles with R code chunks)
-    r-base \
+    r-base r-base-dev \
+    r-cran-knitr r-cran-rmarkdown r-cran-kableextra \
     # Quarto dependencies
     curl gdebi-core \
     && rm -rf /var/lib/apt/lists/*
@@ -24,9 +25,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN curl -LO https://github.com/quarto-dev/quarto-cli/releases/download/v1.7.29/quarto-1.7.29-linux-amd64.deb \
     && gdebi -n quarto-1.7.29-linux-amd64.deb \
     && rm quarto-1.7.29-linux-amd64.deb
-
-# R packages commonly used in CCR Quarto articles
-RUN R -e "install.packages(c('knitr', 'rmarkdown', 'kableExtra'), repos='https://cloud.r-project.org')"
 
 # uv is tiny but bundling it here keeps the app Dockerfile a one-liner build
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
