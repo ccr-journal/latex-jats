@@ -14,7 +14,7 @@ import { PipelineProgress } from "@/components/PipelineProgress";
 import { MetadataCard } from "@/components/MetadataCard";
 import { UploadZone } from "@/components/UploadZone";
 import { useAuth } from "@/auth/AuthContext";
-import { getManuscript, getStatus, uploadFiles, startProcessing, updateManuscript, reimportOjsMetadata, approveManuscript, withdrawApproval, downloadUrl, outputUrl, presign, getAuthorToken, regenerateAuthorToken, getInviteTemplate, inviteAuthors } from "@/api/client";
+import { getManuscript, getStatus, uploadFiles, startProcessing, updateManuscript, reimportOjsMetadata, approveManuscript, withdrawApproval, downloadUrl, outputUrl, presign, getAuthorToken, regenerateAuthorToken, getInviteTemplate, inviteAuthors, type Recipient } from "@/api/client";
 import { ApiError } from "@/api/client";
 import type { Manuscript, PipelineStep } from "@/api/types";
 
@@ -475,10 +475,11 @@ function AuthorLink({ doiSuffix, authors }: { doiSuffix: string; authors: { name
   const [inviteMessage, setInviteMessage] = useState<string | null>(null);
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
+  const [recipients, setRecipients] = useState<Recipient[]>([]);
+  const [newRecipient, setNewRecipient] = useState("");
   const [loadingTemplate, setLoadingTemplate] = useState(false);
 
   const authorsWithEmail = authors.filter((a) => a.email);
-  const authorsWithoutEmail = authors.filter((a) => !a.email);
 
   useEffect(() => {
     getAuthorToken(doiSuffix)
@@ -507,15 +508,18 @@ function AuthorLink({ doiSuffix, authors }: { doiSuffix: string; authors: { name
 
   const handleOpenInvite = async () => {
     setInviteMessage(null);
+    setNewRecipient("");
     setInviteDialogOpen(true);
     setLoadingTemplate(true);
     try {
       const tpl = await getInviteTemplate(doiSuffix);
       setSubject(tpl.subject);
       setBody(tpl.body);
+      setRecipients(tpl.recipients);
     } catch {
       setSubject("");
       setBody("");
+      setRecipients([]);
     } finally {
       setLoadingTemplate(false);
     }
@@ -525,7 +529,7 @@ function AuthorLink({ doiSuffix, authors }: { doiSuffix: string; authors: { name
     setInviting(true);
     setInviteMessage(null);
     try {
-      const result = await inviteAuthors(doiSuffix, { subject, body });
+      const result = await inviteAuthors(doiSuffix, { subject, body, recipients });
       setInviteMessage(`Sent to ${result.sent.join(", ")}`);
       setInviteDialogOpen(false);
     } catch (err) {
@@ -533,6 +537,24 @@ function AuthorLink({ doiSuffix, authors }: { doiSuffix: string; authors: { name
     } finally {
       setInviting(false);
     }
+  };
+
+  const handleAddRecipient = () => {
+    const input = newRecipient.trim();
+    if (!input) return;
+    // Parse "Name <email>" or just "email"
+    const match = input.match(/^(.+?)\s*<([^>]+)>$/);
+    const recipient: Recipient = match
+      ? { name: match[1].trim(), email: match[2].trim() }
+      : { name: input.split("@")[0], email: input };
+    if (!recipient.email.includes("@")) return;
+    if (recipients.some((r) => r.email === recipient.email)) return;
+    setRecipients([...recipients, recipient]);
+    setNewRecipient("");
+  };
+
+  const handleRemoveRecipient = (email: string) => {
+    setRecipients(recipients.filter((r) => r.email !== email));
   };
 
   if (loading) return null;
@@ -583,10 +605,47 @@ function AuthorLink({ doiSuffix, authors }: { doiSuffix: string; authors: { name
             <p className="text-sm text-muted-foreground">Loading template...</p>
           ) : (
             <div className="space-y-3">
-              <div className="text-sm text-muted-foreground">
-                Sending to: {authorsWithEmail.map((a) => `${a.name ?? "Unknown"} (${a.email})`).join(", ")}
-                {authorsWithoutEmail.length > 0 && (
-                  <> — skipped (no email): {authorsWithoutEmail.map((a) => a.name ?? "Unknown").join(", ")}</>
+              <div className="space-y-1">
+                <Label className="text-sm font-medium">To</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  {recipients.map((r) => (
+                    <span
+                      key={r.email}
+                      className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-xs"
+                    >
+                      {r.name} &lt;{r.email}&gt;
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveRecipient(r.email)}
+                        className="ml-0.5 text-muted-foreground hover:text-foreground"
+                        aria-label={`Remove ${r.name}`}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newRecipient}
+                    onChange={(e) => setNewRecipient(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddRecipient(); } }}
+                    placeholder="Add recipient: Name <email> or email"
+                    className="flex-1 rounded border border-input bg-background px-3 py-1.5 text-sm"
+                  />
+                  <Button type="button" variant="outline" size="sm" onClick={handleAddRecipient} disabled={!newRecipient.trim()}>
+                    Add
+                  </Button>
+                </div>
+                {authorsWithEmail.length > recipients.length && (
+                  <button
+                    type="button"
+                    onClick={() => setRecipients(authorsWithEmail.map((a) => ({ name: a.name ?? "Author", email: a.email! })))}
+                    className="text-xs text-muted-foreground hover:underline"
+                  >
+                    Add all authors with email
+                  </button>
                 )}
               </div>
               <div className="space-y-1">
@@ -601,7 +660,7 @@ function AuthorLink({ doiSuffix, authors }: { doiSuffix: string; authors: { name
               </div>
               <div className="space-y-1">
                 <Label htmlFor="invite-body" className="text-sm font-medium">
-                  Message <span className="font-normal text-muted-foreground">(markdown — {"{names}"} is replaced with author names)</span>
+                  Message <span className="font-normal text-muted-foreground">(markdown)</span>
                 </Label>
                 <textarea
                   id="invite-body"
@@ -617,7 +676,7 @@ function AuthorLink({ doiSuffix, authors }: { doiSuffix: string; authors: { name
             <Button variant="outline" onClick={() => setInviteDialogOpen(false)} disabled={inviting}>
               Cancel
             </Button>
-            <Button onClick={handleInvite} disabled={inviting || loadingTemplate}>
+            <Button onClick={handleInvite} disabled={inviting || loadingTemplate || recipients.length === 0}>
               {inviting ? "Sending\u2026" : "Send invitations"}
             </Button>
           </div>

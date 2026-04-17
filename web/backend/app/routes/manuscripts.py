@@ -236,19 +236,25 @@ def regenerate_author_token(
 # ── Author invitations ───────────────────────────────────────────────────────
 
 
+class Recipient(BaseModel):
+    name: str
+    email: str
+
+
 class InviteTemplateRead(BaseModel):
     subject: str
-    body: str  # markdown with {names} placeholder
+    body: str  # markdown
+    recipients: list[Recipient]  # default: first author only
 
 
 class InviteRequest(BaseModel):
     subject: str
-    body: str  # markdown with {names} placeholder
+    body: str  # markdown
+    recipients: list[Recipient]  # editor-chosen recipients
 
 
 class InviteResult(BaseModel):
     sent: list[str]     # authors who received the email
-    skipped: list[str]  # authors without email
 
 
 def _get_or_create_token(doi_suffix: str, session: Session) -> ManuscriptToken:
@@ -281,9 +287,23 @@ def get_invite_template(
     author_url = _build_author_url(doi_suffix, mt.token)
     title = ms.title or ms.doi_suffix
 
+    # Default to first author only
+    authors = session.exec(
+        select(ManuscriptAuthor)
+        .where(ManuscriptAuthor.manuscript_id == doi_suffix)
+        .order_by(ManuscriptAuthor.order)
+    ).all()
+    first_with_email = next(
+        (Recipient(name=a.name or "Author", email=a.email)
+         for a in authors if a.email),
+        None,
+    )
+
+    author_name = first_with_email.name if first_with_email else "Author"
     return InviteTemplateRead(
         subject=f"Your manuscript is ready for review: {title}",
-        body=email_module.default_template(title, author_url),
+        body=email_module.default_template(title, author_url, author_name),
+        recipients=[first_with_email] if first_with_email else [],
     )
 
 
@@ -294,7 +314,7 @@ async def invite_authors(
     _editor: str = Depends(require_editor),
     session: Session = Depends(get_session),
 ):
-    """Send invitation emails to all authors with email addresses."""
+    """Send invitation emails to the specified recipients."""
     from ..config import get_config
 
     cfg = get_config()
@@ -305,25 +325,13 @@ async def invite_authors(
     if ms is None:
         raise HTTPException(404, detail=f"Manuscript '{doi_suffix}' not found")
 
-    # Partition authors into those with and without email
-    authors = session.exec(
-        select(ManuscriptAuthor)
-        .where(ManuscriptAuthor.manuscript_id == doi_suffix)
-        .order_by(ManuscriptAuthor.order)
-    ).all()
+    if not req.recipients:
+        raise HTTPException(422, detail="No recipients specified.")
 
-    to_send = [(a.name or "Author", a.email) for a in authors if a.email]
-    skipped = [a.name or "Author" for a in authors if not a.email]
-
-    if not to_send:
-        raise HTTPException(
-            422, detail="No authors have email addresses. Import from OJS or add emails manually."
-        )
-
+    to_send = [(r.name, r.email) for r in req.recipients]
     await email_module.send_invite_email(req.subject, req.body, to_send, cfg)
     return InviteResult(
         sent=[name for name, _ in to_send],
-        skipped=skipped,
     )
 
 

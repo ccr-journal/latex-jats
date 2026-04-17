@@ -1,10 +1,9 @@
 """Email sending for author invitations.
 
 Uses stdlib smtplib + email.mime, wrapped in asyncio.to_thread() to avoid
-blocking the event loop.  The editor provides a markdown template with
-``{names}`` as a placeholder; we format a natural-language name list
-(e.g. "Alice, Bob, and Carol") and convert the markdown to HTML via the
-``markdown`` library.  A single email is sent to all authors.
+blocking the event loop.  The editor provides a ready-to-send markdown body
+which is converted to HTML via the ``markdown`` library.  A single email is
+sent to all recipients.
 """
 
 from __future__ import annotations
@@ -23,7 +22,7 @@ logger = logging.getLogger("latex_jats.web.email")
 
 
 DEFAULT_TEMPLATE = """\
-Dear {names},
+Dear {name},
 
 Your manuscript "{title}" is now in production at Computational Communication Research (CCR).
 
@@ -44,21 +43,10 @@ Best regards,
 Computational Communication Research"""
 
 
-def _format_names(names: list[str]) -> str:
-    """Format a list of names as natural-language enumeration."""
-    if len(names) == 0:
-        return "Authors"
-    if len(names) == 1:
-        return names[0]
-    if len(names) == 2:
-        return f"{names[0]} and {names[1]}"
-    return ", ".join(names[:-1]) + f", and {names[-1]}"
-
-
-def default_template(title: str, author_url: str) -> str:
-    """Return the default invitation template with title and URL filled in."""
+def default_template(title: str, author_url: str, author_name: str) -> str:
+    """Return the default invitation template with all values filled in."""
     return DEFAULT_TEMPLATE.format(
-        names="{names}", title=title, author_url=author_url,
+        name=author_name, title=title, author_url=author_url,
     )
 
 
@@ -68,9 +56,8 @@ def _send(
     body_md: str,
     cfg: AuthConfig,
 ) -> None:
-    """Send a single invitation email to all authors (blocking)."""
-    names = _format_names([name for name, _ in recipients])
-    plain = body_md.replace("{names}", names)
+    """Send a single invitation email to all recipients (blocking)."""
+    plain = body_md
     html = md.markdown(plain)
 
     msg = MIMEMultipart("alternative")
@@ -95,11 +82,7 @@ async def send_invite_email(
     authors: list[tuple[str, str]],  # (name, email) pairs
     cfg: AuthConfig | None = None,
 ) -> None:
-    """Send a single invitation email to all authors.
-
-    ``body_md`` is a markdown template; ``{names}`` is replaced with a
-    formatted name list (e.g. "Alice, Bob, and Carol").
-    """
+    """Send a single invitation email to all recipients."""
     cfg = cfg or get_config()
     await asyncio.to_thread(_send, authors, subject, body_md, cfg)
     logger.info(

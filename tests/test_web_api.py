@@ -1218,7 +1218,11 @@ def test_sync_ojs_no_comparison_file(client, engine, test_storage):
 # ── Invite authors ───────────────────────────────────────────────────────────
 
 
-INVITE_BODY = {"subject": "Test invite", "body": "Dear {names}, please check."}
+INVITE_BODY = {
+    "subject": "Test invite",
+    "body": "Dear Alice, please check.",
+    "recipients": [{"name": "Alice", "email": "alice@example.com"}],
+}
 
 
 def test_invite_authors_requires_editor(author_client, engine):
@@ -1231,29 +1235,25 @@ def test_invite_authors_requires_editor(author_client, engine):
     assert r.status_code == 403
 
 
-def test_invite_authors_no_emails(client, engine):
+def test_invite_authors_no_recipients(client, engine):
     cfg_with_smtp = AuthConfig(
         **{**TEST_CFG.__dict__, "smtp_host": "smtp.test", "smtp_from": "test@test.com"}
     )
     set_for_tests(cfg_with_smtp)
     with Session(engine) as session:
         session.add(Manuscript(doi_suffix="CCR.NOEMAIL", title="Test"))
-        session.add(ManuscriptAuthor(manuscript_id="CCR.NOEMAIL", name="Alice", order=0))
         session.commit()
     r = client.post(
-        "/api/manuscripts/CCR.NOEMAIL/invite-authors", json=INVITE_BODY
+        "/api/manuscripts/CCR.NOEMAIL/invite-authors",
+        json={"subject": "Test", "body": "Dear Author", "recipients": []},
     )
     assert r.status_code == 422
-    assert "No authors have email" in r.json()["detail"]
+    assert "No recipients" in r.json()["detail"]
 
 
 def test_invite_authors_smtp_not_configured(client, engine):
     with Session(engine) as session:
         session.add(Manuscript(doi_suffix="CCR.NOSMTP", title="Test"))
-        session.add(ManuscriptAuthor(
-            manuscript_id="CCR.NOSMTP", name="Alice",
-            email="alice@example.com", order=0,
-        ))
         session.commit()
     r = client.post(
         "/api/manuscripts/CCR.NOSMTP/invite-authors", json=INVITE_BODY
@@ -1265,13 +1265,25 @@ def test_invite_authors_smtp_not_configured(client, engine):
 def test_invite_template(client, engine):
     with Session(engine) as session:
         session.add(Manuscript(doi_suffix="CCR.TPL", title="My Paper"))
+        session.add(ManuscriptAuthor(
+            manuscript_id="CCR.TPL", name="Alice",
+            email="alice@example.com", order=0,
+        ))
+        session.add(ManuscriptAuthor(
+            manuscript_id="CCR.TPL", name="Bob",
+            email="bob@example.com", order=1,
+        ))
         session.commit()
     r = client.get("/api/manuscripts/CCR.TPL/invite-authors")
     assert r.status_code == 200
     data = r.json()
     assert "My Paper" in data["subject"]
-    assert "{names}" in data["body"]
+    assert "Dear Alice" in data["body"]
     assert "CCR.TPL" in data["body"]
+    # Default recipients: first author only
+    assert len(data["recipients"]) == 1
+    assert data["recipients"][0]["name"] == "Alice"
+    assert data["recipients"][0]["email"] == "alice@example.com"
 
 
 def test_invite_authors_success(client, engine):
@@ -1281,13 +1293,6 @@ def test_invite_authors_success(client, engine):
     set_for_tests(cfg_with_smtp)
     with Session(engine) as session:
         session.add(Manuscript(doi_suffix="CCR.INVITE", title="My Paper"))
-        session.add(ManuscriptAuthor(
-            manuscript_id="CCR.INVITE", name="Alice",
-            email="alice@example.com", order=0,
-        ))
-        session.add(ManuscriptAuthor(
-            manuscript_id="CCR.INVITE", name="Bob", order=1,
-        ))
         session.commit()
 
     with patch(
@@ -1295,16 +1300,22 @@ def test_invite_authors_success(client, engine):
     ) as mock_send:
         r = client.post(
             "/api/manuscripts/CCR.INVITE/invite-authors",
-            json={"subject": "Check your paper", "body": "Dear {names}, please review."},
+            json={
+                "subject": "Check your paper",
+                "body": "Dear Alice and Bob, please review.",
+                "recipients": [
+                    {"name": "Alice", "email": "alice@example.com"},
+                    {"name": "Bob", "email": "bob@example.com"},
+                ],
+            },
         )
 
     assert r.status_code == 200
     data = r.json()
-    assert data["sent"] == ["Alice"]
-    assert data["skipped"] == ["Bob"]
+    assert data["sent"] == ["Alice", "Bob"]
     mock_send.assert_called_once()
     call_args = mock_send.call_args
     # recipients list
-    assert call_args[0][0] == [("Alice", "alice@example.com")]
+    assert call_args[0][0] == [("Alice", "alice@example.com"), ("Bob", "bob@example.com")]
     # subject
     assert call_args[0][1] == "Check your paper"

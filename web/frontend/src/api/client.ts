@@ -178,14 +178,19 @@ export function regenerateAuthorToken(doiSuffix: string): Promise<AuthorToken> {
 
 // ── Author invitations ──────────────────────────────────────────────────────
 
+export interface Recipient {
+  name: string;
+  email: string;
+}
+
 export interface InviteTemplate {
   subject: string;
   body: string;
+  recipients: Recipient[];
 }
 
 export interface InviteResult {
   sent: string[];
-  skipped: string[];
 }
 
 export function getInviteTemplate(doiSuffix: string): Promise<InviteTemplate> {
@@ -194,7 +199,7 @@ export function getInviteTemplate(doiSuffix: string): Promise<InviteTemplate> {
 
 export function inviteAuthors(
   doiSuffix: string,
-  data: { subject: string; body: string },
+  data: { subject: string; body: string; recipients: Recipient[] },
 ): Promise<InviteResult> {
   return apiFetch(`/api/manuscripts/${doiSuffix}/invite-authors`, {
     method: "POST",
