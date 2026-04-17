@@ -314,13 +314,19 @@ def _run_latex_pipeline(
     _start_step(engine, doi_suffix, "convert")
     preprocess_for_latexml(workspace_dir)
 
-    # Determine article ID from the LaTeX preamble
+    # Determine article ID from the LaTeX preamble (for validation/logging only)
     try:
         article_id = get_doi_suffix(workspace_tex)
     except Exception:
         article_id = doi_suffix
+    if article_id != doi_suffix:
+        logger.info(
+            "Article ID from LaTeX (%s) differs from manuscript doi_suffix (%s); "
+            "output files will be named after doi_suffix",
+            article_id, doi_suffix,
+        )
 
-    output_xml = convert_output / f"{article_id}.xml"
+    output_xml = convert_output / f"{doi_suffix}.xml"
 
     lastpage = None
     if pdf_src.exists():
@@ -331,10 +337,10 @@ def _run_latex_pipeline(
     # Copy PDF to convert output for web preview
     pdf_path = source_dir / "main.pdf" if (source_dir / "main.pdf").exists() else None
     if pdf_path:
-        shutil.copy2(pdf_path, convert_output / f"{article_id}.pdf")
+        shutil.copy2(pdf_path, convert_output / f"{doi_suffix}.pdf")
 
     # Create publisher zip
-    zip_path = convert_output / f"{article_id}.zip"
+    zip_path = convert_output / f"{doi_suffix}.zip"
     create_publisher_zip(output_xml, pdf_path, zip_path)
     convert_log_dir = convert_output / "logs"
     _finish_step(engine, doi_suffix, "convert", collector.drain(),
@@ -401,8 +407,12 @@ def _run_quarto_pipeline(
         pdf_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(rendered_pdf, pdf_path)
         lastpage = _pdf_page_count(pdf_path)
-    except Exception:
-        logger.warning("Quarto PDF compilation failed; continuing without PDF")
+    except Exception as exc:
+        # Log through latex_jats so the collector picks it up and the step
+        # is marked as "warnings" rather than "ok".
+        logging.getLogger("latex_jats").warning(
+            "Quarto PDF compilation failed (continuing without PDF): %s", exc
+        )
     _finish_step(engine, doi_suffix, "compile", collector.drain(),
                  log_dirs=[workspace_dir])
 
@@ -410,23 +420,29 @@ def _run_quarto_pipeline(
     step_tracker[0] = "convert"
     _start_step(engine, doi_suffix, "convert")
 
-    # Determine article ID from the qmd YAML
+    # Determine article ID from the qmd YAML (for validation/logging only)
     try:
         article_id = get_doi_suffix_from_qmd(workspace_qmd)
     except Exception:
         article_id = doi_suffix
+    if article_id != doi_suffix:
+        logger.info(
+            "Article ID from QMD (%s) differs from manuscript doi_suffix (%s); "
+            "output files will be named after doi_suffix",
+            article_id, doi_suffix,
+        )
 
-    output_xml = convert_output / f"{article_id}.xml"
+    output_xml = convert_output / f"{doi_suffix}.xml"
     convert_quarto(workspace_qmd, output_xml, html=True, lastpage=lastpage)
 
     # Copy PDF to convert output for web preview
     if pdf_path and pdf_path.exists():
-        dest_pdf = convert_output / f"{article_id}.pdf"
+        dest_pdf = convert_output / f"{doi_suffix}.pdf"
         if dest_pdf != pdf_path:
             shutil.copy2(pdf_path, dest_pdf)
 
     # Create publisher zip
-    zip_path = convert_output / f"{article_id}.zip"
+    zip_path = convert_output / f"{doi_suffix}.zip"
     create_publisher_zip(output_xml, pdf_path, zip_path)
     convert_log_dir = convert_output / "logs"
     _finish_step(engine, doi_suffix, "convert", collector.drain(),

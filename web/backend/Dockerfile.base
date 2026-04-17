@@ -10,6 +10,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     latexml \
     # PDF figure conversion
     inkscape \
+    # SVG to PDF conversion (required by Quarto PDF rendering with SVG figures)
+    librsvg2-bin \
     # pdfinfo for page count detection
     poppler-utils \
     # Python

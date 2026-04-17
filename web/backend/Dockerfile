@@ -1,7 +1,7 @@
 # TeX Live, LaTeXML, inkscape, poppler, python3, uv all baked into the base
 # image. See web/backend/Dockerfile.base and the "Rebuilding the base image"
 # section of README.md. Bump the date tag when refreshing system packages.
-FROM ccsamsterdam/latex-jats-base:2026-04c
+FROM ccsamsterdam/latex-jats-base:2026-04d
 
 # Set up application — copy full project (backend imports src/latex_jats)
 WORKDIR /app
