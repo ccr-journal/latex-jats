@@ -3,7 +3,6 @@ import xml.etree.ElementTree as ET
 
 from latex_jats.quarto import (
     add_fig_table_labels,
-    clean_element_citations,
     drop_empty_refs_section,
     fix_corresp_xref,
     fix_empty_history,
@@ -11,6 +10,9 @@ from latex_jats.quarto import (
     move_appendix_to_back,
     move_fn_group_to_back,
     parse_qmd_frontmatter,
+    rebuild_element_citations,
+    reorder_back_matter,
+    set_ref_list_title,
     unwrap_table_fig,
 )
 
@@ -138,17 +140,243 @@ def test_drop_empty_refs_section_keeps_nonempty(xml_file):
     assert root.find(".//body/sec[@id='references']") is not None
 
 
-def test_clean_element_citations(xml_file):
+_XLINK = "{http://www.w3.org/1999/xlink}"
+
+
+def test_rebuild_element_citations_journal(xml_file):
     p = xml_file(
-        '<article><back><ref-list><ref id="r1"><element-citation>'
-        '<article-title>Foo</article-title>'
-        '<date-in-citation content-type="access-date"><year>2026</year></date-in-citation>'
-        '</element-citation></ref></ref-list></back></article>'
+        '<article><back><ref-list>'
+        '<ref id="ref-smith2024">'
+        '<element-citation publication-type="article-journal">'
+        '<person-group person-group-type="author">'
+        '<name><surname>Smith</surname><given-names>Jane A.</given-names></name>'
+        '<name><surname>Doe</surname><given-names>John</given-names></name>'
+        '</person-group>'
+        '<article-title>A Study of Things</article-title>'
+        '<source>Journal of Things</source>'
+        '<year iso-8601-date="2024-03">2024</year>'
+        '<month>03</month>'
+        '<volume>12</volume>'
+        '<issue>3</issue>'
+        '<issn>1234-5678</issn>'
+        '<uri>https://example.com/x</uri>'
+        '<pub-id pub-id-type="doi">10.1234/abc.2024.003</pub-id>'
+        '<fpage>45</fpage>'
+        '<lpage>67</lpage>'
+        '</element-citation>'
+        '</ref>'
+        '</ref-list></back></article>'
     )
-    clean_element_citations(p)
+    rebuild_element_citations(p)
     root = _parse(p)
-    assert root.find(".//date-in-citation") is None
-    assert root.find(".//article-title").text == "Foo"
+    ref = root.find(".//ref")
+    assert ref.find("element-citation") is None
+    mc = ref.find("mixed-citation")
+    assert mc is not None
+    assert mc.get("publication-type") == "journal"
+    surnames = [sn.text for sn in mc.findall("string-name/surname")]
+    assert surnames == ["Smith", "Doe"]
+    assert mc.find("article-title").text == "A Study of Things"
+    assert mc.find("source/italic").text == "Journal of Things"
+    assert mc.find("year").text == "2024"
+    assert mc.find("volume").text == "12"
+    assert mc.find("issue").text == "3"
+    assert mc.find("fpage").text == "45"
+    assert mc.find("lpage").text == "67"
+    link = mc.find("ext-link")
+    assert link is not None
+    assert link.get("ext-link-type") == "doi"
+    assert link.get(f"{_XLINK}href") == "https://doi.org/10.1234/abc.2024.003"
+    assert link.text == "https://doi.org/10.1234/abc.2024.003"
+    # Given names should be collapsed to APA initials for consistency with
+    # the biblatex-driven LaTeX pipeline.
+    given = [g.text for g in mc.findall("string-name/given-names")]
+    assert given == ["J. A.", "J."]
+    # Sanity-check APA separators are inline (the original bug was that
+    # Quarto's element-citation emitted fields with no punctuation, so the
+    # rendered text was run-on).
+    flat = "".join(mc.itertext())
+    assert "Smith, J. A." in flat
+    assert ", & Doe, J." in flat
+    assert " (2024). " in flat
+    assert ". Journal of Things, " in flat
+    assert "12(3), 45\u201367. https://doi.org/" in flat
+
+
+def test_rebuild_element_citations_chapter(xml_file):
+    p = xml_file(
+        '<article><back><ref-list>'
+        '<ref id="ref-cuddy2008">'
+        '<element-citation publication-type="chapter">'
+        '<person-group person-group-type="author">'
+        '<name><surname>Cuddy</surname><given-names>Amy J. C.</given-names></name>'
+        '</person-group>'
+        '<article-title>Warmth and Competence</article-title>'
+        '<source>Advances in Experimental Social Psychology</source>'
+        '<publisher-name>Elsevier</publisher-name>'
+        '<year iso-8601-date="2008">2008</year>'
+        '<volume>40</volume>'
+        '<fpage>61</fpage>'
+        '<lpage>149</lpage>'
+        '</element-citation>'
+        '</ref>'
+        '</ref-list></back></article>'
+    )
+    rebuild_element_citations(p)
+    root = _parse(p)
+    mc = root.find(".//mixed-citation")
+    assert mc.get("publication-type") == "book"
+    assert mc.find("chapter-title").text == "Warmth and Competence"
+    assert mc.find("source/italic").text == "Advances in Experimental Social Psychology"
+    assert mc.find("fpage").text == "61"
+    assert mc.find("lpage").text == "149"
+    assert mc.find("publisher-name").text == "Elsevier"
+    flat = "".join(mc.itertext())
+    assert "In " in flat
+    assert "(pp. 61" in flat
+
+
+def test_rebuild_element_citations_book(xml_file):
+    p = xml_file(
+        '<article><back><ref-list>'
+        '<ref id="ref-butler2011">'
+        '<element-citation publication-type="book">'
+        '<person-group person-group-type="author">'
+        '<name><surname>Butler</surname><given-names>Judith</given-names></name>'
+        '</person-group>'
+        '<source>Gender Trouble</source>'
+        '<publisher-name>Routledge</publisher-name>'
+        '<year iso-8601-date="2011">2011</year>'
+        '<pub-id pub-id-type="doi">10.4324/9780203824979</pub-id>'
+        '</element-citation>'
+        '</ref>'
+        '</ref-list></back></article>'
+    )
+    rebuild_element_citations(p)
+    root = _parse(p)
+    mc = root.find(".//mixed-citation")
+    assert mc.get("publication-type") == "book"
+    assert mc.find("source/italic").text == "Gender Trouble"
+    assert mc.find("publisher-name").text == "Routledge"
+    assert mc.find("article-title") is None
+    assert mc.find("chapter-title") is None
+    link = mc.find("ext-link")
+    assert link.get("ext-link-type") == "doi"
+    assert link.get(f"{_XLINK}href") == "https://doi.org/10.4324/9780203824979"
+
+
+def test_rebuild_element_citations_uri_only(xml_file):
+    p = xml_file(
+        '<article><back><ref-list>'
+        '<ref id="ref-web">'
+        '<element-citation publication-type="webpage">'
+        '<person-group person-group-type="author">'
+        '<name><surname>Roe</surname><given-names>R.</given-names></name>'
+        '</person-group>'
+        '<source>A Blog Post</source>'
+        '<year iso-8601-date="2022">2022</year>'
+        '<uri>https://example.com/post</uri>'
+        '</element-citation>'
+        '</ref>'
+        '</ref-list></back></article>'
+    )
+    rebuild_element_citations(p)
+    root = _parse(p)
+    mc = root.find(".//mixed-citation")
+    link = mc.find("ext-link")
+    assert link is not None
+    assert link.get("ext-link-type") == "uri"
+    assert link.get(f"{_XLINK}href") == "https://example.com/post"
+
+
+def test_rebuild_element_citations_elocator_page(xml_file):
+    p = xml_file(
+        '<article><back><ref-list>'
+        '<ref id="ref-bai2025">'
+        '<element-citation publication-type="article-journal">'
+        '<person-group person-group-type="author">'
+        '<name><surname>Bai</surname><given-names>X.</given-names></name>'
+        '</person-group>'
+        '<article-title>Explicitly unbiased LLMs</article-title>'
+        '<source>PNAS</source>'
+        '<year>2025</year>'
+        '<volume>122</volume>'
+        '<issue>8</issue>'
+        '<fpage>e2416228122</fpage>'
+        '<lpage />'
+        '</element-citation>'
+        '</ref>'
+        '</ref-list></back></article>'
+    )
+    rebuild_element_citations(p)
+    root = _parse(p)
+    mc = root.find(".//mixed-citation")
+    assert mc.find("fpage").text == "e2416228122"
+    # Empty <lpage/> should not produce a redundant lpage element
+    assert mc.find("lpage") is None
+
+
+def test_set_ref_list_title_fills_empty(xml_file):
+    p = xml_file(
+        '<article><back><ref-list><title/>'
+        '<ref id="r1"><mixed-citation>x</mixed-citation></ref>'
+        '</ref-list></back></article>'
+    )
+    set_ref_list_title(p)
+    root = _parse(p)
+    assert root.find(".//ref-list/title").text == "References"
+
+
+def test_set_ref_list_title_preserves_existing(xml_file):
+    p = xml_file(
+        '<article><back><ref-list><title>Literature</title>'
+        '<ref id="r1"><mixed-citation>x</mixed-citation></ref>'
+        '</ref-list></back></article>'
+    )
+    set_ref_list_title(p)
+    root = _parse(p)
+    assert root.find(".//ref-list/title").text == "Literature"
+
+
+def test_set_ref_list_title_inserts_when_missing(xml_file):
+    p = xml_file(
+        '<article><back><ref-list>'
+        '<ref id="r1"><mixed-citation>x</mixed-citation></ref>'
+        '</ref-list></back></article>'
+    )
+    set_ref_list_title(p)
+    root = _parse(p)
+    ref_list = root.find(".//ref-list")
+    assert ref_list[0].tag == "title"
+    assert ref_list[0].text == "References"
+
+
+def test_reorder_back_matter(xml_file):
+    p = xml_file(
+        '<article><back>'
+        '<ref-list><title>References</title></ref-list>'
+        '<fn-group><fn id="fn1"/></fn-group>'
+        '<app-group><app id="a"/></app-group>'
+        '</back></article>'
+    )
+    reorder_back_matter(p)
+    root = _parse(p)
+    tags = [c.tag for c in root.find("back")]
+    assert tags == ["app-group", "fn-group", "ref-list"]
+
+
+def test_reorder_back_matter_noop_when_sorted(xml_file):
+    p = xml_file(
+        '<article><back>'
+        '<app-group><app id="a"/></app-group>'
+        '<fn-group><fn id="fn1"/></fn-group>'
+        '<ref-list><title>References</title></ref-list>'
+        '</back></article>'
+    )
+    reorder_back_matter(p)
+    root = _parse(p)
+    tags = [c.tag for c in root.find("back")]
+    assert tags == ["app-group", "fn-group", "ref-list"]
 
 
 def test_move_appendix_to_back(xml_file):

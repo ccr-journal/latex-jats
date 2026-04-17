@@ -19,6 +19,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 from latex_jats.convert import (
+    _build_mixed_citation,
     _convert_pdf_figures,
     apply_article_meta,
     apply_journal_meta,
@@ -455,18 +456,200 @@ def drop_empty_refs_section(jats_file: str) -> None:
         tree.write(jats_file, encoding="unicode")
 
 
-def clean_element_citations(jats_file: str) -> None:
-    """Strip noisy <date-in-citation content-type="access-date"> elements that
-    Quarto adds to every reference.
+def _to_apa_initials(given: str) -> str:
+    """Convert full given names to APA-style initials ('Andrea E.' -> 'A. E.').
+
+    The LaTeX pipeline receives pre-initialised names via biblatex; Quarto's
+    CSL output keeps full first names. Collapse to initials here so Quarto
+    articles match the LaTeX-pipeline reference style.
+    """
+    tokens = given.split()
+    return " ".join(t[:1] + "." for t in tokens if t)
+
+
+# Map CSL/Quarto publication-type values to the bibtex-style entry types
+# that _build_mixed_citation in convert.py expects.
+_QUARTO_TYPE_TO_ENTRY_TYPE = {
+    "article-journal": "article",
+    "article-magazine": "article",
+    "article-newspaper": "article",
+    "chapter": "incollection",
+    "book": "book",
+    "report": "report",
+    "thesis": "thesis",
+    "paper-conference": "inproceedings",
+    "webpage": "online",
+    "manuscript": "misc",
+}
+
+
+def _entry_from_element_citation(ec):
+    """Build a parse_bbl-style entry dict from a Quarto <element-citation>.
+
+    Returns a dict shaped like the ones produced by parse_bbl() so it can be
+    fed directly to _build_mixed_citation(). Publication type is mapped from
+    the CSL type Quarto emits to the closest biblatex entry type.
+    """
+    pub_type = ec.get("publication-type", "")
+    entry_type = _QUARTO_TYPE_TO_ENTRY_TYPE.get(pub_type, "misc")
+    entry: dict = {"key": "", "type": entry_type, "authors": []}
+
+    author_group = ec.find("person-group[@person-group-type='author']")
+    if author_group is not None:
+        for child in author_group:
+            if child.tag == "name":
+                surname = (child.findtext("surname") or "").strip()
+                given = (child.findtext("given-names") or "").strip()
+                if surname:
+                    entry["authors"].append({
+                        "family": surname,
+                        "given": _to_apa_initials(given),
+                        "prefix": "",
+                        "is_collab": False,
+                    })
+            elif child.tag == "collab":
+                text = "".join(child.itertext()).strip()
+                if text:
+                    entry["authors"].append({
+                        "family": text,
+                        "given": "",
+                        "prefix": "",
+                        "is_collab": True,
+                    })
+
+    article_title = ec.findtext("article-title")
+    source = ec.findtext("source")
+    if entry_type == "article":
+        if article_title:
+            entry["title"] = article_title.strip()
+        if source:
+            entry["journaltitle"] = source.strip()
+    elif entry_type in ("incollection", "inbook", "inproceedings"):
+        if article_title:
+            entry["title"] = article_title.strip()
+        if source:
+            entry["booktitle"] = source.strip()
+    else:
+        # book, report, thesis, online, misc: source is the work title
+        if source:
+            entry["title"] = source.strip()
+        elif article_title:
+            entry["title"] = article_title.strip()
+
+    year = ec.findtext("year")
+    if year:
+        entry["year"] = year.strip()
+
+    for field, key in (("volume", "volume"), ("issue", "number"),
+                      ("edition", "edition"), ("publisher-name", "publisher"),
+                      ("publisher-loc", "location")):
+        val = ec.findtext(field)
+        if val and val.strip():
+            entry[key] = val.strip()
+
+    fpage = (ec.findtext("fpage") or "").strip()
+    lpage = (ec.findtext("lpage") or "").strip()
+    if fpage and lpage:
+        entry["pages"] = f"{fpage}--{lpage}"
+    elif fpage:
+        entry["pages"] = fpage
+
+    doi = ec.find("pub-id[@pub-id-type='doi']")
+    if doi is not None and doi.text and doi.text.strip():
+        entry["doi"] = doi.text.strip()
+
+    uri = ec.findtext("uri")
+    if uri and uri.strip():
+        entry["url"] = uri.strip()
+
+    return entry
+
+
+# JATS back-matter convention (NISO tag library): ack, app-group, bio,
+# fn-group, glossary, ref-list, notes, sec. Unknown tags retain their
+# relative position after the known ones.
+_BACK_ORDER = [
+    "ack", "app-group", "bio", "fn-group", "glossary",
+    "ref-list", "notes", "sec",
+]
+
+
+def reorder_back_matter(jats_file: str) -> None:
+    """Sort <back> children into the conventional JATS order.
+
+    Quarto emits <ref-list> before <fn-group>/<app-group>; the LaTeX
+    pipeline produces the standard order with references last. Normalise
+    so both pipelines yield the same back-matter structure.
+    """
+    tree = ET.parse(jats_file)
+    root = tree.getroot()
+    back = root.find("back")
+    if back is None or len(back) < 2:
+        return
+    order_index = {tag: i for i, tag in enumerate(_BACK_ORDER)}
+    children = list(back)
+    original = list(enumerate(children))
+    original.sort(key=lambda item: (order_index.get(item[1].tag, len(_BACK_ORDER)), item[0]))
+    sorted_children = [c for _, c in original]
+    if sorted_children == children:
+        return
+    for c in children:
+        back.remove(c)
+    for c in sorted_children:
+        back.append(c)
+    tree.write(jats_file, encoding="unicode")
+
+
+def set_ref_list_title(jats_file: str) -> None:
+    """Set <ref-list>'s <title> to 'References' when empty.
+
+    Quarto emits <ref-list><title/></ref-list>; publishers use the title as
+    the section heading, so an empty title hides the References section on
+    the rendered site. The LaTeX pipeline produces 'References' from
+    biblatex's bibliography title macro.
     """
     tree = ET.parse(jats_file)
     root = tree.getroot()
     changed = False
-    for cit in root.findall(".//element-citation"):
-        for d in list(cit.findall("date-in-citation")):
-            if d.get("content-type") == "access-date":
-                cit.remove(d)
-                changed = True
+    for ref_list in root.iter("ref-list"):
+        title = ref_list.find("title")
+        if title is None:
+            title = ET.Element("title")
+            ref_list.insert(0, title)
+            changed = True
+        if not (title.text and title.text.strip()) and len(title) == 0:
+            title.text = "References"
+            changed = True
+    if changed:
+        tree.write(jats_file, encoding="unicode")
+
+
+def rebuild_element_citations(jats_file: str) -> None:
+    """Rewrite each <ref>/<element-citation> as a formatted <mixed-citation>.
+
+    Quarto's jats_publishing emits <element-citation> with fully-structured
+    but display-empty fields. Publishers render this as run-on text because
+    the APA separators (commas, parens, ". ") live only in the display form.
+    This fixup reuses _build_mixed_citation from the LaTeX pipeline so
+    Quarto articles end up with the same reference shape as latexml ones.
+    """
+    ET.register_namespace("xlink", "http://www.w3.org/1999/xlink")
+    tree = ET.parse(jats_file)
+    root = tree.getroot()
+    changed = False
+    for ref in root.iter("ref"):
+        ec = ref.find("element-citation")
+        if ec is None:
+            continue
+        entry = _entry_from_element_citation(ec)
+        if not entry.get("authors") and not entry.get("title"):
+            logger.warning("ref %r has no authors or title; leaving element-citation as-is",
+                           ref.get("id"))
+            continue
+        new_mc = _build_mixed_citation(entry)
+        ref.remove(ec)
+        ref.append(new_mc)
+        changed = True
     if changed:
         tree.write(jats_file, encoding="unicode")
 
@@ -532,8 +715,10 @@ def convert_quarto(input_qmd: Path, output_xml: Path, html: bool = False,
     drop_orphan_fns(out_str)
     move_fn_group_to_back(out_str)
     drop_empty_refs_section(out_str)
-    clean_element_citations(out_str)
+    rebuild_element_citations(out_str)
+    set_ref_list_title(out_str)
     move_appendix_to_back(out_str)
+    reorder_back_matter(out_str)
     fix_ext_links(out_str)
     fix_pdf_graphic_refs(out_str)
     finalize_xml(out_str)
