@@ -53,10 +53,14 @@ jobs:
           cache-from: type=gha,scope=api
           cache-to: type=gha,scope=api,mode=max
 
+      - name: Prepare release assets
+        run: cp deploy/.env.example deploy/.env
+
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             deploy/docker-compose.yml
+            deploy/.env
             deploy/update.sh
           generate_release_notes: true

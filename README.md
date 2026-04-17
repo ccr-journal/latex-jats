@@ -8,11 +8,12 @@ This is a tool to convert CCR journal articles in _latex_ format into _JATS XML_
 It can be used as a CLI tool (see below) or as a web service where editors and authors can upload LaTeX source, run the conversion, and preview/download results. The quickest way to get the web service running:
 
 ```sh
-cp .env.example .env   # then fill in ORCID_* and OJS_* credentials
-docker compose up -d --build
+wget -q https://github.com/ccr-journal/latex-jats/releases/latest/download/{docker-compose.yml,.env}
+# edit .env — fill in ORCID_* and OJS_* credentials
+docker compose up -d
 ```
 
-See the [Web Service](#web-service) section for details, and [.env.example](.env.example) for every configuration option.
+See the [Web Service](#web-service) section for details, and [deploy/.env.example](deploy/.env.example) for every configuration option.
 
 
 ### Processing pipeline
@@ -102,7 +103,7 @@ npm install                      # root (concurrently)
 npm run install:frontend         # React frontend
 ```
 
-Copy [.env.dev.example](.env.dev.example) to `.env` and fill in the ORCID **sandbox** credentials and your own sandbox ORCID in `OJS_EDITOR_OVERRIDE_ORCIDS`. This file is tuned for local dev: `FRONTEND_URL`/`ORCID_REDIRECT_URI` point at localhost, `ORCID_ENV=sandbox`, and OJS is optional. Do **not** use [.env.example](.env.example) locally — its `SITE_ADDRESS` value is a Caddy placeholder for production and will break the OAuth redirect.
+Copy [.env.dev.example](.env.dev.example) to `.env` and fill in the ORCID **sandbox** credentials and your own sandbox ORCID in `OJS_EDITOR_OVERRIDE_ORCIDS`. This file is tuned for local dev: `FRONTEND_URL`/`ORCID_REDIRECT_URI` point at localhost, `ORCID_ENV=sandbox`, and OJS is optional. Do **not** use [deploy/.env.example](deploy/.env.example) locally — its `SITE_ADDRESS` value is a Caddy placeholder for production and will break the OAuth redirect.
 
 Run the dev servers (backend on :8000, frontend on :5173):
 
@@ -114,9 +115,11 @@ Swagger UI is available at http://localhost:8000/docs.
 
 ### Docker deployment
 
-Copy [.env.example](.env.example) to `.env` and fill in ORCID and OJS credentials (see the comments in that file), then:
+Download the latest release files and fill in your credentials:
 
 ```sh
+wget -q https://github.com/ccr-journal/latex-jats/releases/latest/download/{docker-compose.yml,.env}
+# edit .env — fill in ORCID_* and OJS_* credentials
 docker compose up -d
 ```
 
