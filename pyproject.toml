@@ -35,6 +35,7 @@ fixbib = "latex_jats.fixbib:main"
 fix-input = "latex_jats.fix_input:main"
 prepare-source = "latex_jats.prepare_source:main"
 run-examples = "latex_jats.runner:main"
+check-zip = "latex_jats.check_zip:main"
 
 [tool.basedpyright]
 typeCheckingMode = "basic"

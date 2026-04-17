@@ -18,8 +18,7 @@ from pathlib import Path
 from lxml import etree
 
 JATS_RNG = (
-    Path(__file__).parent
-    / "src"
+    Path(__file__).parent.parent
     / "schema"
     / "jats-publishing-1.2-rng"
     / "JATS-journalpublishing1-mathml3.rng"
