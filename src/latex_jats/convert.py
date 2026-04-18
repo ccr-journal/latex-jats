@@ -2354,6 +2354,25 @@ def fix_ext_links(jats_file):
     tree.write(jats_file, encoding="unicode")
 
 
+def strip_mathml_alttext(jats_file):
+    """Remove @alttext from every <mml:math> element.
+
+    Ingenta's MathML renderer deserializes our properly-escaped alttext
+    (e.g. ``alttext="&lt;4"``) and then re-serializes the subtree without
+    re-escaping, producing broken XML that its own parser then rejects
+    ("Unescaped '<' not allowed in attributes values"). alttext is
+    optional per the MathML spec, so we drop it across the board to
+    sidestep the bug.
+    """
+    MML = "http://www.w3.org/1998/Math/MathML"
+    tree = ET.parse(jats_file)
+    root = tree.getroot()
+    for el in root.iter(f"{{{MML}}}math"):
+        if "alttext" in el.attrib:
+            del el.attrib["alttext"]
+    tree.write(jats_file, encoding="unicode")
+
+
 def finalize_xml(jats_file):
     """Add XML declaration, DOCTYPE, and required root <article> attributes."""
     ET.register_namespace("xlink", "http://www.w3.org/1999/xlink")
@@ -2468,6 +2487,7 @@ def convert(input_path: Path, output_path: Path, html: bool = False, lastpage=No
     fix_lstlisting_labels(str(output_path), str(input_path))
     fix_fig_structure(str(output_path))
     fix_ext_links(str(output_path))
+    strip_mathml_alttext(str(output_path))
     fix_pdf_graphic_refs(str(output_path))
     finalize_xml(str(output_path))
 
