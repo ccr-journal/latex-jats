@@ -11,6 +11,7 @@ finalize_xml, and convert_to_html from convert.py unchanged.
 
 from __future__ import annotations
 
+import copy
 import logging
 import re
 import shutil
@@ -257,6 +258,62 @@ def fix_corresp_xref(jats_file: str) -> None:
                 changed = True
     if changed:
         tree.write(jats_file, encoding="unicode")
+
+
+def inline_affiliations(jats_file: str) -> None:
+    """Nest reference-style <aff> elements inside each <contrib>.
+
+    Quarto emits affiliations as siblings of <contrib-group> keyed by id,
+    with each <contrib> carrying an <xref ref-type="aff" rid="..."> pointer.
+    The LaTeX pipeline nests the <aff> directly inside each <contrib>, and
+    the HTML preview stylesheet renders the two shapes very differently.
+    This rewrites the Quarto output into the LaTeX shape.
+    """
+    tree = ET.parse(jats_file)
+    root = tree.getroot()
+    article_meta = root.find(".//article-meta")
+    if article_meta is None:
+        return
+    contrib_group = article_meta.find("contrib-group")
+    if contrib_group is None:
+        return
+
+    aff_map: dict[str, ET.Element] = {}
+    for aff in article_meta.findall("aff"):
+        aff_id = aff.get("id")
+        if aff_id:
+            aff_map[aff_id] = aff
+    if not aff_map:
+        return
+
+    consumed: set[str] = set()
+    for contrib in contrib_group.findall("contrib"):
+        for xref in list(contrib):
+            if xref.tag != "xref" or xref.get("ref-type") != "aff":
+                continue
+            rid = xref.get("rid") or ""
+            aff = aff_map.get(rid)
+            if aff is None:
+                continue
+            aff_copy = copy.deepcopy(aff)
+            aff_copy.attrib.pop("id", None)
+            aff_copy.tail = xref.tail
+            idx = list(contrib).index(xref)
+            contrib.remove(xref)
+            contrib.insert(idx, aff_copy)
+            consumed.add(rid)
+
+    orphans = sorted(set(aff_map) - consumed)
+    if orphans:
+        logger.warning(
+            "Affiliation(s) %s not referenced by any contrib; leaving in place.",
+            ", ".join(orphans),
+        )
+
+    for rid in consumed:
+        article_meta.remove(aff_map[rid])
+
+    tree.write(jats_file, encoding="unicode")
 
 
 def unwrap_table_fig(jats_file: str) -> None:
@@ -712,6 +769,7 @@ def convert_quarto(input_qmd: Path, output_xml: Path, html: bool = False,
     inject_metadata_from_yaml(out_str, str(input_qmd), lastpage=lastpage)
     fix_empty_history(out_str)
     fix_corresp_xref(out_str)
+    inline_affiliations(out_str)
     unwrap_table_fig(out_str)
     add_fig_table_labels(out_str)
     drop_orphan_fns(out_str)

@@ -7,6 +7,7 @@ from latex_jats.quarto import (
     fix_corresp_xref,
     fix_empty_history,
     inject_metadata_from_yaml,
+    inline_affiliations,
     move_appendix_to_back,
     move_fn_group_to_back,
     parse_qmd_frontmatter,
@@ -49,6 +50,127 @@ def test_fix_corresp_xref(xml_file):
     contrib = root.find(".//contrib")
     assert contrib.find("xref") is not None
     assert contrib.find("xref").get("rid") == "fn1"
+
+
+def test_inline_affiliations_basic(xml_file):
+    p = xml_file(
+        '<article><front><article-meta>'
+        '<contrib-group>'
+        '<contrib contrib-type="author"><name><surname>Doe</surname></name>'
+        '<xref ref-type="aff" rid="aff-1">a</xref></contrib>'
+        '</contrib-group>'
+        '<aff id="aff-1"><institution-wrap><institution>Uni A</institution></institution-wrap></aff>'
+        '</article-meta></front></article>'
+    )
+    inline_affiliations(p)
+    root = _parse(p)
+    article_meta = root.find(".//article-meta")
+    assert article_meta.find("aff") is None
+    contrib = root.find(".//contrib")
+    assert contrib.find("xref") is None
+    aff = contrib.find("aff")
+    assert aff is not None
+    assert aff.get("id") is None
+    assert aff.find("institution-wrap/institution").text == "Uni A"
+
+
+def test_inline_affiliations_shared(xml_file):
+    p = xml_file(
+        '<article><front><article-meta>'
+        '<contrib-group>'
+        '<contrib contrib-type="author"><name><surname>Doe</surname></name>'
+        '<xref ref-type="aff" rid="aff-1">a</xref></contrib>'
+        '<contrib contrib-type="author"><name><surname>Roe</surname></name>'
+        '<xref ref-type="aff" rid="aff-1">a</xref></contrib>'
+        '</contrib-group>'
+        '<aff id="aff-1"><institution-wrap><institution>Uni A</institution></institution-wrap></aff>'
+        '</article-meta></front></article>'
+    )
+    inline_affiliations(p)
+    root = _parse(p)
+    assert root.find(".//article-meta/aff") is None
+    contribs = root.findall(".//contrib")
+    assert len(contribs) == 2
+    for c in contribs:
+        assert c.find("xref") is None
+        assert c.find("aff/institution-wrap/institution").text == "Uni A"
+
+
+def test_inline_affiliations_multiple_per_author(xml_file):
+    p = xml_file(
+        '<article><front><article-meta>'
+        '<contrib-group>'
+        '<contrib contrib-type="author"><name><surname>Doe</surname></name>'
+        '<xref ref-type="aff" rid="aff-1">a</xref>'
+        '<xref ref-type="aff" rid="aff-2">b</xref></contrib>'
+        '</contrib-group>'
+        '<aff id="aff-1"><institution-wrap><institution>Uni A</institution></institution-wrap></aff>'
+        '<aff id="aff-2"><institution-wrap><institution>Uni B</institution></institution-wrap></aff>'
+        '</article-meta></front></article>'
+    )
+    inline_affiliations(p)
+    root = _parse(p)
+    assert root.find(".//article-meta/aff") is None
+    affs = root.findall(".//contrib/aff")
+    assert len(affs) == 2
+    assert affs[0].find("institution-wrap/institution").text == "Uni A"
+    assert affs[1].find("institution-wrap/institution").text == "Uni B"
+
+
+def test_inline_affiliations_preserves_fn_xref(xml_file):
+    p = xml_file(
+        '<article><front><article-meta>'
+        '<contrib-group>'
+        '<contrib contrib-type="author"><name><surname>Doe</surname></name>'
+        '<xref ref-type="aff" rid="aff-1">a</xref>'
+        '<xref ref-type="fn" rid="fn1">1</xref></contrib>'
+        '</contrib-group>'
+        '<aff id="aff-1"><institution-wrap><institution>Uni A</institution></institution-wrap></aff>'
+        '</article-meta></front></article>'
+    )
+    inline_affiliations(p)
+    root = _parse(p)
+    contrib = root.find(".//contrib")
+    fn_xrefs = [x for x in contrib.findall("xref") if x.get("ref-type") == "fn"]
+    assert len(fn_xrefs) == 1
+    assert fn_xrefs[0].get("rid") == "fn1"
+    assert contrib.find("aff") is not None
+
+
+def test_inline_affiliations_orphan_warns(xml_file, caplog):
+    import logging
+    p = xml_file(
+        '<article><front><article-meta>'
+        '<contrib-group>'
+        '<contrib contrib-type="author"><name><surname>Doe</surname></name>'
+        '<xref ref-type="aff" rid="aff-1">a</xref></contrib>'
+        '</contrib-group>'
+        '<aff id="aff-1"><institution-wrap><institution>Uni A</institution></institution-wrap></aff>'
+        '<aff id="aff-2"><institution-wrap><institution>Uni B</institution></institution-wrap></aff>'
+        '</article-meta></front></article>'
+    )
+    with caplog.at_level(logging.WARNING):
+        inline_affiliations(p)
+    root = _parse(p)
+    remaining = root.findall(".//article-meta/aff")
+    assert len(remaining) == 1
+    assert remaining[0].get("id") == "aff-2"
+    assert any("aff-2" in r.message for r in caplog.records)
+
+
+def test_inline_affiliations_noop_when_already_nested(xml_file):
+    original = (
+        '<article><front><article-meta>'
+        '<contrib-group>'
+        '<contrib contrib-type="author"><name><surname>Doe</surname></name>'
+        '<aff>Uni A</aff></contrib>'
+        '</contrib-group>'
+        '</article-meta></front></article>'
+    )
+    p = xml_file(original)
+    inline_affiliations(p)
+    with open(p, encoding="utf-8") as f:
+        assert f.read() == original
 
 
 def test_unwrap_table_fig(xml_file):
