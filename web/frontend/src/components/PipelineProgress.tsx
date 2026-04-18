@@ -8,12 +8,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-const STEP_LABELS: Record<string, string> = {
-  prepare: "Prepare",
-  compile: "Compile",
-  convert: "Convert",
-  check: "Check",
-  validate: "Validate",
+const STEP_LABELS: Record<string, { verb: string; noun: string }> = {
+  prepare:  { verb: "Prepare",  noun: "Sources" },
+  compile:  { verb: "Compile",  noun: "PDF" },
+  convert:  { verb: "Convert",  noun: "XML" },
+  check:    { verb: "Check",    noun: "Metadata" },
+  validate: { verb: "Validate", noun: "Results" },
 };
 
 const STATUS_STYLES: Record<StepStatus, { dot: string; text: string; label: string }> = {
@@ -59,8 +59,11 @@ export function PipelineProgress({ steps }: { steps: PipelineStep[] }) {
                 }`}
               >
                 <div className={`h-2.5 w-2.5 rounded-full ${style.dot}`} />
-                <span className="font-medium">
-                  {STEP_LABELS[step.name] ?? step.name}
+                <span className="font-medium leading-tight">
+                  {STEP_LABELS[step.name]?.verb ?? step.name}
+                </span>
+                <span className="text-[10px] leading-tight text-muted-foreground">
+                  {STEP_LABELS[step.name]?.noun ?? ""}
                 </span>
                 <span className={`text-[10px] ${style.text}`}>
                   {style.label}
@@ -78,7 +81,7 @@ export function PipelineProgress({ steps }: { steps: PipelineStep[] }) {
         <DialogContent className="sm:max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>
-              {STEP_LABELS[selectedStep?.name ?? ""] ?? selectedStep?.name} Log
+              {STEP_LABELS[selectedStep?.name ?? ""]?.verb ?? selectedStep?.name} Log
             </DialogTitle>
           </DialogHeader>
 
