@@ -187,6 +187,38 @@
     <graphic xlink:href="{$href}"/>
   </xsl:template>
 
+  <!-- description lists: emit JATS <def-list> so the \item[LABEL] label survives.
+       Stock LaTeXML-jats.xsl maps ltx:description → <list> and silently strips
+       <ltx:tag>, losing labels like "RQ1:" / "H1:" / "Donor Rate:". -->
+  <xsl:template match="ltx:description">
+    <def-list>
+      <xsl:apply-templates select="@xml:id" mode="copy-attribute"/>
+      <xsl:apply-templates/>
+    </def-list>
+  </xsl:template>
+
+  <xsl:template match="ltx:description/ltx:item">
+    <def-item>
+      <xsl:apply-templates select="@xml:id" mode="copy-attribute"/>
+      <term>
+        <xsl:apply-templates select="ltx:tags/ltx:tag[not(@role)]/node()"/>
+      </term>
+      <def>
+        <xsl:apply-templates select="*[not(self::ltx:tags)]"/>
+      </def>
+    </def-item>
+  </xsl:template>
+
+  <xsl:template match="ltx:description/ltx:item/ltx:tags"/>
+
+  <!-- JATS Publishing <def> only accepts <p> children. Block-level elements
+       like ltx:equation (inside the item's ltx:para) emit <disp-formula>,
+       which must be wrapped in <p>. Match such siblings and wrap their
+       imported transform in <p>. -->
+  <xsl:template match="ltx:description/ltx:item/ltx:para/*[not(self::ltx:p)]">
+    <p><xsl:apply-imports/></p>
+  </xsl:template>
+
   <!-- Fix: nested tabular inside a table cell → flatten to line-break-separated content.
        JATS does not allow <table> inside <td>/<th>. The LaTeX pattern
        \begin{tabular}[c]{@{}c@{}}line1\\line2\end{tabular} inside table cells

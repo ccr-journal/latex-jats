@@ -190,6 +190,47 @@ def test_adjustbox_table_structure(tmp_path):
 
 
 @pytest.mark.integration
+def test_description_list_produces_def_list(tmp_path):
+    """\\begin{description}\\item[LABEL] produces JATS <def-list> with <term> labels."""
+    output = tmp_path / "output.xml"
+    tex = _prepare_fixture(FIXTURES / "description.tex", tmp_path)
+    run_latexmlc(str(tex), str(output), log_dir=tmp_path)
+
+    root = ET.parse(output).getroot()
+    def_lists = root.findall(".//def-list")
+    assert def_lists, "No <def-list> found — description should map to def-list"
+
+    def_items = def_lists[0].findall("def-item")
+    assert len(def_items) == 3, f"Expected 3 def-items, got {len(def_items)}"
+
+    # Item 1: \item[RQ1:] — plain-text label
+    term1 = def_items[0].find("term")
+    assert term1 is not None, "First def-item has no <term>"
+    assert "".join(term1.itertext()) == "RQ1:", f"Expected 'RQ1:' in term, got {term1.text!r}"
+    def1 = def_items[0].find("def")
+    assert def1 is not None and def1.find("p") is not None, "First def-item has no <def><p>"
+    assert "How effectively" in "".join(def1.itertext())
+
+    # Item 2: \item[\textbf{Donor Rate:}] — label with nested bold should survive as <bold>
+    term2 = def_items[1].find("term")
+    bold2 = term2.find("bold")
+    assert bold2 is not None, \
+        f"Expected <bold> inside <term>, got: {ET.tostring(term2, encoding='unicode')}"
+    assert bold2.text == "Donor Rate:", f"Expected 'Donor Rate:' inside <bold>, got {bold2.text!r}"
+    # No double-wrapping: <term> should have no direct text content besides the <bold>
+    assert term2.find("bold/bold") is None, "Label should not be double-wrapped in <bold>"
+
+    # Item 3: bare \item — empty <term>, still has <def>
+    term3 = def_items[2].find("term")
+    assert term3 is not None, "Bare item missing <term>"
+    assert not (term3.text and term3.text.strip()) and len(term3) == 0, \
+        f"Bare item <term> should be empty, got: {ET.tostring(term3, encoding='unicode')}"
+    def3 = def_items[2].find("def")
+    assert def3 is not None and def3.find("p") is not None
+    assert "bare item" in "".join(def3.itertext())
+
+
+@pytest.mark.integration
 @pytest.mark.skipif(not shutil.which("jing"), reason="jing not installed")
 def test_jats_validates(tmp_path):
     """Output JATS XML from the authors fixture validates against the JATS Publishing 1.2 RNG schema."""
