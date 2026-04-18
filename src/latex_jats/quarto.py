@@ -18,6 +18,7 @@ import subprocess
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+from latex_jats.ccr_cls import warn_if_outdated as _warn_if_ccr_cls_outdated
 from latex_jats.convert import (
     _build_mixed_citation,
     _convert_pdf_figures,
@@ -69,6 +70,7 @@ def prepare_quarto_workspace(example_dir: Path, workspace_dir: Path) -> bool:
         else:
             logger.info("R packages restored from renv.lock")
 
+    _warn_if_ccr_cls_outdated(workspace_dir)
     return True
 
 

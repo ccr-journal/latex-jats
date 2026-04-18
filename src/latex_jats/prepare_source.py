@@ -21,6 +21,7 @@ import sys
 import unicodedata
 from pathlib import Path
 
+from latex_jats.ccr_cls import warn_if_outdated as _warn_if_ccr_cls_outdated
 from latex_jats.fix_input import _collect_tex_files, fix_file
 
 logger = logging.getLogger(__name__)
@@ -145,6 +146,7 @@ def prepare_workspace(source_dir: Path, workspace_dir: Path,
 
     engine = _detect_tex_engine(main_tex)
     _patch_ccr_cls(workspace_dir, engine)
+    _warn_if_ccr_cls_outdated(workspace_dir)
 
     # Apply fixes to the workspace copy (if requested)
     if fix_problems:
