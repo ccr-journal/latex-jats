@@ -219,14 +219,22 @@ def _collect_log_files(dirs: list[Path]) -> list[dict]:
     return entries
 
 
+_PIPELINE_LOG_HEADER = (
+    "# This log contains a summary of all warnings and other important "
+    "events from this step.\n"
+    "# See the other tabs for the raw logs of the individual processes.\n"
+)
+
+
 def _finish_step(engine: Engine, doi_suffix: str, step_name: str,
                  log_text: str, *, failed: bool = False,
                  log_dirs: list[Path] | None = None) -> None:
     """Mark a pipeline step as completed and store its logs."""
     status = StepStatus.failed if failed else classify_step_status(log_text)
-    logs: list[dict] = []
-    if log_text.strip():
-        logs.append({"name": "pipeline", "content": log_text.strip()})
+    body = log_text.strip() or "(no warnings or errors)"
+    logs: list[dict] = [
+        {"name": "pipeline", "content": _PIPELINE_LOG_HEADER + "\n" + body}
+    ]
     if log_dirs:
         logs.extend(_collect_log_files(log_dirs))
     _update_step(engine, doi_suffix, step_name,
