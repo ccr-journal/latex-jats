@@ -161,53 +161,45 @@ h1.document-title {
   letter-spacing: -0.01em;
 }
 
-/* --- Author / Affiliation tables -------------------------- */
-/* Each author is a separate .metadata.two-column.table with
-   right-aligned name cell and left-aligned affiliation cell */
+/* --- Authors + affiliations ------------------------------- */
+/* Authors appear inline as "Name^a, Name^b, ..." followed by a list
+   of affiliations, each prefixed with its matching letter marker.
+   Matches the AUP web layout and the PDF produced by ccr.cls. */
 
-div#article-front .metadata.two-column.table:not(:first-of-type):not(:has(h4.callout-title)) {
-  display: block;
-  margin: 0;
-}
-
-div#article-front .metadata.two-column.table:not(:first-of-type):not(:has(h4.callout-title)) .row {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  margin: 0.5rem 0 0;
-}
-
-div#article-front .metadata.two-column.table:not(:first-of-type):not(:has(h4.callout-title)) .cell {
-  width: 100%;
+div#article-front .contrib-group {
+  margin: 0.8rem 0 0;
   padding: 0;
-  margin: 0;
 }
 
-div#article-front .metadata.two-column.table:not(:first-of-type):not(:has(h4.callout-title)) .cell:first-child {
-  /* Author name */
-  text-align: left !important;
-}
-
-div#article-front .metadata.two-column.table:not(:first-of-type):not(:has(h4.callout-title)) .cell:last-child {
-  /* Affiliation */
-  margin-top: 0.1rem;
-}
-
-div#article-front .metadata.two-column.table:not(:first-of-type):not(:has(h4.callout-title)) p.metadata-entry {
-  margin: 0;
-  font-size: var(--font-size);
-}
-
-/* Author name: normal weight */
-div#article-front .metadata.two-column.table:not(:first-of-type):not(:has(h4.callout-title)) .cell:first-child p.metadata-entry {
+div#article-front .author-list {
+  margin: 0 0 0.6rem;
   font-size: 11.5pt;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+div#article-front .author-list .aff-marker {
   font-weight: 400;
 }
 
-/* Affiliation: italic */
-div#article-front .metadata.two-column.table:not(:first-of-type):not(:has(h4.callout-title)) .cell:last-child p.metadata-entry {
+div#article-front .aff-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   font-style: italic;
-  font-size: 11.5pt;
+  font-size: 11pt;
+  line-height: 1.35;
+}
+
+div#article-front .aff-item {
+  margin: 0.1rem 0;
+  padding-left: 1.2em;
+  text-indent: -1.2em;
+}
+
+div#article-front .aff-item .aff-marker {
+  font-style: normal;
+  margin-right: 0.25em;
 }
 
 /* Keywords inline block in front matter (moved from footer by post-processing) */
