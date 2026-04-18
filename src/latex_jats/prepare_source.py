@@ -104,6 +104,64 @@ def _normalize_bbl(latex_dir: Path) -> None:
                 )
 
 
+# Patterns in the TeX log that indicate the run produced nothing useful.
+# Matched as substrings on any single line of main.log.
+_FATAL_LOG_PATTERNS = (
+    "! Emergency stop.",
+    "! ==> Fatal error occurred, no output PDF file produced!",
+    "No pages of output.",
+    "(That makes 100 errors; please try again.)",
+)
+
+_MAX_LOG_ERRORS = 10
+
+
+def _parse_latex_log_errors(log_path: Path) -> tuple[list[str], list[str]]:
+    """Scan a TeX log for error lines.
+
+    Returns ``(fatal, errors)``:
+      - ``fatal``: the subset of ``_FATAL_LOG_PATTERNS`` that appeared in
+        the log (one entry per distinct pattern).
+      - ``errors``: deduped distinct TeX error messages (lines starting with
+        ``! ``), each paired with the nearby ``l.<N>`` source-line hint if
+        one follows within a few lines. Capped at ``_MAX_LOG_ERRORS``.
+
+    Returns ``([], [])`` if the log file doesn't exist.
+    """
+    if not log_path.exists():
+        return [], []
+    text = log_path.read_text(encoding="utf-8", errors="replace")
+    lines = text.splitlines()
+
+    fatal_found: list[str] = []
+    for pattern in _FATAL_LOG_PATTERNS:
+        if any(pattern in line for line in lines):
+            fatal_found.append(pattern)
+
+    seen: set[str] = set()
+    errors: list[str] = []
+    for i, line in enumerate(lines):
+        if not line.startswith("! "):
+            continue
+        msg = line.rstrip()
+        # Look ahead a few lines for an "l.<N> ..." context line
+        context = ""
+        for j in range(i + 1, min(i + 5, len(lines))):
+            nxt = lines[j].strip()
+            if nxt.startswith("l.") and len(nxt) > 2 and nxt[2].isdigit():
+                context = " (" + nxt + ")"
+                break
+        key = msg
+        if key in seen:
+            continue
+        seen.add(key)
+        errors.append(msg + context)
+        if len(errors) >= _MAX_LOG_ERRORS:
+            break
+
+    return fatal_found, errors
+
+
 def _patch_ccr_cls(workspace_dir: Path, engine: str = "pdflatex"):
     """Patch ccr.cls in the workspace: add \\pdfminorversion=7, drop pstricks."""
     cls = workspace_dir / "ccr.cls"
@@ -218,8 +276,29 @@ def compile_latex(latex_dir: Path, log_dir: Path | None = None) -> bool:
 
     _normalize_bbl(latex_dir)
 
+    def _copy_and_report_errors() -> bool:
+        """Copy TeX logs into log_dir and emit any LaTeX errors from main.log.
+
+        Returns True if no fatal patterns were found, False otherwise.
+        Safe to call multiple times / on every exit path.
+        """
+        if log_dir:
+            for src, dst in [
+                (latex_dir / "main.log",  log_dir / "latex.log"),
+                (latex_dir / "main.blg",  log_dir / "bib.log"),
+            ]:
+                if src.exists():
+                    shutil.copy2(src, dst)
+        fatal, errors = _parse_latex_log_errors(latex_dir / "main.log")
+        for msg in errors:
+            logger.warning("LaTeX error: %s", msg)
+        for pattern in fatal:
+            logger.error("LaTeX fatal: %s", pattern)
+        return not fatal
+
     if not _run(latex_cmd, latex_dir, pdflatex_log):
         if not pdf_path.exists():
+            _copy_and_report_errors()
             return False
         logger.warning("pdflatex exited with errors but produced a PDF — continuing")
 
@@ -239,29 +318,23 @@ def compile_latex(latex_dir: Path, log_dir: Path | None = None) -> bool:
         bib_ok = True
 
     if not bib_ok:
+        _copy_and_report_errors()
         return False
 
     _normalize_bbl(latex_dir)
 
     if not _run(latex_cmd, latex_dir, pdflatex_log):
         if not pdf_path.exists():
+            _copy_and_report_errors()
             return False
         logger.warning("pdflatex exited with errors but produced a PDF — continuing")
     if not _run(latex_cmd, latex_dir, pdflatex_log):
         if not pdf_path.exists():
+            _copy_and_report_errors()
             return False
         logger.warning("pdflatex exited with errors but produced a PDF — continuing")
 
-    # Copy TeX's own detailed log files into log_dir
-    if log_dir:
-        for src, dst in [
-            (latex_dir / "main.log",  log_dir / "latex.log"),
-            (latex_dir / "main.blg",  log_dir / "bib.log"),
-        ]:
-            if src.exists():
-                shutil.copy2(src, dst)
-
-    return True
+    return _copy_and_report_errors()
 
 
 def prepare(source: Path, fix_problems: bool = False, force: bool = False,
