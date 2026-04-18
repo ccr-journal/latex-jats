@@ -56,6 +56,7 @@ Three sequential steps in `src/latex_jats/convert.py`:
    - `fix_citation_ref_types` — adds `ref-type="bibr"` to in-text citation xrefs
    - `fix_metadata` — injects journal-meta (CCR constants) and article-meta (DOI, volume, issue, fpage, pub-date) from the LaTeX preamble; also trims whitespace from `<kwd>` elements
    - `fix_table_in_p` — unwraps `<table-wrap>` incorrectly nested inside `<p>`
+   - `fix_fig_structure` — unwraps a stray `<p>` around a lone `<graphic>` inside `<fig>` (happens with `\makebox{\includegraphics{…}}` in the source); warns on any other deviation from the known-good `<fig>` shape (Ingenta/AUP will fail to render otherwise)
    - `fix_table_notes` — moves stray `<p>` inside `<table-wrap>` into a `<table-wrap-foot>`
    - `warn_tfoot_notes` — warns about notes placed inside `\tfoot` rows
    - `clean_body` — removes empty `<p>` elements and misplaced `<title>` inside `<body>`

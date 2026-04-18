@@ -710,6 +710,102 @@ def fix_table_in_p(jats_file):
     tree.write(jats_file, encoding="unicode")
 
 
+def fix_fig_structure(jats_file):
+    """Enforce the known-good <fig> shape and warn on deviations.
+
+    The only shape that renders reliably at AUP/Ingenta is
+    ``<fig> > (<label> + <caption> > <title> + <graphic>)``.  LaTeXML will
+    emit this shape for a straightforward ``\\begin{figure} \\includegraphics
+    \\caption ... \\end{figure}``, but author tricks like
+    ``\\makebox{\\includegraphics{...}}`` wrap the ``<graphic>`` in a stray
+    ``<p>``, which silently fails to render in production.
+
+    This fixup:
+
+    1. Unwraps the one safe case — ``<fig>`` with children
+       ``<label>, <caption>(<title>), <p>(<graphic>)`` — promoting the
+       ``<graphic>`` out of the ``<p>`` so the figure matches the known-good
+       shape.  Logs an ``INFO`` note so the author sees that their source
+       was auto-corrected.
+    2. For any other ``<fig>`` that does not already match the known-good
+       shape, logs a ``WARNING`` describing the deviation.  Does *not*
+       attempt to rewrite — guessing risks making the JATS worse.
+    """
+    tree = ET.parse(jats_file)
+    root = tree.getroot()
+
+    def _is_bare_p_graphic(p):
+        return (
+            p.tag == "p"
+            and not (p.text and p.text.strip())
+            and len(list(p)) == 1
+            and p[0].tag == "graphic"
+            and not (p[0].tail and p[0].tail.strip())
+        )
+
+    def _caption_is_title_only(caption):
+        return (
+            caption is not None
+            and not (caption.text and caption.text.strip())
+            and len(list(caption)) == 1
+            and caption[0].tag == "title"
+            and not (caption[0].tail and caption[0].tail.strip())
+        )
+
+    def _describe(fig):
+        children = [c.tag for c in fig]
+        if children == ["label", "caption", "graphic"]:
+            caption = fig[1]
+            if not _caption_is_title_only(caption):
+                cap_children = [c.tag for c in caption]
+                return f"<caption> should contain only <title> (found: {cap_children})"
+            return None  # known-good
+        if "label" not in children:
+            return f"missing <label> (children: {children})"
+        if "caption" not in children:
+            return f"missing <caption> (children: {children})"
+        if "graphic" not in children:
+            return f"missing <graphic> (children: {children})"
+        return f"unexpected <fig> children {children} (expected [label, caption, graphic])"
+
+    changed = False
+    for fig in root.findall(".//fig"):
+        fig_id = fig.get("id", "<unknown>")
+        children = list(fig)
+        tags = [c.tag for c in children]
+
+        # Try to unwrap the one known-fixable case.
+        if (
+            tags == ["label", "caption", "p"]
+            and _caption_is_title_only(children[1])
+            and _is_bare_p_graphic(children[2])
+        ):
+            p = children[2]
+            graphic = p[0]
+            p_idx = list(fig).index(p)
+            fig.remove(p)
+            fig.insert(p_idx, graphic)
+            logging.info(
+                f"Figure {fig_id!r}: unwrapped <graphic> from a stray <p> "
+                "(likely caused by \\makebox around \\includegraphics — "
+                "remove the \\makebox in the LaTeX source)."
+            )
+            changed = True
+            continue
+
+        deviation = _describe(fig)
+        if deviation is not None:
+            logging.warning(
+                f"Figure {fig_id!r} has unexpected structure: {deviation}. "
+                "Ingenta/AUP may fail to render this figure. Simplify the "
+                "LaTeX source (bare \\includegraphics + \\caption inside "
+                "\\begin{figure}...\\end{figure})."
+            )
+
+    if changed:
+        tree.write(jats_file, encoding="unicode")
+
+
 def fix_table_notes(jats_file):
     """Moves misplaced <p> elements inside <table-wrap> to <table-wrap-foot> and removes the original."""
     ET.register_namespace("xlink", "http://www.w3.org/1999/xlink")
@@ -2370,6 +2466,7 @@ def convert(input_path: Path, output_path: Path, html: bool = False, lastpage=No
     else:
         logger.warning(f'no .bbl file at {bbl_file}; references will be plain text')
     fix_lstlisting_labels(str(output_path), str(input_path))
+    fix_fig_structure(str(output_path))
     fix_ext_links(str(output_path))
     fix_pdf_graphic_refs(str(output_path))
     finalize_xml(str(output_path))
