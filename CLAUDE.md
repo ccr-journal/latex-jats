@@ -190,16 +190,16 @@ CI builds and pushes Docker images (`ccsamsterdam/latex-jats-api`, `ccsamsterdam
 
 ## Syncing the CCR class pin
 
-The prepare step warns authors when their vendored `ccr.cls` is older than, or differs from, the latest upstream release at [ccr-journal/ccr-latex](https://github.com/ccr-journal/ccr-latex). "Latest" is defined by two pinned constants in `src/latex_jats/ccr_cls.py` — `EXPECTED_CCR_CLS_VERSION` and `EXPECTED_CCR_CLS_SHA256` — plus a committed canonical copy at `tests/fixtures/ccr_canonical.cls`.
+The prepare step warns authors when their vendored `ccr.cls` is older than, or differs from, the latest upstream release at [ccr-journal/ccr-latex](https://github.com/ccr-journal/ccr-latex). "Latest" is defined by two pinned constants in `src/latex_jats/ccr_cls.py` — `EXPECTED_CCR_CLS_VERSION` and `EXPECTED_CCR_CLS_SHA256` — plus a committed canonical copy at `src/latex_jats/ccr_canonical.cls`. The canonical copy ships inside the Python package so it is also available at runtime when the web UI's "Use most recent ccr.cls" option injects it into a workspace.
 
 When upstream releases a new version, bump all three together:
 
-1. Replace `tests/fixtures/ccr_canonical.cls` with the new upstream file (`curl -fsSL https://raw.githubusercontent.com/ccr-journal/ccr-latex/main/ccr.cls -o tests/fixtures/ccr_canonical.cls`).
+1. Replace `src/latex_jats/ccr_canonical.cls` with the new upstream file (`curl -fsSL https://raw.githubusercontent.com/ccr-journal/ccr-latex/main/ccr.cls -o src/latex_jats/ccr_canonical.cls`).
 2. Update `EXPECTED_CCR_CLS_VERSION` in `src/latex_jats/ccr_cls.py` to match the new `% Version X.XX` comment in the file.
 3. Recompute the hash and update `EXPECTED_CCR_CLS_SHA256`:
    ```sh
    uv run python -c "from latex_jats.ccr_cls import compute_ccr_cls_sha256; \
-     import pathlib; print(compute_ccr_cls_sha256(pathlib.Path('tests/fixtures/ccr_canonical.cls')))"
+     import pathlib; print(compute_ccr_cls_sha256(pathlib.Path('src/latex_jats/ccr_canonical.cls')))"
    ```
 4. Run `uv run pytest tests/test_ccr_cls.py`. The `test_canonical_fixture_matches_pinned_hash` self-check fails loudly if the fixture and pins diverge, so you'll know immediately if any of the three got skipped.
 

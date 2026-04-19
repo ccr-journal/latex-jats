@@ -8,6 +8,7 @@ with status transitions and captured log output.
 import logging
 import shutil
 import subprocess
+import threading
 import traceback
 from datetime import datetime
 from pathlib import Path
@@ -93,14 +94,26 @@ def inject_ojs_metadata(tex_file: Path, manuscript) -> None:
 
 
 class _LogCollector(logging.Handler):
-    """Collects log records from the ``latex_jats`` logger hierarchy."""
+    """Collects log records from the ``latex_jats`` logger hierarchy.
+
+    When multiple pipelines run concurrently (FastAPI BackgroundTasks run in
+    a shared thread pool), every collector is attached to the same
+    ``latex_jats`` logger and would otherwise receive every pipeline's
+    records.  We capture the thread that created the collector and ignore
+    records emitted from other threads — each pipeline's work (including the
+    subprocess captures that route back through logging) happens in a single
+    thread, so the thread id is a reliable owner marker.
+    """
 
     def __init__(self) -> None:
         super().__init__()
         self.setFormatter(logging.Formatter("%(levelname)s: %(message)s"))
         self.buffer: list[str] = []
+        self._owner_thread = threading.get_ident()
 
     def emit(self, record: logging.LogRecord) -> None:
+        if threading.get_ident() != self._owner_thread:
+            return
         self.buffer.append(self.format(record))
 
     def drain(self) -> str:
@@ -277,6 +290,7 @@ def _pdf_page_count(pdf_path) -> int | None:
 def _run_latex_pipeline(
     doi_suffix: str, engine: Engine, storage: Storage, collector: _LogCollector,
     step_tracker: list[str], *, fix: bool = False,
+    use_canonical_ccr_cls: bool = False,
 ) -> None:
     """LaTeX-specific pipeline: prepare → compile → convert → check → validate."""
     source_dir = storage.source_dir(doi_suffix)
@@ -284,7 +298,11 @@ def _run_latex_pipeline(
     convert_output = storage.convert_output_dir(doi_suffix)
 
     # ── Step 1: prepare workspace ────────────────────────────────────
-    workspace_tex = prepare_workspace(source_dir, workspace_dir, fix_problems=fix)
+    workspace_tex = prepare_workspace(
+        source_dir, workspace_dir,
+        fix_problems=fix,
+        use_canonical_ccr_cls=use_canonical_ccr_cls,
+    )
 
     # Inject missing journal metadata from OJS before compilation
     with Session(engine) as session:
@@ -389,7 +407,7 @@ def _run_latex_pipeline(
 
 def _run_quarto_pipeline(
     doi_suffix: str, engine: Engine, storage: Storage, collector: _LogCollector,
-    step_tracker: list[str],
+    step_tracker: list[str], *, use_canonical_ccr_cls: bool = False,
 ) -> None:
     """Quarto-specific pipeline: prepare → compile (PDF) → convert → check → validate."""
     source_dir = storage.source_dir(doi_suffix)
@@ -397,7 +415,10 @@ def _run_quarto_pipeline(
     convert_output = storage.convert_output_dir(doi_suffix)
 
     # ── Step 1: prepare workspace ────────────────────────────────────
-    prepare_quarto_workspace(source_dir, workspace_dir)
+    prepare_quarto_workspace(
+        source_dir, workspace_dir,
+        use_canonical_ccr_cls=use_canonical_ccr_cls,
+    )
     _finish_step(engine, doi_suffix, "prepare", collector.drain())
 
     workspace_qmd = find_qmd(workspace_dir)
@@ -489,7 +510,10 @@ def _run_quarto_pipeline(
     )
 
 
-def run_pipeline(doi_suffix: str, engine: Engine, storage: Storage, *, fix: bool = False) -> None:
+def run_pipeline(
+    doi_suffix: str, engine: Engine, storage: Storage, *,
+    fix: bool = False, use_canonical_ccr_cls: bool = False,
+) -> None:
     """Execute the full conversion pipeline for a manuscript.
 
     This function is intended to run as a FastAPI background task.  It creates
@@ -532,9 +556,15 @@ def run_pipeline(doi_suffix: str, engine: Engine, storage: Storage, *, fix: bool
         _start_step(engine, doi_suffix, "prepare")
 
         if is_quarto:
-            _run_quarto_pipeline(doi_suffix, engine, storage, collector, step_tracker)
+            _run_quarto_pipeline(
+                doi_suffix, engine, storage, collector, step_tracker,
+                use_canonical_ccr_cls=use_canonical_ccr_cls,
+            )
         else:
-            _run_latex_pipeline(doi_suffix, engine, storage, collector, step_tracker, fix=fix)
+            _run_latex_pipeline(
+                doi_suffix, engine, storage, collector, step_tracker,
+                fix=fix, use_canonical_ccr_cls=use_canonical_ccr_cls,
+            )
 
     except Exception:
         tb = traceback.format_exc()

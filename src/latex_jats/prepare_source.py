@@ -21,7 +21,10 @@ import sys
 import unicodedata
 from pathlib import Path
 
-from latex_jats.ccr_cls import warn_if_outdated as _warn_if_ccr_cls_outdated
+from latex_jats.ccr_cls import (
+    install_canonical_ccr_cls as _install_canonical_ccr_cls,
+    warn_if_outdated as _warn_if_ccr_cls_outdated,
+)
 from latex_jats.fix_input import _collect_tex_files, fix_file
 
 logger = logging.getLogger(__name__)
@@ -187,11 +190,16 @@ def _patch_ccr_cls(workspace_dir: Path, engine: str = "pdflatex"):
 
 
 def prepare_workspace(source_dir: Path, workspace_dir: Path,
-                      fix_problems: bool = False) -> Path:
+                      fix_problems: bool = False,
+                      use_canonical_ccr_cls: bool = False) -> Path:
     """Create a workspace copy of the source and apply fixes + warnings.
 
     Copies the source tree into workspace_dir, optionally applies fix_input
     fixes, and runs all source-quality warnings on the result.
+
+    If ``use_canonical_ccr_cls`` is set, the canonical upstream ``ccr.cls`` is
+    installed into the workspace before the version check, so the outdated-class
+    warning is suppressed.
 
     Returns the path to main.tex in the workspace.
     """
@@ -202,9 +210,16 @@ def prepare_workspace(source_dir: Path, workspace_dir: Path,
     shutil.copytree(source_dir, workspace_dir)
     main_tex = workspace_dir / "main.tex"
 
+    if use_canonical_ccr_cls:
+        _install_canonical_ccr_cls(workspace_dir)
+
+    # Check the author's ccr.cls before we modify it. _patch_ccr_cls rewrites
+    # the file (adding \pdfminorversion, commenting out pstricks), which would
+    # otherwise make warn_if_outdated see an "edited" canonical copy.
+    _warn_if_ccr_cls_outdated(workspace_dir)
+
     engine = _detect_tex_engine(main_tex)
     _patch_ccr_cls(workspace_dir, engine)
-    _warn_if_ccr_cls_outdated(workspace_dir)
 
     # Apply fixes to the workspace copy (if requested)
     if fix_problems:

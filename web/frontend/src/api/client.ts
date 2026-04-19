@@ -92,7 +92,7 @@ export async function logout(): Promise<void> {
 
 // ── Meta ──────────────────────────────────────────────────────────────────────
 
-export function getVersion(): Promise<{ version: string }> {
+export function getVersion(): Promise<{ version: string; ccr_cls_version: string }> {
   return apiFetch("/api/version");
 }
 
@@ -117,7 +117,7 @@ export function getManuscript(doiSuffix: string): Promise<Manuscript> {
 
 export function updateManuscript(
   doiSuffix: string,
-  data: { fix_source?: boolean },
+  data: { fix_source?: boolean; use_canonical_ccr_cls?: boolean },
 ): Promise<Manuscript> {
   return apiFetch(`/api/manuscripts/${doiSuffix}`, {
     method: "PATCH",
@@ -172,9 +172,11 @@ export async function uploadFiles(
 export async function startProcessing(
   doiSuffix: string,
   fix: boolean = false,
+  useCanonicalCcrCls: boolean = false,
 ): Promise<Manuscript> {
   const form = new FormData();
   form.append("fix", fix ? "true" : "false");
+  form.append("use_canonical_ccr_cls", useCanonicalCcrCls ? "true" : "false");
   return apiFetch(`/api/manuscripts/${doiSuffix}/process`, {
     method: "POST",
     body: form,

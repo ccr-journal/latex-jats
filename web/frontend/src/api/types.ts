@@ -44,6 +44,7 @@ export interface Manuscript {
   year: number | null;
   authors: OjsAuthor[];
   fix_source: boolean;
+  use_canonical_ccr_cls: boolean;
   created_at: string;
   updated_at: string;
   uploaded_at: string | null;

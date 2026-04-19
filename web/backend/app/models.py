@@ -55,6 +55,7 @@ class Manuscript(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     fix_source: bool = False
+    use_canonical_ccr_cls: bool = False
     uploaded_at: Optional[datetime] = None
     uploaded_by: Optional[str] = None  # "editor" | "author"
     job_log: str = ""
@@ -141,6 +142,7 @@ class ManuscriptRead(SQLModel):
     year: Optional[int] = None
     authors: list[AuthorRead] = []
     fix_source: bool = False
+    use_canonical_ccr_cls: bool = False
     created_at: datetime
     updated_at: datetime
     uploaded_at: Optional[datetime]

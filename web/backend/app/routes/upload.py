@@ -142,6 +142,7 @@ async def start_processing(
     doi_suffix: str,
     background_tasks: BackgroundTasks,
     fix: bool = Form(False),
+    use_canonical_ccr_cls: bool = Form(False),
     user: CurrentUser = Depends(get_current_user),
     role: Literal["editor", "author"] = Depends(get_current_role),
     session: Session = Depends(get_session),
@@ -161,6 +162,7 @@ async def start_processing(
         )
 
     ms.fix_source = fix
+    ms.use_canonical_ccr_cls = use_canonical_ccr_cls
     ms.status = ManuscriptStatus.queued
     ms.job_log = ""
     ms.job_started_at = None
@@ -171,6 +173,9 @@ async def start_processing(
     session.commit()
     session.refresh(ms)
 
-    background_tasks.add_task(run_pipeline, doi_suffix, deps._engine, storage, fix=fix)
+    background_tasks.add_task(
+        run_pipeline, doi_suffix, deps._engine, storage,
+        fix=fix, use_canonical_ccr_cls=use_canonical_ccr_cls,
+    )
 
     return manuscript_to_read(ms, session)

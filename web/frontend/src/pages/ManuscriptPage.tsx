@@ -14,7 +14,7 @@ import { PipelineProgress } from "@/components/PipelineProgress";
 import { MetadataCard } from "@/components/MetadataCard";
 import { UploadZone } from "@/components/UploadZone";
 import { useAuth } from "@/auth/AuthContext";
-import { getManuscript, getStatus, uploadFiles, startProcessing, updateManuscript, reimportOjsMetadata, approveManuscript, withdrawApproval, deleteManuscript, archiveManuscript, unarchiveManuscript, downloadUrl, outputUrl, presign, getAuthorToken, regenerateAuthorToken, getInviteTemplate, inviteAuthors, type Recipient } from "@/api/client";
+import { getManuscript, getStatus, getVersion, uploadFiles, startProcessing, updateManuscript, reimportOjsMetadata, approveManuscript, withdrawApproval, deleteManuscript, archiveManuscript, unarchiveManuscript, downloadUrl, outputUrl, presign, getAuthorToken, regenerateAuthorToken, getInviteTemplate, inviteAuthors, type Recipient } from "@/api/client";
 import { ApiError } from "@/api/client";
 import type { Manuscript, PipelineStep } from "@/api/types";
 
@@ -65,6 +65,7 @@ export function ManuscriptPage() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [archiving, setArchiving] = useState(false);
   const [archiveError, setArchiveError] = useState<string | null>(null);
+  const [ccrClsVersion, setCcrClsVersion] = useState<string | null>(null);
 
   // Initial fetch
   useEffect(() => {
@@ -74,6 +75,10 @@ export function ManuscriptPage() {
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, [doiSuffix]);
+
+  useEffect(() => {
+    getVersion().then((v) => setCcrClsVersion(v.ccr_cls_version)).catch(() => {});
+  }, []);
 
   // Status polling when queued or processing
   useEffect(() => {
@@ -123,6 +128,11 @@ export function ManuscriptPage() {
     setManuscript(updated);
   };
 
+  const handleUseCanonicalToggle = async (checked: boolean) => {
+    const updated = await updateManuscript(doiSuffix, { use_canonical_ccr_cls: checked });
+    setManuscript(updated);
+  };
+
   const handleReimport = async () => {
     setReimporting(true);
     try {
@@ -161,7 +171,11 @@ export function ManuscriptPage() {
   };
 
   const handleStartProcessing = async () => {
-    const updated = await startProcessing(doiSuffix, manuscript.fix_source);
+    const updated = await startProcessing(
+      doiSuffix,
+      manuscript.fix_source,
+      manuscript.use_canonical_ccr_cls,
+    );
     setManuscript(updated);
   };
 
@@ -394,6 +408,19 @@ export function ManuscriptPage() {
             />
             <Label htmlFor="fix-source" className="text-sm font-normal cursor-pointer">
               Apply source fixes before compiling
+            </Label>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="use-canonical-ccr-cls"
+              checked={manuscript.use_canonical_ccr_cls}
+              onChange={(e) => handleUseCanonicalToggle(e.target.checked)}
+              disabled={isProcessing || isApproved}
+              className="h-4 w-4 rounded border-input accent-primary"
+            />
+            <Label htmlFor="use-canonical-ccr-cls" className="text-sm font-normal cursor-pointer">
+              Use most recent ccr.cls file{ccrClsVersion ? ` (v${ccrClsVersion})` : ""}
             </Label>
           </div>
           {canProcess && (

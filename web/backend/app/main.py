@@ -98,7 +98,11 @@ if _CORS_ORIGINS:
 
 @app.get("/api/version")
 def get_version() -> dict[str, str]:
-    return {"version": pkg_version("latex-jats")}
+    from latex_jats.ccr_cls import EXPECTED_CCR_CLS_VERSION
+    return {
+        "version": pkg_version("latex-jats"),
+        "ccr_cls_version": EXPECTED_CCR_CLS_VERSION,
+    }
 
 
 app.include_router(auth.router)

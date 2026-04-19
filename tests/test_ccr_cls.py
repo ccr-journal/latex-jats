@@ -8,16 +8,18 @@ from pathlib import Path
 import pytest
 
 from latex_jats.ccr_cls import (
+    CANONICAL_CCR_CLS_PATH,
     EXPECTED_CCR_CLS_SHA256,
     EXPECTED_CCR_CLS_VERSION,
     compute_ccr_cls_sha256,
     find_ccr_cls,
+    install_canonical_ccr_cls,
     parse_ccr_cls_version,
     warn_if_outdated,
 )
 
 
-CANONICAL_FIXTURE = Path(__file__).parent / "fixtures" / "ccr_canonical.cls"
+CANONICAL_FIXTURE = CANONICAL_CCR_CLS_PATH
 
 
 def _make_cls(path: Path, version: str | None, extra: str = "") -> Path:
@@ -172,3 +174,29 @@ def _bump(version: str) -> str:
     parts = [int(p) for p in version.split(".")]
     parts[-1] += 1
     return ".".join(str(p) for p in parts)
+
+
+# --- install_canonical_ccr_cls -----------------------------------------------
+
+
+def test_install_overwrites_flat_layout(tmp_path: Path, caplog: pytest.LogCaptureFixture):
+    _make_cls(tmp_path / "ccr.cls", "0.02", extra="% custom edit\n")
+    install_canonical_ccr_cls(tmp_path)
+    with caplog.at_level(logging.WARNING, logger="latex_jats.ccr_cls"):
+        warn_if_outdated(tmp_path)
+    assert [r for r in caplog.records if r.levelno == logging.WARNING] == []
+
+
+def test_install_overwrites_quarto_extension_layout(tmp_path: Path):
+    ext_dir = tmp_path / "_extensions" / "ccr-journal" / "ccr"
+    ext_dir.mkdir(parents=True)
+    _make_cls(ext_dir / "ccr.cls", "0.02")
+    written = install_canonical_ccr_cls(tmp_path)
+    assert written == ext_dir / "ccr.cls"
+    assert compute_ccr_cls_sha256(written) == EXPECTED_CCR_CLS_SHA256
+
+
+def test_install_creates_when_missing(tmp_path: Path):
+    written = install_canonical_ccr_cls(tmp_path)
+    assert written == tmp_path / "ccr.cls"
+    assert compute_ccr_cls_sha256(written) == EXPECTED_CCR_CLS_SHA256

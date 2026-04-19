@@ -19,7 +19,10 @@ import subprocess
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-from latex_jats.ccr_cls import warn_if_outdated as _warn_if_ccr_cls_outdated
+from latex_jats.ccr_cls import (
+    install_canonical_ccr_cls as _install_canonical_ccr_cls,
+    warn_if_outdated as _warn_if_ccr_cls_outdated,
+)
 from latex_jats.convert import (
     _build_mixed_citation,
     _convert_pdf_figures,
@@ -40,7 +43,8 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 
-def prepare_quarto_workspace(example_dir: Path, workspace_dir: Path) -> bool:
+def prepare_quarto_workspace(example_dir: Path, workspace_dir: Path,
+                             use_canonical_ccr_cls: bool = False) -> bool:
     """Copy a Quarto example into the workspace.
 
     Mirrors prepare_workspace() for LaTeX but without LaTeX-specific validation.
@@ -49,12 +53,19 @@ def prepare_quarto_workspace(example_dir: Path, workspace_dir: Path) -> bool:
 
     If the workspace contains an ``renv.lock`` file, R package dependencies are
     restored via ``renv::restore()`` so that code chunks can execute.
+
+    If ``use_canonical_ccr_cls`` is set, the canonical upstream ``ccr.cls`` is
+    installed into the workspace before the version check, so the outdated-class
+    warning is suppressed.
     """
     if workspace_dir.exists():
         shutil.rmtree(workspace_dir)
     workspace_dir.parent.mkdir(parents=True, exist_ok=True)
     shutil.copytree(example_dir, workspace_dir)
     logger.info("Prepared Quarto workspace at %s", workspace_dir)
+
+    if use_canonical_ccr_cls:
+        _install_canonical_ccr_cls(workspace_dir)
 
     # Restore R package dependencies if renv.lock is present
     renv_lock = workspace_dir / "renv.lock"
