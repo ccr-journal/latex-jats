@@ -31,8 +31,8 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 
-EXPECTED_CCR_CLS_VERSION = "0.05"
-EXPECTED_CCR_CLS_SHA256 = "d71fd2c8d572dab83e4afff2058618afe9c746289623468168ff3bdb50e01387"
+EXPECTED_CCR_CLS_VERSION = "0.06"
+EXPECTED_CCR_CLS_SHA256 = "19de6ab297eec52cca61b61277164bf00af6dd4737e8dfaf785a16ecdb96a079"
 
 _VERSION_RE = re.compile(r"^\s*%\s*Version\s+(\d+(?:\.\d+)+)", re.IGNORECASE)
 
