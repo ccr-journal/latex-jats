@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -14,7 +14,7 @@ import { PipelineProgress } from "@/components/PipelineProgress";
 import { MetadataCard } from "@/components/MetadataCard";
 import { UploadZone } from "@/components/UploadZone";
 import { useAuth } from "@/auth/AuthContext";
-import { getManuscript, getStatus, uploadFiles, startProcessing, updateManuscript, reimportOjsMetadata, approveManuscript, withdrawApproval, downloadUrl, outputUrl, presign, getAuthorToken, regenerateAuthorToken, getInviteTemplate, inviteAuthors, type Recipient } from "@/api/client";
+import { getManuscript, getStatus, uploadFiles, startProcessing, updateManuscript, reimportOjsMetadata, approveManuscript, withdrawApproval, deleteManuscript, downloadUrl, outputUrl, presign, getAuthorToken, regenerateAuthorToken, getInviteTemplate, inviteAuthors, type Recipient } from "@/api/client";
 import { ApiError } from "@/api/client";
 import type { Manuscript, PipelineStep } from "@/api/types";
 
@@ -47,6 +47,7 @@ function formatDate(iso: string | null): string {
 
 export function ManuscriptPage() {
   const { doiSuffix } = useParams<{ doiSuffix: string }>();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [manuscript, setManuscript] = useState<Manuscript | null>(null);
   const [loading, setLoading] = useState(true);
@@ -59,6 +60,9 @@ export function ManuscriptPage() {
   const [approving, setApproving] = useState(false);
   const [withdrawing, setWithdrawing] = useState(false);
   const [withdrawError, setWithdrawError] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Initial fetch
   useEffect(() => {
@@ -158,6 +162,18 @@ export function ManuscriptPage() {
     setManuscript(updated);
   };
 
+  const handleDelete = async () => {
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await deleteManuscript(doiSuffix);
+      navigate("/");
+    } catch (err) {
+      setDeleteError(err instanceof ApiError ? err.message : "Failed to delete manuscript");
+      setDeleting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {!isTokenScoped && (
@@ -182,6 +198,26 @@ export function ManuscriptPage() {
                   onClick={handleReimport}
                 >
                   {reimporting ? "Importing\u2026" : "Refresh from OJS"}
+                </Button>
+              )}
+              {isEditor && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={isApproved || isProcessing}
+                  title={
+                    isApproved
+                      ? "Withdraw approval before deleting"
+                      : isProcessing
+                        ? "Wait for the current conversion to finish"
+                        : undefined
+                  }
+                  onClick={() => {
+                    setDeleteError(null);
+                    setDeleteDialogOpen(true);
+                  }}
+                >
+                  Delete
                 </Button>
               )}
               <StatusBadge status={manuscript.status} />
@@ -324,6 +360,31 @@ export function ManuscriptPage() {
             </DialogTitle>
           </DialogHeader>
           <UploadZone onUpload={handleUpload} />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deleteDialogOpen} onOpenChange={(open) => { if (!deleting) setDeleteDialogOpen(open); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete manuscript</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm">
+            <p>
+              This will permanently and irreversibly remove <strong>{doiSuffix}</strong>,
+              including all uploaded source files, conversion output, author records,
+              and access tokens.
+            </p>
+            <p>This cannot be undone. Are you sure?</p>
+            {deleteError && <p className="text-red-600">{deleteError}</p>}
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} disabled={deleting}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+              {deleting ? "Deleting\u2026" : "Delete"}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 

@@ -131,6 +131,10 @@ export function withdrawApproval(doiSuffix: string): Promise<Manuscript> {
   });
 }
 
+export function deleteManuscript(doiSuffix: string): Promise<void> {
+  return apiFetch(`/api/manuscripts/${doiSuffix}`, { method: "DELETE" });
+}
+
 export function getStatus(doiSuffix: string): Promise<Manuscript> {
   return apiFetch(`/api/manuscripts/${doiSuffix}/status`);
 }

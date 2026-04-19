@@ -3,6 +3,7 @@
 import json
 import logging
 import secrets
+import shutil
 from pathlib import Path
 from typing import Literal
 
@@ -153,6 +154,40 @@ def get_manuscript(
 ):
     ms = load_manuscript_for_user(doi_suffix, session, user, role)
     return manuscript_to_read(ms, session)
+
+
+@router.delete("/{doi_suffix}", status_code=204)
+def delete_manuscript(
+    doi_suffix: str,
+    _editor: str = Depends(require_editor),
+    session: Session = Depends(get_session),
+    storage: Storage = Depends(get_storage),
+):
+    ms = session.get(Manuscript, doi_suffix)
+    if ms is None:
+        raise HTTPException(404, detail=f"Manuscript '{doi_suffix}' not found")
+    if ms.status == ManuscriptStatus.approved:
+        raise HTTPException(
+            409, detail="Cannot delete an approved manuscript. Withdraw approval first."
+        )
+
+    for author in session.exec(
+        select(ManuscriptAuthor).where(ManuscriptAuthor.manuscript_id == doi_suffix)
+    ).all():
+        session.delete(author)
+    for token in session.exec(
+        select(ManuscriptToken).where(ManuscriptToken.manuscript_id == doi_suffix)
+    ).all():
+        session.delete(token)
+    session.delete(ms)
+    session.commit()
+
+    manuscript_dir = storage.manuscript_dir(doi_suffix)
+    if manuscript_dir.exists():
+        try:
+            shutil.rmtree(manuscript_dir)
+        except OSError as exc:
+            logger.error("Failed to remove storage for deleted manuscript %s: %s", doi_suffix, exc)
 
 
 # ── Author token management ──────────────────────────────────────────────────

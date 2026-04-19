@@ -936,6 +936,59 @@ def test_withdraw_allowed_when_ojs_not_in_production(client, engine, monkeypatch
     assert r.json()["status"] == "ready"
 
 
+# ── Delete ────────────────────────────────────────────────────────────────────
+
+
+def test_delete_manuscript_wipes_db_and_files(client, engine, test_storage):
+    doi = _create(client, "CCR2025.1.1.DEL1")
+    test_storage.ensure_dirs(doi)
+    sentinel = test_storage.source_dir(doi) / "main.tex"
+    sentinel.write_text("\\documentclass{article}")
+    with Session(engine) as session:
+        session.add(ManuscriptAuthor(manuscript_id=doi, name="A. Author", email="a@example.com"))
+        session.add(ManuscriptToken(manuscript_id=doi, token="del1-author-tok"))
+        session.commit()
+
+    r = client.delete(f"/api/manuscripts/{doi}")
+    assert r.status_code == 204
+
+    with Session(engine) as session:
+        assert session.get(Manuscript, doi) is None
+        from sqlmodel import select
+        assert session.exec(
+            select(ManuscriptAuthor).where(ManuscriptAuthor.manuscript_id == doi)
+        ).first() is None
+        assert session.exec(
+            select(ManuscriptToken).where(ManuscriptToken.manuscript_id == doi)
+        ).first() is None
+    assert not test_storage.manuscript_dir(doi).exists()
+
+
+def test_delete_manuscript_not_found(client):
+    r = client.delete("/api/manuscripts/DOES-NOT-EXIST")
+    assert r.status_code == 404
+
+
+def test_delete_manuscript_blocked_when_approved(client, engine):
+    doi = _create(client, "CCR2025.1.1.DEL2")
+    with Session(engine) as session:
+        ms = session.get(Manuscript, doi)
+        ms.status = "approved"
+        session.add(ms)
+        session.commit()
+
+    r = client.delete(f"/api/manuscripts/{doi}")
+    assert r.status_code == 409
+    assert "approved" in r.json()["detail"].lower()
+    with Session(engine) as session:
+        assert session.get(Manuscript, doi) is not None
+
+
+def test_delete_manuscript_requires_editor(author_client):
+    r = author_client.delete(f"/api/manuscripts/{AUTHOR_FIXTURE_DOI}")
+    assert r.status_code == 403
+
+
 # ── OJS import ────────────────────────────────────────────────────────────────
 
 
