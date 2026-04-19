@@ -229,8 +229,12 @@ export function inviteAuthors(
 
 // ── OJS ───────────────────────────────────────────────────────────────────────
 
-export function listOjsSubmissions(): Promise<OjsSubmission[]> {
-  return apiFetch("/api/ojs/submissions");
+export type OjsStage = "copyediting" | "production";
+
+export function listOjsSubmissions(
+  stage: OjsStage = "copyediting",
+): Promise<OjsSubmission[]> {
+  return apiFetch(`/api/ojs/submissions?stage=${stage}`);
 }
 
 export function importOjsSubmission(submissionId: number): Promise<Manuscript> {

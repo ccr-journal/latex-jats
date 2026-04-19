@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
+from enum import Enum
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlmodel import Session
 
@@ -23,6 +24,17 @@ logger = logging.getLogger("latex_jats.web.ojs_routes")
 router = APIRouter(prefix="/api/ojs", tags=["ojs"])
 
 
+class OjsStage(str, Enum):
+    copyediting = "copyediting"
+    production = "production"
+
+
+_STAGE_IDS: dict[OjsStage, int] = {
+    OjsStage.copyediting: 4,
+    OjsStage.production: 5,
+}
+
+
 class OjsSubmissionRead(BaseModel):
     submission_id: int
     doi_suffix: str
@@ -33,11 +45,14 @@ class OjsSubmissionRead(BaseModel):
 
 @router.get("/submissions", response_model=list[OjsSubmissionRead])
 async def list_production_submissions(
+    stage: OjsStage = Query(OjsStage.copyediting),
     _editor: str = Depends(require_editor),
     session: Session = Depends(get_session),
 ):
     try:
-        subs = await ojs_client.fetch_production_submissions()
+        subs = await ojs_client.fetch_production_submissions(
+            stage_id=_STAGE_IDS[stage]
+        )
     except ojs_client.OjsAdminTokenInvalid as exc:
         logger.error("OJS admin token invalid: %s", exc)
         raise HTTPException(502, detail="OJS admin token invalid")

@@ -1031,6 +1031,73 @@ def test_already_imported_flag(client):
     assert r.json()[0]["already_imported"] is True
 
 
+def test_list_ojs_submissions_accepts_production_stage(client):
+    _set_ojs_subs([
+        ojs_client.OjsSubmission(
+            submission_id=42,
+            doi_suffix="CCR2025.1.3.Z",
+            title="Backlog",
+            authors=(),
+        )
+    ])
+    # The test override ignores the stage filter, but the route should accept
+    # stage=production and still return the overridden list.
+    r = client.get("/api/ojs/submissions?stage=production")
+    assert r.status_code == 200
+    assert len(r.json()) == 1
+
+
+def test_list_ojs_submissions_rejects_unknown_stage(client):
+    _set_ojs_subs([])
+    r = client.get("/api/ojs/submissions?stage=review")
+    assert r.status_code == 422
+
+
+def test_fetch_production_submissions_uses_stage_id(monkeypatch):
+    """Make sure the stage_id argument is forwarded to the OJS query string."""
+    import asyncio
+
+    from web.backend.app import ojs as ojs_module
+
+    ojs_module.set_production_submissions_override(None)
+    ojs_module.invalidate_production_cache()
+
+    captured_params: list[list[tuple[str, str]]] = []
+
+    class FakeResp:
+        status_code = 200
+
+        @staticmethod
+        def json():
+            return {"items": [], "itemsMax": 0}
+
+    class FakeClient:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *a):
+            return False
+
+        async def get(self, url, headers=None, params=None):
+            captured_params.append(list(params))
+            return FakeResp()
+
+    monkeypatch.setattr(ojs_module.httpx, "AsyncClient", lambda *a, **k: FakeClient())
+
+    class FakeCfg:
+        ojs_admin_token = "tok"
+        ojs_base_url = "https://example.test"
+        ojs_journal_path = "j"
+        ojs_doi_prefix = "10.5117/"
+
+    asyncio.run(
+        ojs_module.fetch_production_submissions(cfg=FakeCfg(), stage_id=5)
+    )
+    ojs_module.invalidate_production_cache()
+    assert captured_params
+    assert ("stageIds[]", "5") in captured_params[0]
+
+
 # ── OJS DOI suffix extraction ─────────────────────────────────────────────────
 
 

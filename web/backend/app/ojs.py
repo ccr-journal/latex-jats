@@ -1,10 +1,11 @@
 """OJS REST client.
 
-Used for copyediting-submission listing (see fetch_production_submissions) —
-the "create manuscript" picker in the frontend fetches submissions currently
-in OJS copyediting stage (stageId 4) with their DOI suffix and author names.
-Also used to push metadata updates (title, abstract, keywords, authors) back
-to OJS after conversion.
+Used for submission listing (see fetch_production_submissions) — the "create
+manuscript" picker in the frontend fetches submissions in a caller-selected
+OJS stage (default copyediting, stageId 4; production, stageId 5, is used
+for backlog import) with their DOI suffix and author names. Also used to
+push metadata updates (title, abstract, keywords, authors) back to OJS after
+conversion.
 
 The backend holds a journal-admin OJS API token in `OJS_ADMIN_TOKEN`.
 """
@@ -64,20 +65,21 @@ _production_submissions_override: list[OjsSubmission] | None = None
 
 # Short in-process cache for the (slow) production submissions list so the
 # picker reopens instantly. Editors importing a submission see it disappear
-# from the list on next open; a 60s TTL keeps the window small.
-_production_cache: tuple[float, list[OjsSubmission]] | None = None
+# from the list on next open; a 60s TTL keeps the window small. Keyed by
+# stage so switching stages in the picker doesn't trash the other stage's
+# entry.
+_production_cache: dict[int, tuple[float, list[OjsSubmission]]] = {}
 _PRODUCTION_CACHE_TTL = 60.0
 
 
 def set_production_submissions_override(subs: list[OjsSubmission] | None) -> None:
-    global _production_submissions_override, _production_cache
+    global _production_submissions_override
     _production_submissions_override = subs
-    _production_cache = None
+    _production_cache.clear()
 
 
 def invalidate_production_cache() -> None:
-    global _production_cache
-    _production_cache = None
+    _production_cache.clear()
 
 
 def _extract_doi_suffix(doi: str | None, prefix: str) -> str | None:
@@ -117,19 +119,22 @@ def _localized(value) -> str:
 
 async def fetch_production_submissions(
     cfg: AuthConfig | None = None,
+    stage_id: int = _STAGE_COPYEDITING,
 ) -> list[OjsSubmission]:
-    """Return OJS submissions currently in copyediting stage.
+    """Return OJS submissions currently in the given stage.
 
-    Skips submissions without a DOI (we need the DOI suffix as the manuscript
-    primary key). Returns an empty list if OJS is not configured.
+    Defaults to copyediting (stageId 4); pass `_STAGE_PRODUCTION` (5) to list
+    backlog/published items. Skips submissions without a DOI (we need the DOI
+    suffix as the manuscript primary key). Returns an empty list if OJS is
+    not configured.
     """
     if _production_submissions_override is not None:
         return list(_production_submissions_override)
 
-    global _production_cache
     now = time.monotonic()
-    if _production_cache is not None:
-        ts, cached = _production_cache
+    cached_entry = _production_cache.get(stage_id)
+    if cached_entry is not None:
+        ts, cached = cached_entry
         if now - ts < _PRODUCTION_CACHE_TTL:
             return list(cached)
 
@@ -150,7 +155,7 @@ async def fetch_production_submissions(
         async with httpx.AsyncClient(timeout=15.0) as client:
             while True:
                 params = [
-                    ("stageIds[]", str(_STAGE_COPYEDITING)),
+                    ("stageIds[]", str(stage_id)),
                     ("count", str(_PAGE_SIZE)),
                     ("offset", str(offset)),
                 ]
@@ -176,8 +181,10 @@ async def fetch_production_submissions(
     except httpx.RequestError as exc:
         raise OjsUnavailable(str(exc)) from exc
 
-    logger.info("Fetched %d production submissions from OJS", len(found))
-    _production_cache = (now, found)
+    logger.info(
+        "Fetched %d submissions from OJS stage %d", len(found), stage_id
+    )
+    _production_cache[stage_id] = (now, found)
     return list(found)
 
 
