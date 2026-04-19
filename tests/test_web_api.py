@@ -1186,7 +1186,6 @@ def test_fetch_production_submissions_uses_stage_id(monkeypatch):
     from web.backend.app import ojs as ojs_module
 
     ojs_module.set_production_submissions_override(None)
-    ojs_module.invalidate_production_cache()
 
     captured_params: list[list[tuple[str, str]]] = []
 
@@ -1219,7 +1218,6 @@ def test_fetch_production_submissions_uses_stage_id(monkeypatch):
     asyncio.run(
         ojs_module.fetch_production_submissions(cfg=FakeCfg(), stage_id=5)
     )
-    ojs_module.invalidate_production_cache()
     assert captured_params
     assert ("stageIds[]", "5") in captured_params[0]
 

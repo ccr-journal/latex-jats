@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -9,13 +9,10 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  createManuscript,
-  importOjsSubmission,
-  listOjsSubmissions,
-} from "@/api/client";
+import { createManuscript, importOjsSubmission } from "@/api/client";
 import type { OjsStage } from "@/api/client";
 import type { Manuscript, OjsSubmission } from "@/api/types";
+import { useOjs, useOjsSubmissions } from "@/ojs/OjsContext";
 
 interface Props {
   onCreated: (ms: Manuscript) => void;
@@ -23,10 +20,8 @@ interface Props {
 
 export function CreateManuscriptDialog({ onCreated }: Props) {
   const [open, setOpen] = useState(false);
-  const [submissions, setSubmissions] = useState<OjsSubmission[] | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [importing, setImporting] = useState<number | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
 
   const [filter, setFilter] = useState("");
   const [stage, setStage] = useState<OjsStage>("copyediting");
@@ -35,25 +30,20 @@ export function CreateManuscriptDialog({ onCreated }: Props) {
   const [doiSuffix, setDoiSuffix] = useState("");
   const [submittingManual, setSubmittingManual] = useState(false);
 
-  useEffect(() => {
-    if (!open) return;
-    setLoading(true);
-    setError(null);
-    listOjsSubmissions(stage)
-      .then(setSubmissions)
-      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load"))
-      .finally(() => setLoading(false));
-  }, [open, stage]);
+  const { refresh } = useOjs();
+  const { submissions, loading, error: loadError } = useOjsSubmissions(stage);
+  const error = importError ?? loadError;
 
   const handleImport = async (submissionId: number) => {
     setImporting(submissionId);
-    setError(null);
+    setImportError(null);
     try {
       const ms = await importOjsSubmission(submissionId);
       setOpen(false);
       onCreated(ms);
+      void refresh(stage);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Import failed");
+      setImportError(err instanceof Error ? err.message : "Import failed");
     } finally {
       setImporting(null);
     }
@@ -63,14 +53,14 @@ export function CreateManuscriptDialog({ onCreated }: Props) {
     e.preventDefault();
     if (!doiSuffix.trim()) return;
     setSubmittingManual(true);
-    setError(null);
+    setImportError(null);
     try {
       const ms = await createManuscript({ doi_suffix: doiSuffix.trim() });
       setOpen(false);
       setDoiSuffix("");
       onCreated(ms);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create manuscript");
+      setImportError(err instanceof Error ? err.message : "Failed to create manuscript");
     } finally {
       setSubmittingManual(false);
     }
@@ -98,6 +88,14 @@ export function CreateManuscriptDialog({ onCreated }: Props) {
               <option value="production">Production (backlog)</option>
             </select>
           </label>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={loading}
+            onClick={() => void refresh(stage)}
+          >
+            {loading ? "Refreshing…" : "Refresh"}
+          </Button>
           <label className="flex items-center gap-2">
             <input
               type="checkbox"

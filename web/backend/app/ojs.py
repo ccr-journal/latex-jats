@@ -13,7 +13,6 @@ The backend holds a journal-admin OJS API token in `OJS_ADMIN_TOKEN`.
 from __future__ import annotations
 
 import logging
-import time
 from dataclasses import dataclass, field, replace
 
 import httpx
@@ -63,23 +62,10 @@ class OjsAdminTokenInvalid(Exception):
 # without making an HTTP request. Set in tests that need canned data.
 _production_submissions_override: list[OjsSubmission] | None = None
 
-# Short in-process cache for the (slow) production submissions list so the
-# picker reopens instantly. Editors importing a submission see it disappear
-# from the list on next open; a 60s TTL keeps the window small. Keyed by
-# stage so switching stages in the picker doesn't trash the other stage's
-# entry.
-_production_cache: dict[int, tuple[float, list[OjsSubmission]]] = {}
-_PRODUCTION_CACHE_TTL = 60.0
-
 
 def set_production_submissions_override(subs: list[OjsSubmission] | None) -> None:
     global _production_submissions_override
     _production_submissions_override = subs
-    _production_cache.clear()
-
-
-def invalidate_production_cache() -> None:
-    _production_cache.clear()
 
 
 def _extract_doi_suffix(doi: str | None, prefix: str) -> str | None:
@@ -131,13 +117,6 @@ async def fetch_production_submissions(
     if _production_submissions_override is not None:
         return list(_production_submissions_override)
 
-    now = time.monotonic()
-    cached_entry = _production_cache.get(stage_id)
-    if cached_entry is not None:
-        ts, cached = cached_entry
-        if now - ts < _PRODUCTION_CACHE_TTL:
-            return list(cached)
-
     cfg = cfg or get_config()
     if not cfg.ojs_admin_token or not cfg.ojs_base_url:
         logger.info("OJS not configured; no production submissions available")
@@ -184,8 +163,7 @@ async def fetch_production_submissions(
     logger.info(
         "Fetched %d submissions from OJS stage %d", len(found), stage_id
     )
-    _production_cache[stage_id] = (now, found)
-    return list(found)
+    return found
 
 
 async def fetch_submission(

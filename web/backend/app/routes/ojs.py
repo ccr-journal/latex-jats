@@ -133,5 +133,4 @@ async def import_submission(
         )
     session.commit()
     session.refresh(ms)
-    ojs_client.invalidate_production_cache()
     return manuscript_to_read(ms, session)
