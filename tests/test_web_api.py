@@ -297,6 +297,41 @@ def test_upload_zip_slip(mock_pipeline, client, test_storage):
     assert (source_dir / "safe.tex").exists()
 
 
+@patch("web.backend.app.routes.upload.run_pipeline")
+def test_upload_replaces_previous_source(mock_pipeline, client, test_storage):
+    """A new upload must wipe any leftover files from the previous upload
+    (or pipeline artifacts written back into source_dir)."""
+    doi = _create(client)
+    source_dir = test_storage.source_dir(doi)
+
+    # First upload: two files
+    r = client.post(
+        f"/api/manuscripts/{doi}/upload",
+        files=[
+            ("files", ("main.tex", b"v1", "text/plain")),
+            ("files", ("bibliography.bib", b"@x{y}", "text/plain")),
+        ],
+    )
+    assert r.status_code == 201
+    assert (source_dir / "main.tex").exists()
+    assert (source_dir / "bibliography.bib").exists()
+
+    # Simulate a pipeline artifact left behind in source_dir
+    (source_dir / "main.pdf").write_bytes(b"%PDF-1.4")
+    (source_dir / ".vdoc.abc.r").write_text("stale")
+
+    # Second upload: only one file — the old ones must be gone
+    r = client.post(
+        f"/api/manuscripts/{doi}/upload",
+        files=[("files", ("main.tex", b"v2", "text/plain"))],
+    )
+    assert r.status_code == 201
+    assert (source_dir / "main.tex").read_bytes() == b"v2"
+    assert not (source_dir / "bibliography.bib").exists()
+    assert not (source_dir / "main.pdf").exists()
+    assert not (source_dir / ".vdoc.abc.r").exists()
+
+
 def test_upload_not_found(client):
     r = client.post(
         "/api/manuscripts/DOES-NOT-EXIST/upload",

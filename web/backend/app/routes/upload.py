@@ -1,6 +1,7 @@
 """Source file upload route."""
 
 import io
+import shutil
 import zipfile
 from datetime import datetime
 from pathlib import Path
@@ -79,15 +80,16 @@ async def upload_source(
         )
 
     source_dir = storage.source_dir(doi_suffix)
-    source_dir.mkdir(parents=True, exist_ok=True)
 
-    # Collect non-zip uploads so we can strip a common top-level folder if present
+    # Buffer everything in memory before touching the filesystem so a failed
+    # read never leaves source_dir half-wiped.
+    zip_payloads: list[bytes] = []
     plain_uploads: list[tuple[str, bytes]] = []
     for upload in files:
         content = await upload.read()
         raw = upload.filename or "upload"
         if Path(raw).name.endswith(".zip"):
-            _safe_extract_zip(content, source_dir)
+            zip_payloads.append(content)
         else:
             plain_uploads.append((raw, content))
 
@@ -99,6 +101,15 @@ async def upload_source(
         has_root_file = any("/" not in p for p, _ in plain_uploads)
         if len(top_dirs) == 1 and not has_root_file:
             prefix = top_dirs.pop() + "/"
+
+    # Replace the previous source entirely — a new upload supersedes any
+    # prior files and pipeline artifacts written back into source_dir.
+    if source_dir.exists():
+        shutil.rmtree(source_dir)
+    source_dir.mkdir(parents=True, exist_ok=True)
+
+    for payload in zip_payloads:
+        _safe_extract_zip(payload, source_dir)
 
     source_root = source_dir.resolve()
     for raw, content in plain_uploads:
