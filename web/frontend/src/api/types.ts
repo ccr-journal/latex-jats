@@ -6,7 +6,7 @@ export type ManuscriptStatus =
   | "ready"
   | "approved"
   | "failed"
-  | "published";
+  | "archived";
 
 export type StepStatus =
   | "pending"

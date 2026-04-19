@@ -20,7 +20,7 @@ class ManuscriptStatus(str, Enum):
     ready = "ready"
     approved = "approved"
     failed = "failed"
-    published = "published"
+    archived = "archived"
 
 
 class StepStatus(str, Enum):

@@ -40,14 +40,16 @@ router = APIRouter(prefix="/api/manuscripts", tags=["manuscripts"])
 
 @router.get("", response_model=list[ManuscriptRead])
 def list_manuscripts(
+    include_archived: bool = False,
     user: CurrentUser = Depends(get_current_user),
     role: Literal["editor", "author"] = Depends(get_current_role),
     session: Session = Depends(get_session),
 ):
     if role == "editor":
-        manuscripts = session.exec(
-            select(Manuscript).order_by(Manuscript.created_at.desc())
-        ).all()
+        stmt = select(Manuscript).order_by(Manuscript.created_at.desc())
+        if not include_archived:
+            stmt = stmt.where(Manuscript.status != ManuscriptStatus.archived)
+        manuscripts = session.exec(stmt).all()
     elif user.manuscript_token_scope is not None:
         # Token-scoped authors can only see their single manuscript
         ms = session.get(Manuscript, user.manuscript_token_scope)
@@ -138,6 +140,50 @@ async def withdraw_approval(
             raise HTTPException(
                 409, detail="Cannot withdraw approval: the submission has already moved to production in OJS"
             )
+    ms.status = ManuscriptStatus.ready
+    session.add(ms)
+    session.commit()
+    session.refresh(ms)
+    return manuscript_to_read(ms, session)
+
+
+@router.post("/{doi_suffix}/archive", response_model=ManuscriptRead)
+def archive_manuscript(
+    doi_suffix: str,
+    _editor: str = Depends(require_editor),
+    session: Session = Depends(get_session),
+):
+    ms = session.get(Manuscript, doi_suffix)
+    if ms is None:
+        raise HTTPException(404, detail=f"Manuscript '{doi_suffix}' not found")
+    if ms.status in (ManuscriptStatus.queued, ManuscriptStatus.processing):
+        raise HTTPException(
+            409,
+            detail=f"Cannot archive a manuscript that is currently being processed (status: {ms.status.value})",
+        )
+    if ms.status == ManuscriptStatus.archived:
+        raise HTTPException(400, detail="Manuscript is already archived")
+    ms.status = ManuscriptStatus.archived
+    session.add(ms)
+    session.commit()
+    session.refresh(ms)
+    return manuscript_to_read(ms, session)
+
+
+@router.post("/{doi_suffix}/unarchive", response_model=ManuscriptRead)
+def unarchive_manuscript(
+    doi_suffix: str,
+    _editor: str = Depends(require_editor),
+    session: Session = Depends(get_session),
+):
+    ms = session.get(Manuscript, doi_suffix)
+    if ms is None:
+        raise HTTPException(404, detail=f"Manuscript '{doi_suffix}' not found")
+    if ms.status != ManuscriptStatus.archived:
+        raise HTTPException(
+            400,
+            detail=f"Only archived manuscripts can be unarchived (current: {ms.status.value})",
+        )
     ms.status = ManuscriptStatus.ready
     session.add(ms)
     session.commit()

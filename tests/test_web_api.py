@@ -989,6 +989,79 @@ def test_delete_manuscript_requires_editor(author_client):
     assert r.status_code == 403
 
 
+# ── Archive ───────────────────────────────────────────────────────────────────
+
+
+def test_archive_manuscript(client):
+    doi = _create(client, "CCR2025.1.1.ARC1")
+    r = client.post(f"/api/manuscripts/{doi}/archive")
+    assert r.status_code == 200
+    assert r.json()["status"] == "archived"
+
+
+def test_archive_blocked_when_processing(client, engine):
+    doi = _create(client, "CCR2025.1.1.ARC2")
+    with Session(engine) as session:
+        ms = session.get(Manuscript, doi)
+        ms.status = "processing"
+        session.add(ms)
+        session.commit()
+    r = client.post(f"/api/manuscripts/{doi}/archive")
+    assert r.status_code == 409
+    assert "processed" in r.json()["detail"].lower()
+
+
+def test_archive_already_archived(client):
+    doi = _create(client, "CCR2025.1.1.ARC3")
+    assert client.post(f"/api/manuscripts/{doi}/archive").status_code == 200
+    r = client.post(f"/api/manuscripts/{doi}/archive")
+    assert r.status_code == 400
+    assert "already archived" in r.json()["detail"].lower()
+
+
+def test_unarchive_manuscript(client):
+    doi = _create(client, "CCR2025.1.1.ARC4")
+    client.post(f"/api/manuscripts/{doi}/archive")
+    r = client.post(f"/api/manuscripts/{doi}/unarchive")
+    assert r.status_code == 200
+    assert r.json()["status"] == "ready"
+
+
+def test_unarchive_requires_archived(client):
+    doi = _create(client, "CCR2025.1.1.ARC5")
+    r = client.post(f"/api/manuscripts/{doi}/unarchive")
+    assert r.status_code == 400
+    assert "archived" in r.json()["detail"].lower()
+
+
+def test_archive_requires_editor(client, author_client):
+    doi = _create(client, "CCR2025.1.1.ARC6")
+    assert author_client.post(f"/api/manuscripts/{doi}/archive").status_code == 403
+    assert author_client.post(f"/api/manuscripts/{doi}/unarchive").status_code == 403
+
+
+def test_list_excludes_archived_by_default(client):
+    _create(client, "CCR2025.1.1.LST1")
+    archived = _create(client, "CCR2025.1.1.LST2")
+    client.post(f"/api/manuscripts/{archived}/archive")
+    r = client.get("/api/manuscripts")
+    assert r.status_code == 200
+    doi_suffixes = [m["doi_suffix"] for m in r.json()]
+    assert "CCR2025.1.1.LST1" in doi_suffixes
+    assert archived not in doi_suffixes
+
+
+def test_list_includes_archived_when_requested(client):
+    _create(client, "CCR2025.1.1.LST3")
+    archived = _create(client, "CCR2025.1.1.LST4")
+    client.post(f"/api/manuscripts/{archived}/archive")
+    r = client.get("/api/manuscripts?include_archived=true")
+    assert r.status_code == 200
+    doi_suffixes = [m["doi_suffix"] for m in r.json()]
+    assert "CCR2025.1.1.LST3" in doi_suffixes
+    assert archived in doi_suffixes
+
+
 # ── OJS import ────────────────────────────────────────────────────────────────
 
 

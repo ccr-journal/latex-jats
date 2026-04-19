@@ -92,8 +92,9 @@ export async function logout(): Promise<void> {
 
 // ── Manuscripts ───────────────────────────────────────────────────────────────
 
-export function listManuscripts(): Promise<Manuscript[]> {
-  return apiFetch("/api/manuscripts");
+export function listManuscripts(includeArchived = false): Promise<Manuscript[]> {
+  const qs = includeArchived ? "?include_archived=true" : "";
+  return apiFetch(`/api/manuscripts${qs}`);
 }
 
 export function createManuscript(data: ManuscriptCreate): Promise<Manuscript> {
@@ -133,6 +134,14 @@ export function withdrawApproval(doiSuffix: string): Promise<Manuscript> {
 
 export function deleteManuscript(doiSuffix: string): Promise<void> {
   return apiFetch(`/api/manuscripts/${doiSuffix}`, { method: "DELETE" });
+}
+
+export function archiveManuscript(doiSuffix: string): Promise<Manuscript> {
+  return apiFetch(`/api/manuscripts/${doiSuffix}/archive`, { method: "POST" });
+}
+
+export function unarchiveManuscript(doiSuffix: string): Promise<Manuscript> {
+  return apiFetch(`/api/manuscripts/${doiSuffix}/unarchive`, { method: "POST" });
 }
 
 export function getStatus(doiSuffix: string): Promise<Manuscript> {

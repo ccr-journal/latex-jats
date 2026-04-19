@@ -26,6 +26,7 @@ export function DashboardPage() {
   const [manuscripts, setManuscripts] = useState<Manuscript[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
   const isEditor = user?.role === "editor";
@@ -36,21 +37,35 @@ export function DashboardPage() {
   }
 
   useEffect(() => {
-    listManuscripts()
+    setLoading(true);
+    listManuscripts(showArchived)
       .then(setManuscripts)
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [showArchived]);
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Manuscripts</h1>
-        {isEditor && (
-          <CreateManuscriptDialog
-            onCreated={(ms) => navigate(`/manuscripts/${ms.doi_suffix}`)}
-          />
-        )}
+        <div className="flex items-center gap-4">
+          {isEditor && (
+            <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showArchived}
+                onChange={(e) => setShowArchived(e.target.checked)}
+                className="h-4 w-4 rounded border-input accent-primary"
+              />
+              Show archived
+            </label>
+          )}
+          {isEditor && (
+            <CreateManuscriptDialog
+              onCreated={(ms) => navigate(`/manuscripts/${ms.doi_suffix}`)}
+            />
+          )}
+        </div>
       </div>
 
       {loading && <p className="text-muted-foreground">Loading...</p>}

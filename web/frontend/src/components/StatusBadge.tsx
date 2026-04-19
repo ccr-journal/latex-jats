@@ -9,7 +9,7 @@ const config: Record<ManuscriptStatus, { label: string; className: string }> = {
   ready: { label: "Ready", className: "bg-green-100 text-green-700 hover:bg-green-100" },
   approved: { label: "Approved", className: "bg-orange-100 text-orange-800 hover:bg-orange-100" },
   failed: { label: "Failed", className: "bg-red-100 text-red-700 hover:bg-red-100" },
-  published: { label: "Published", className: "bg-teal-100 text-teal-700 hover:bg-teal-100" },
+  archived: { label: "Archived", className: "bg-zinc-200 text-zinc-700 hover:bg-zinc-200" },
 };
 
 export function StatusBadge({ status }: { status: ManuscriptStatus }) {

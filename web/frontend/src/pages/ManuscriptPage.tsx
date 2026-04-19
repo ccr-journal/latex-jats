@@ -14,7 +14,7 @@ import { PipelineProgress } from "@/components/PipelineProgress";
 import { MetadataCard } from "@/components/MetadataCard";
 import { UploadZone } from "@/components/UploadZone";
 import { useAuth } from "@/auth/AuthContext";
-import { getManuscript, getStatus, uploadFiles, startProcessing, updateManuscript, reimportOjsMetadata, approveManuscript, withdrawApproval, deleteManuscript, downloadUrl, outputUrl, presign, getAuthorToken, regenerateAuthorToken, getInviteTemplate, inviteAuthors, type Recipient } from "@/api/client";
+import { getManuscript, getStatus, uploadFiles, startProcessing, updateManuscript, reimportOjsMetadata, approveManuscript, withdrawApproval, deleteManuscript, archiveManuscript, unarchiveManuscript, downloadUrl, outputUrl, presign, getAuthorToken, regenerateAuthorToken, getInviteTemplate, inviteAuthors, type Recipient } from "@/api/client";
 import { ApiError } from "@/api/client";
 import type { Manuscript, PipelineStep } from "@/api/types";
 
@@ -63,6 +63,8 @@ export function ManuscriptPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [archiving, setArchiving] = useState(false);
+  const [archiveError, setArchiveError] = useState<string | null>(null);
 
   // Initial fetch
   useEffect(() => {
@@ -100,6 +102,7 @@ export function ManuscriptPage() {
   const isProcessing = manuscript.status === "queued" || manuscript.status === "processing";
   const isReady = manuscript.status === "ready";
   const isApproved = manuscript.status === "approved";
+  const isArchived = manuscript.status === "archived";
   const hasOutput = isReady || isApproved;
   const hasBeenUploaded = manuscript.uploaded_at !== null;
   const canProcess = hasBeenUploaded && !isProcessing && !isApproved;
@@ -162,6 +165,32 @@ export function ManuscriptPage() {
     setManuscript(updated);
   };
 
+  const handleArchive = async () => {
+    setArchiving(true);
+    setArchiveError(null);
+    try {
+      const updated = await archiveManuscript(doiSuffix);
+      setManuscript(updated);
+    } catch (err) {
+      setArchiveError(err instanceof ApiError ? err.message : "Failed to archive");
+    } finally {
+      setArchiving(false);
+    }
+  };
+
+  const handleUnarchive = async () => {
+    setArchiving(true);
+    setArchiveError(null);
+    try {
+      const updated = await unarchiveManuscript(doiSuffix);
+      setManuscript(updated);
+    } catch (err) {
+      setArchiveError(err instanceof ApiError ? err.message : "Failed to unarchive");
+    } finally {
+      setArchiving(false);
+    }
+  };
+
   const handleDelete = async () => {
     setDeleting(true);
     setDeleteError(null);
@@ -188,7 +217,10 @@ export function ManuscriptPage() {
       <Card>
         <CardHeader>
           <div className="flex items-start justify-between gap-4">
-            <CardTitle className="text-xl">{manuscript.doi_suffix}</CardTitle>
+            <div className="flex items-center gap-3">
+              <CardTitle className="text-xl">{manuscript.doi_suffix}</CardTitle>
+              <StatusBadge status={manuscript.status} />
+            </div>
             <div className="flex items-center gap-2">
               {isEditor && manuscript.ojs_submission_id && (
                 <Button
@@ -200,6 +232,26 @@ export function ManuscriptPage() {
                   {reimporting ? "Importing\u2026" : "Refresh from OJS"}
                 </Button>
               )}
+              {isEditor && (isArchived ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={archiving}
+                  onClick={handleUnarchive}
+                >
+                  {archiving ? "Unarchiving\u2026" : "Unarchive"}
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={archiving || isProcessing}
+                  title={isProcessing ? "Wait for the current conversion to finish" : undefined}
+                  onClick={handleArchive}
+                >
+                  {archiving ? "Archiving\u2026" : "Archive"}
+                </Button>
+              ))}
               {isEditor && (
                 <Button
                   variant="destructive"
@@ -220,9 +272,11 @@ export function ManuscriptPage() {
                   Delete
                 </Button>
               )}
-              <StatusBadge status={manuscript.status} />
             </div>
           </div>
+          {archiveError && (
+            <p className="text-sm text-red-600 mt-2">{archiveError}</p>
+          )}
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           {manuscript.title && (
