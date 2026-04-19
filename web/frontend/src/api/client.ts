@@ -90,6 +90,12 @@ export async function logout(): Promise<void> {
   }
 }
 
+// ── Meta ──────────────────────────────────────────────────────────────────────
+
+export function getVersion(): Promise<{ version: string }> {
+  return apiFetch("/api/version");
+}
+
 // ── Manuscripts ───────────────────────────────────────────────────────────────
 
 export function listManuscripts(includeArchived = false): Promise<Manuscript[]> {

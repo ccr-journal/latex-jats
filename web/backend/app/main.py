@@ -3,6 +3,7 @@
 import logging
 import os
 from contextlib import asynccontextmanager
+from importlib.metadata import version as pkg_version
 from pathlib import Path
 
 from alembic import command as alembic_command
@@ -94,6 +95,11 @@ if _CORS_ORIGINS:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+@app.get("/api/version")
+def get_version() -> dict[str, str]:
+    return {"version": pkg_version("latex-jats")}
+
 
 app.include_router(auth.router)
 app.include_router(manuscripts.router)

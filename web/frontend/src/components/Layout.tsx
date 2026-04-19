@@ -1,12 +1,19 @@
+import { useEffect, useState } from "react";
 import { Link, Outlet, useNavigate } from "react-router-dom";
 import { ThemeToggle } from "./ThemeToggle";
 import { Button } from "./ui/button";
 import { useAuth } from "@/auth/AuthContext";
+import { getVersion } from "@/api/client";
 
 export function Layout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const isTokenScoped = !!user?.manuscript_token_scope;
+  const [version, setVersion] = useState<string | null>(null);
+
+  useEffect(() => {
+    getVersion().then((v) => setVersion(v.version)).catch(() => {});
+  }, []);
 
   const handleLogout = async () => {
     await logout();
@@ -21,15 +28,8 @@ export function Layout() {
             <span className="text-lg text-orange-600">CCR</span>
             <span className="text-sm text-muted-foreground">JATSmith</span>
           </Link>
-          {!isTokenScoped && (
-            <nav className="flex gap-4">
-              <Link
-                to="/"
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Manuscripts
-              </Link>
-            </nav>
+          {version && (
+            <span className="text-xs text-muted-foreground">v{version}</span>
           )}
           <div className="ml-auto flex items-center gap-3">
             {user && (
