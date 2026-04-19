@@ -39,7 +39,7 @@ async def presign(
 ):
     """Return a short-lived token for unauthenticated access to output files."""
     load_manuscript_for_user(doi_suffix, session, user, role)
-    return {"token": create_token(doi_suffix, user.orcid or "token-author")}
+    return {"token": create_token(doi_suffix, user.username or "token-author")}
 
 
 @router.get("/{doi_suffix}/output/{path:path}")
@@ -56,8 +56,8 @@ async def get_output_file(
     effective_token = token or request.cookies.get(_COOKIE_NAME)
 
     if effective_token is not None:
-        orcid = verify_token(effective_token, doi_suffix)
-        if orcid is None:
+        token_user = verify_token(effective_token, doi_suffix)
+        if token_user is None:
             raise HTTPException(401, detail="Invalid or expired presign token")
     else:
         # Standard Bearer auth

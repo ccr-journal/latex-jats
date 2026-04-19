@@ -29,7 +29,6 @@ class FakeManuscript:
 @dataclass
 class FakeAuthor:
     name: Optional[str]
-    orcid: str = "0000-0000-0000-0000"
     order: int = 0
 
 

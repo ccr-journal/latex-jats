@@ -16,7 +16,6 @@ from sqlmodel import create_engine
 from . import deps
 from .models import (  # noqa: F401 — registers metadata
     AccessToken,
-    LoginState,
     Manuscript,
     ManuscriptAuthor,
 )

@@ -54,8 +54,7 @@ async def list_production_submissions(
                 doi_suffix=s.doi_suffix,
                 title=s.title,
                 authors=[
-                    AuthorRead(orcid=a.orcid, name=a.name, order=a.order)
-                    for a in s.authors
+                    AuthorRead(name=a.name, order=a.order) for a in s.authors
                 ],
                 already_imported=existing is not None,
             )
@@ -112,7 +111,6 @@ async def import_submission(
         session.add(
             ManuscriptAuthor(
                 manuscript_id=target.doi_suffix,
-                orcid=a.orcid,
                 name=a.name,
                 email=a.email,
                 order=a.order,

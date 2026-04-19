@@ -17,7 +17,7 @@ services:
     image: ccsamsterdam/latex-jats-api:${VERSION:-latest}
     restart: unless-stopped
     env_file:
-      - .env  # ORCID_*, OJS_*, SITE_ADDRESS, etc. — see .env.example
+      - .env  # EDITOR_CREDENTIALS, OJS_*, SITE_ADDRESS, etc. — see .env.example
     environment:
       - CORS_ORIGINS=
       - STORAGE_DIR=/app/storage

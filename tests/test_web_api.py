@@ -23,7 +23,6 @@ from web.backend.app.config import AuthConfig, set_for_tests
 from web.backend.app.main import app
 from web.backend.app.models import (  # noqa: F401
     AccessToken,
-    LoginState,
     Manuscript,
     ManuscriptAuthor,
     ManuscriptToken,
@@ -32,36 +31,27 @@ from web.backend.app.storage import Storage
 
 
 EDITOR_TOKEN = "editor-test-token"
-EDITOR_ORCID = "0000-0000-0000-0001"
+EDITOR_USERNAME = "editor"
 AUTHOR_TOKEN = "author-test-token"
-AUTHOR_ORCID = "0000-0000-0000-0002"
-OTHER_ORCID = "0000-0000-0000-0003"
+AUTHOR_USERNAME = "author-user"
 MANUSCRIPT_TOKEN = "manuscript-access-token-12345"
 
 
 TEST_CFG = AuthConfig(
-    orcid_client_id="cid",
-    orcid_client_secret="sec",
-    orcid_env="sandbox",
-    orcid_redirect_uri="http://testserver/api/auth/orcid/callback",
+    editor_credentials={EDITOR_USERNAME: "testpass", AUTHOR_USERNAME: "authorpass"},
     frontend_url="http://testserver",
     ojs_base_url="https://ojs",
     ojs_journal_path="ccr",
     ojs_admin_token="admintok",
     ojs_doi_prefix="10.5117/",
-    ojs_editor_cache_ttl_seconds=300,
     session_token_ttl_days=30,
-    editor_override_orcids=frozenset(),
 )
 
 
 @pytest.fixture(autouse=True)
-def _editor_orcid_override(monkeypatch):
-    """Pin the editor ORCID set and config so tests don't hit the network."""
+def _test_config():
+    """Pin the auth config so tests don't depend on env vars."""
     set_for_tests(TEST_CFG)
-    async def fake_fetch(cfg=None):
-        return frozenset({EDITOR_ORCID})
-    monkeypatch.setattr(ojs_client, "fetch_editor_orcids", fake_fetch)
     yield
     ojs_client.set_production_submissions_override(None)
 
@@ -105,14 +95,14 @@ def client(anon_client: TestClient, engine):
         session.add(
             AccessToken(
                 token=EDITOR_TOKEN,
-                orcid=EDITOR_ORCID,
+                username=EDITOR_USERNAME,
                 name="Test Editor",
             )
         )
         session.add(
             AccessToken(
                 token=AUTHOR_TOKEN,
-                orcid=AUTHOR_ORCID,
+                username=AUTHOR_USERNAME,
                 name="Test Author",
             )
         )
@@ -121,16 +111,28 @@ def client(anon_client: TestClient, engine):
     return anon_client
 
 
-@pytest.fixture
-def author_client(client: TestClient):
-    """Separate client sharing the same engine/overrides, authed as non-editor.
+AUTHOR_FIXTURE_DOI = "CCR.AUTHOR.FIXTURE"
+AUTHOR_FIXTURE_TOKEN = "author-manuscript-token"
 
-    Must be used alongside `client` — both point at the same FastAPI app and
-    dependency overrides, so requests through either see the same database.
+
+@pytest.fixture
+def author_client(client: TestClient, engine):
+    """Client authed via a per-manuscript author token (role=author).
+
+    Sets up a fixture manuscript + ManuscriptToken so tests can assert that
+    editor-only endpoints return 403 for non-editor callers.
     """
-    from fastapi.testclient import TestClient as _TC
-    ac = _TC(app, raise_server_exceptions=False)
-    ac.headers.update({"Authorization": f"Bearer {AUTHOR_TOKEN}"})
+    with Session(engine) as session:
+        session.add(Manuscript(doi_suffix=AUTHOR_FIXTURE_DOI))
+        session.add(
+            ManuscriptToken(
+                manuscript_id=AUTHOR_FIXTURE_DOI,
+                token=AUTHOR_FIXTURE_TOKEN,
+            )
+        )
+        session.commit()
+    ac = TestClient(app, raise_server_exceptions=False)
+    ac.headers.update({"Authorization": f"Bearer {AUTHOR_FIXTURE_TOKEN}"})
     return ac
 
 
@@ -611,12 +613,6 @@ def test_classify_step_status_errors_over_warnings():
 # ── Author access control ────────────────────────────────────────────────────
 
 
-def _link_author(engine, doi: str, orcid: str) -> None:
-    with Session(engine) as session:
-        session.add(ManuscriptAuthor(manuscript_id=doi, orcid=orcid, order=0))
-        session.commit()
-
-
 def _create_manuscript_token(engine, doi: str, token: str = MANUSCRIPT_TOKEN) -> None:
     with Session(engine) as session:
         session.add(ManuscriptToken(manuscript_id=doi, token=token))
@@ -704,7 +700,7 @@ def test_manuscript_token_me_endpoint(client, engine):
     data = r.json()
     assert data["role"] == "author"
     assert data["manuscript_token_scope"] == doi
-    assert data["orcid"] is None
+    assert data["username"] is None
 
 
 def test_manuscript_token_cannot_create(client, engine):
@@ -800,7 +796,6 @@ def test_regenerate_author_token(client):
 def test_author_token_requires_editor(client, author_client, engine):
     """Non-editors cannot generate author tokens."""
     doi = _create(client)
-    _link_author(engine, doi, AUTHOR_ORCID)
     r = author_client.get(f"/api/manuscripts/{doi}/author-token")
     assert r.status_code == 403
 
@@ -954,7 +949,7 @@ def test_list_ojs_submissions_editor(client):
             submission_id=42,
             doi_suffix="CCR2025.1.3.Z",
             title="Something",
-            authors=(ojs_client.OjsAuthor(orcid=AUTHOR_ORCID, name="A Author"),),
+            authors=(ojs_client.OjsAuthor(name="A Author"),),
         )
     ])
     r = client.get("/api/ojs/submissions")
@@ -977,8 +972,8 @@ def test_import_ojs_submission_creates_authors(client, engine):
             doi_suffix="CCR2025.1.3.Z",
             title="Something",
             authors=(
-                ojs_client.OjsAuthor(orcid=AUTHOR_ORCID, name="A Author", order=0),
-                ojs_client.OjsAuthor(orcid=OTHER_ORCID, name="Other", order=1),
+                ojs_client.OjsAuthor(name="A Author", order=0),
+                ojs_client.OjsAuthor(name="Other", order=1),
             ),
         )
     ])
@@ -994,7 +989,7 @@ def test_import_ojs_submission_creates_authors(client, engine):
                 ManuscriptAuthor.manuscript_id == "CCR2025.1.3.Z"
             )
         ).all()
-    assert {a.orcid for a in authors} == {AUTHOR_ORCID, OTHER_ORCID}
+    assert {a.name for a in authors} == {"A Author", "Other"}
 
 
 def test_import_ojs_submission_duplicate(client):
@@ -1129,7 +1124,7 @@ def _setup_manuscript_with_comparison(engine, test_storage, doi="CCR.SYNC"):
             keywords=["kw1", "kw2"],
         ))
         session.add(ManuscriptAuthor(
-            manuscript_id=doi, orcid=AUTHOR_ORCID, name="A Author", order=0,
+            manuscript_id=doi, name="A Author", order=0,
         ))
         session.commit()
 
@@ -1162,7 +1157,7 @@ def test_sync_ojs_field_title(mock_update, mock_fetch, client, engine, test_stor
     # After push, re-import returns OJS submission with the updated title
     mock_fetch.return_value = ojs_client.OjsSubmission(
         submission_id=42, doi_suffix=doi, title="LaTeX Title",
-        authors=(ojs_client.OjsAuthor(orcid=AUTHOR_ORCID, name="A Author", order=0),),
+        authors=(ojs_client.OjsAuthor(name="A Author", order=0),),
     )
     r = client.post(
         f"/api/manuscripts/{doi}/sync-ojs",
@@ -1184,7 +1179,7 @@ def test_sync_ojs_field_keywords(mock_update, mock_fetch, client, engine, test_s
     mock_fetch.return_value = ojs_client.OjsSubmission(
         submission_id=42, doi_suffix=doi, title="OJS Title",
         keywords=("kw1", "kw3"),
-        authors=(ojs_client.OjsAuthor(orcid=AUTHOR_ORCID, name="A Author", order=0),),
+        authors=(ojs_client.OjsAuthor(name="A Author", order=0),),
     )
     r = client.post(
         f"/api/manuscripts/{doi}/sync-ojs",
@@ -1220,7 +1215,6 @@ def test_sync_ojs_rejects_matching_field(client, engine, test_storage):
 
 def test_sync_ojs_requires_editor(client, author_client, engine, test_storage):
     doi = _setup_manuscript_with_comparison(engine, test_storage)
-    _link_author(engine, doi, AUTHOR_ORCID)
     r = author_client.post(
         f"/api/manuscripts/{doi}/sync-ojs",
         json={"field": "title"},

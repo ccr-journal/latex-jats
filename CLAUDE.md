@@ -35,7 +35,7 @@ npm run start:api                    # backend only (FastAPI on port 8000)
 npm run start:web                    # frontend only (Vite dev server on port 5173)
 ```
 
-Install dependencies: `uv sync --extra web` for the backend, `npm install` in root (for concurrently) and `npm run install:frontend` for the React frontend. Copy `.env.dev.example` to `.env` and fill in ORCID sandbox credentials (see comments in that file). The SQLite database, migrations, and file storage are created automatically under `storage/` on first startup. Swagger UI is available at `http://localhost:8000/docs`.
+Install dependencies: `npm install` in root (for concurrently), then `npm run install:backend` (wraps `uv sync --extra web`) and `npm run install:frontend` for the React frontend. Copy `.env.dev.example` to `.env` — the defaults include `EDITOR_CREDENTIALS=editor:devpass` so you can log in immediately. The SQLite database, migrations, and file storage are created automatically under `storage/` on first startup. Swagger UI is available at `http://localhost:8000/docs`.
 
 **Other CLI tools:**
 ```sh
@@ -139,19 +139,18 @@ web/
   backend/
     app/
       main.py             FastAPI app, CORS, lifespan
-      models.py           SQLModel tables (Manuscript, ManuscriptAuthor, AccessToken)
-      config.py           AuthConfig from env vars (ORCID, OJS, session settings)
+      models.py           SQLModel tables (Manuscript, ManuscriptAuthor, AccessToken, ManuscriptToken)
+      config.py           AuthConfig from env vars (EDITOR_CREDENTIALS, OJS, session settings)
       deps.py             get_session / get_storage / get_current_user / get_current_role / require_editor
       storage.py          file storage abstraction (local filesystem, S3-ready interface)
       worker.py           background pipeline runner (prepare → convert → zip)
-      ojs.py              OJS REST client (editor lookup, production submissions, DOI extraction)
-      orcid.py            ORCID OAuth code exchange
+      ojs.py              OJS REST client (production submissions, metadata sync)
       routes/             manuscripts.py, upload.py, status.py, download.py, output.py, auth.py, ojs.py
     alembic/              database migrations (auto-run on startup)
     alembic.ini
   frontend/               Vite + React + TypeScript + shadcn/ui SPA
     src/
-      auth/               AuthContext (ORCID login state, role)
+      auth/               AuthContext (login state, role)
       api/                typed API client (client.ts, types.ts)
       pages/              DashboardPage, ManuscriptPage, PreviewPage
       components/         Layout, StatusBadge, UploadZone, LogViewer, CreateManuscriptDialog
@@ -166,11 +165,10 @@ storage/                    runtime file storage (gitignored) — manuscripts/<d
 
 ## Authentication and access control
 
-- **ORCID login** — any ORCID user can log in. Role (editor vs author) is derived per-request by comparing the user's ORCID against the OJS editor set (cached from `fetch_editor_orcids`). Dev override via `OJS_EDITOR_OVERRIDE_ORCIDS`.
-- **Editors** see all manuscripts and can create/import new ones from OJS.
-- **Authors** see only manuscripts where their ORCID appears in `ManuscriptAuthor`. Denied access returns 404 (not 403) to avoid leaking manuscript existence.
-- **`require_editor`** dependency gates editor-only endpoints (manuscript creation, OJS import).
-- **OJS integration** — editors import manuscripts from OJS copyediting stage (stageId 4). Import populates `ManuscriptAuthor` rows (with ORCIDs), title, abstract, keywords, DOI, volume, issue, year. The submissions list is cached for 60s.
+- **Editor login** — editors sign in with username + password via `POST /api/auth/login`. Credentials come from the `EDITOR_CREDENTIALS` env var: a plain string creates a single `editor` user with that password, or use `user1:pw1,user2:pw2` for multiple accounts. A successful login mints an `AccessToken` row; the role is trivially "editor" whenever an `AccessToken` is presented.
+- **Author access** — authors use per-manuscript `ManuscriptToken` links (emailed or copy-pasted by the editor). A valid `ManuscriptToken` grants role="author" scoped to exactly one manuscript. Denied access returns 404 (not 403) to avoid leaking manuscript existence.
+- **`require_editor`** dependency gates editor-only endpoints (manuscript creation, OJS import, sync).
+- **OJS integration** — editors import manuscripts from OJS copyediting stage (stageId 4). Import populates `ManuscriptAuthor` rows, title, abstract, keywords, DOI, volume, issue, year. The submissions list is cached for 60s. OJS calls use the service-account `OJS_ADMIN_TOKEN` and are independent of the editor's identity.
 - The frontend UI component library uses `@base-ui/react`, not Radix. Use `render` prop (not `asChild`) for composition and `buttonVariants()` for link-styled buttons.
 
 ## Database
@@ -223,5 +221,5 @@ Integration tests are skipped automatically if `latexmlc` is not installed.
 - Every new LaTeXML binding feature (new macro or constructor in `ccr.cls.ltxml` or `biblatex.sty.ltxml`) should have an integration test in `test_integration.py`. Reuse existing fixture `.tex` files where possible, or add a new minimal fixture under `tests/fixtures/latex/`.
 - The `authors.tex` fixture is a good general-purpose base: it exercises authors, affiliations, abstract, keywords, and a bibliography. Use it for tests that need a complete front matter.
 - New FastAPI routes should have tests in `tests/test_web_api.py`, using `TestClient` with dependency overrides for `get_session` (in-memory SQLite with `StaticPool`) and `get_storage` (`tmp_path`). See existing tests there for the pattern.
-- The test suite has an `autouse` fixture that pins `fetch_editor_orcids` to return `{EDITOR_ORCID}` so role checks don't hit the network. OJS production submissions are injected via `ojs_client.set_production_submissions_override([...])`. Both are reset between tests.
-- Auth tests are in `tests/test_auth.py` (ORCID callback flow, session management). OJS client tests in `tests/test_ojs_client.py` (uses `respx` to mock HTTP).
+- The test suite has an `autouse` fixture that pins the auth config (with a known `editor_credentials` map) so tests don't depend on env vars. OJS production submissions are injected via `ojs_client.set_production_submissions_override([...])` and reset between tests.
+- Auth tests are in `tests/test_auth.py` (password login flow, session management). The `author_client` fixture in `test_web_api.py` is authed via `ManuscriptToken` (role=author) and used to assert 403s on editor-only endpoints.

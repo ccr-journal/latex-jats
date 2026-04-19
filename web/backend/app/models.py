@@ -66,7 +66,6 @@ class Manuscript(SQLModel, table=True):
 class ManuscriptAuthor(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     manuscript_id: str = Field(foreign_key="manuscript.doi_suffix", index=True)
-    orcid: Optional[str] = Field(default=None, index=True)
     name: Optional[str] = None
     email: Optional[str] = None
     order: int = 0
@@ -75,7 +74,7 @@ class ManuscriptAuthor(SQLModel, table=True):
 class AccessToken(SQLModel, table=True):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     token: str = Field(index=True, unique=True)
-    orcid: str = Field(index=True)
+    username: str = Field(index=True)
     name: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
     expires_at: Optional[datetime] = None
@@ -88,11 +87,6 @@ class ManuscriptToken(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
-class LoginState(SQLModel, table=True):
-    state: str = Field(primary_key=True)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-
-
 # ── Request / response schemas ────────────────────────────────────────────────
 
 
@@ -102,20 +96,19 @@ class ManuscriptCreate(SQLModel):
 
 
 class CurrentUser(SQLModel):
-    orcid: Optional[str] = None
+    username: Optional[str] = None
     name: Optional[str] = None
     manuscript_token_scope: Optional[str] = None  # doi_suffix if token-based
 
 
 class CurrentUserWithRole(SQLModel):
-    orcid: Optional[str] = None
+    username: Optional[str] = None
     name: Optional[str] = None
     role: str  # "editor" | "author"
     manuscript_token_scope: Optional[str] = None
 
 
 class AuthorRead(SQLModel):
-    orcid: Optional[str] = None
     name: Optional[str] = None
     email: Optional[str] = None
     order: int = 0

@@ -55,8 +55,27 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
-export function orcidLoginUrl(): string {
-  return `${BASE}/api/auth/orcid/login`;
+export interface LoginResponse {
+  token: string;
+  user: CurrentUser;
+}
+
+export async function login(
+  username: string,
+  password: string,
+): Promise<CurrentUser> {
+  const res = await fetch(`${BASE}/api/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new ApiError(res.status, body.detail ?? res.statusText);
+  }
+  const data: LoginResponse = await res.json();
+  setSessionToken(data.token);
+  return data.user;
 }
 
 export function getCurrentUser(): Promise<CurrentUser> {

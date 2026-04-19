@@ -1,6 +1,6 @@
 """Stateless presigned-URL tokens using HMAC-SHA256.
 
-Tokens encode {doi_suffix, orcid, exp} and are signed with a server secret.
+Tokens encode {doi_suffix, user, exp} and are signed with a server secret.
 They allow unauthenticated browser requests (new tabs, iframes, <a> downloads)
 to access manuscript output files for a short window.
 """
@@ -36,10 +36,10 @@ def _sign(payload: bytes) -> str:
     return hmac.new(_get_secret(), payload, hashlib.sha256).hexdigest()
 
 
-def create_token(doi_suffix: str, orcid: str) -> str:
+def create_token(doi_suffix: str, user: str) -> str:
     """Return a short-lived presigned token for *doi_suffix*."""
     payload = json.dumps(
-        {"sub": doi_suffix, "orcid": orcid, "exp": int(time.time()) + TOKEN_TTL_SECONDS},
+        {"sub": doi_suffix, "user": user, "exp": int(time.time()) + TOKEN_TTL_SECONDS},
         separators=(",", ":"),
     ).encode()
     sig = _sign(payload)
@@ -48,7 +48,7 @@ def create_token(doi_suffix: str, orcid: str) -> str:
 
 
 def verify_token(token: str, doi_suffix: str) -> str | None:
-    """Verify *token* and return the ORCID if valid, else ``None``.
+    """Verify *token* and return the user label if valid, else ``None``.
 
     Checks: signature, expiry, and that the token was issued for
     *doi_suffix*.
@@ -71,7 +71,7 @@ def verify_token(token: str, doi_suffix: str) -> str | None:
         return None
     if data.get("exp", 0) < time.time():
         return None
-    return data.get("orcid")
+    return data.get("user")
 
 
 def reset_secret() -> None:

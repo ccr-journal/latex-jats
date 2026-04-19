@@ -28,8 +28,8 @@ async def download_output(
     storage: Storage = Depends(get_storage),
 ):
     if token is not None:
-        orcid = verify_token(token, doi_suffix)
-        if orcid is None:
+        token_user = verify_token(token, doi_suffix)
+        if token_user is None:
             raise HTTPException(401, detail="Invalid or expired presign token")
     else:
         user = _authenticate_bearer(authorization, session)

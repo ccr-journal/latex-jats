@@ -12,7 +12,6 @@ from fastapi import Depends, Header, HTTPException
 from sqlalchemy import Engine
 from sqlmodel import Session, select
 
-from . import ojs as ojs_client
 from .models import (
     AccessToken,
     AuthorRead,
@@ -42,21 +41,21 @@ def get_storage() -> Storage:
 def _authenticate_bearer(authorization: str | None, session: Session) -> CurrentUser:
     """Validate a Bearer token and return the user. Raises HTTPException on failure.
 
-    Tries ORCID session tokens (AccessToken) first, then per-manuscript author
+    Tries editor session tokens (AccessToken) first, then per-manuscript author
     tokens (ManuscriptToken).
     """
     if not authorization or not authorization.lower().startswith("bearer "):
         raise HTTPException(401, detail="Missing or malformed Authorization header")
     token = authorization.split(None, 1)[1].strip()
 
-    # Try ORCID session token
+    # Try editor session token
     row = session.exec(select(AccessToken).where(AccessToken.token == token)).first()
     if row is not None:
         if row.expires_at is not None and row.expires_at < datetime.utcnow():
             session.delete(row)
             session.commit()
             raise HTTPException(401, detail="Session expired")
-        return CurrentUser(orcid=row.orcid, name=row.name)
+        return CurrentUser(username=row.username, name=row.name)
 
     # Try per-manuscript author token
     mt = session.exec(
@@ -76,14 +75,14 @@ def get_current_user(
 
 
 async def resolve_role(user: CurrentUser) -> Literal["editor", "author"]:
-    """Determine role for a user (editor vs author) via OJS lookup."""
+    """Determine role for a user (editor vs author).
+
+    Manuscript-token sessions are always authors; any AccessToken session
+    originates from EDITOR_CREDENTIALS login, so the role is editor.
+    """
     if user.manuscript_token_scope is not None:
         return "author"
-    try:
-        editors = await ojs_client.fetch_editor_orcids()
-    except (ojs_client.OjsAdminTokenInvalid, ojs_client.OjsUnavailable):
-        return "author"
-    return "editor" if user.orcid in editors else "author"
+    return "editor"
 
 
 async def get_current_role(
@@ -136,8 +135,7 @@ def manuscript_to_read(
     ).all()
     data = ms.model_dump()
     data["authors"] = [
-        AuthorRead(orcid=a.orcid, name=a.name, email=a.email, order=a.order)
-        for a in authors
+        AuthorRead(name=a.name, email=a.email, order=a.order) for a in authors
     ]
     if storage is None:
         storage = _storage

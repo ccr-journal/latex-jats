@@ -61,14 +61,13 @@ export interface ManuscriptCreate {
 }
 
 export interface CurrentUser {
-  orcid: string | null;
+  username: string | null;
   name: string | null;
   role: "editor" | "author";
   manuscript_token_scope: string | null;
 }
 
 export interface OjsAuthor {
-  orcid: string;
   name: string | null;
   email: string | null;
   order: number;

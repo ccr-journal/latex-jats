@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -8,18 +8,41 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { orcidLoginUrl } from "@/api/client";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ApiError, login } from "@/api/client";
 import { useAuth } from "@/auth/AuthContext";
 
 export function LoginPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, refresh } = useAuth();
   const navigate = useNavigate();
-  const [params] = useSearchParams();
-  const error = params.get("error");
+  const [username, setUsername] = useState("editor");
+  const [password, setPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && user) navigate("/", { replace: true });
   }, [loading, user, navigate]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSubmitting(true);
+    try {
+      await login(username, password);
+      await refresh();
+      navigate("/", { replace: true });
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        setError("Invalid username or password");
+      } else {
+        setError(err instanceof Error ? err.message : "Login failed");
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="mx-auto max-w-md px-4 py-12">
@@ -27,26 +50,38 @@ export function LoginPage() {
         <CardHeader>
           <CardTitle>CCR JATSmith</CardTitle>
           <CardDescription>
-            Editor sign-in via ORCID. Authors access manuscripts through
-            direct links provided by the production editor.
+            Editor sign-in. Authors access manuscripts through the direct link
+            provided by the production editor.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {error === "not_authorized" && (
-            <p className="text-sm text-red-600">
-              Your ORCID isn't registered as a CCR editor. Ensure your ORCID is
-              set on your CCR editor profile in OJS, or contact the editorial
-              team.
-            </p>
-          )}
-          <Button
-            className="w-full"
-            onClick={() => {
-              window.location.href = orcidLoginUrl();
-            }}
-          >
-            Sign in with ORCID
-          </Button>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <div className="space-y-1">
+              <Label htmlFor="username">Username</Label>
+              <Input
+                id="username"
+                autoComplete="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+            {error && <p className="text-sm text-red-600">{error}</p>}
+            <Button type="submit" className="w-full" disabled={submitting}>
+              {submitting ? "Signing in…" : "Sign in"}
+            </Button>
+          </form>
         </CardContent>
       </Card>
     </div>

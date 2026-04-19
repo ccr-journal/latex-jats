@@ -9,7 +9,7 @@ It can be used as a CLI tool (see below) or as a web service where editors and a
 
 ```sh
 wget -q https://github.com/ccr-journal/latex-jats/releases/latest/download/{docker-compose.yml,.env}
-# edit .env — fill in ORCID_* and OJS_* credentials
+# edit .env — set EDITOR_CREDENTIALS and OJS_* credentials
 docker compose up -d
 ```
 
@@ -69,25 +69,6 @@ uv run latex-jats examples/CCR2023.1.004.KATH/latex/main.tex path/to/output.xml
 
 The output is automatically validated against the [JATS Publishing 1.2 RelaxNG schema](https://jats.nlm.nih.gov/publishing/1.2/rng.html) (MathML3 variant) using `jing`. You can also validate online with [J4R Validator](https://j4r.nlm.nih.gov/) or [PubMed Central Validator](https://pmc.ncbi.nlm.nih.gov/tools/stylechecker/).
 
-<!--
-These are words of wisdom, but I don't think they belong in the README
-
-### check input
-
-However, **before you do this**, check the input. Check the `.tex` files (these tend to be of the type `main.tex` containing a `body.tex`, sometimes with appendices and such). Also check the `.bib` files (`bibliography.bib`). These files can contain mistakes that will trip up the conversion. Run `fixbib` to clean up the bibliography.
-
-`fixbib` is not included in the main script because it is expected that many irregularities will occur and need manual attention. It would also make debugging very difficult. So it is separate and expected to grow. (Several scripts that "check" biblatex and bibtex can be found on [Pypi](https://pypi.org/search/?q=biblatex) but none seems to do what was needed here).
-
-For the correction of `.tex` files no script was created. Out of scope and the author's responsibility.
-
-### bibliographies
-JATS is not meant to support bibliographical style. Style support on the publication platform AUP Online is minimal. CCR's APA style is not supported. What is left is to manhandle the JATS into semi APA and be content with basic online rendering. Not worse than the PDFs produced so far, though.
-
-Another file that is likely to grow is the biblatex binding `src/latexml/biblatex.sty.ltxml`. Not so much for bibliographical styling, but for unsupported tex tags in the articles.
-
-### on the whole
-Latex is a slippery beast, very different from XML. Authors do as they please. Expect continuous variety and surprises. Expect constant updating of the scripts. Do _not_ expect automatic conversion and a smooth workflow. Expect manual labor, the hallmark of a good editor.
--->
 
 ## Web Service
 
@@ -98,12 +79,12 @@ A web interface for editors and authors to upload LaTeX source, run the conversi
 Install dependencies:
 
 ```sh
-uv sync --extra web              # Python backend
 npm install                      # root (concurrently)
+npm run install:backend          # Python backend (uv sync --extra web)
 npm run install:frontend         # React frontend
 ```
 
-Copy [.env.dev.example](.env.dev.example) to `.env` and fill in the ORCID **sandbox** credentials and your own sandbox ORCID in `OJS_EDITOR_OVERRIDE_ORCIDS`. This file is tuned for local dev: `FRONTEND_URL`/`ORCID_REDIRECT_URI` point at localhost, `ORCID_ENV=sandbox`, and OJS is optional. Do **not** use [deploy/.env.example](deploy/.env.example) locally — its `SITE_ADDRESS` value is a Caddy placeholder for production and will break the OAuth redirect.
+Copy [.env.dev.example](.env.dev.example) to `.env`. The defaults work out of the box: `EDITOR_CREDENTIALS=editor:devpass` creates a single editor account, `FRONTEND_URL` points at localhost, and OJS is optional. Do **not** use [deploy/.env.example](deploy/.env.example) locally — its `SITE_ADDRESS` value is a Caddy placeholder for production.
 
 Run the dev servers (backend on :8000, frontend on :5173):
 
@@ -119,7 +100,7 @@ Download the latest release files and fill in your credentials:
 
 ```sh
 wget -q https://github.com/ccr-journal/latex-jats/releases/latest/download/{docker-compose.yml,.env}
-# edit .env — fill in ORCID_* and OJS_* credentials
+# edit .env — set EDITOR_CREDENTIALS and OJS_* credentials
 docker compose up -d
 ```
 

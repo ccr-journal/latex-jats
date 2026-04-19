@@ -392,7 +392,7 @@ def _apply_ojs_submission(ms, sub, doi_suffix, session):
         session.delete(a)
     for a in sub.authors:
         session.add(ManuscriptAuthor(
-            manuscript_id=doi_suffix, orcid=a.orcid, name=a.name,
+            manuscript_id=doi_suffix, name=a.name,
             email=a.email, order=a.order,
         ))
     session.commit()

@@ -34,7 +34,7 @@ export function Layout() {
           <div className="ml-auto flex items-center gap-3">
             {user && (
               <span className="text-sm text-muted-foreground">
-                {isTokenScoped ? "Viewing as author" : (user.name ?? user.orcid)}
+                {isTokenScoped ? "Viewing as author" : user.username}
               </span>
             )}
             <ThemeToggle />
