@@ -69,7 +69,12 @@ async def list_production_submissions(
                 doi_suffix=s.doi_suffix,
                 title=s.title,
                 authors=[
-                    AuthorRead(name=a.name, order=a.order) for a in s.authors
+                    AuthorRead(
+                        name=a.name,
+                        order=a.order,
+                        primary_contact=a.primary_contact,
+                    )
+                    for a in s.authors
                 ],
                 already_imported=existing is not None,
             )
@@ -129,6 +134,7 @@ async def import_submission(
                 name=a.name,
                 email=a.email,
                 order=a.order,
+                primary_contact=a.primary_contact,
             )
         )
     session.commit()

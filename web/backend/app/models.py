@@ -70,6 +70,7 @@ class ManuscriptAuthor(SQLModel, table=True):
     name: Optional[str] = None
     email: Optional[str] = None
     order: int = 0
+    primary_contact: bool = Field(default=False)
 
 
 class AccessToken(SQLModel, table=True):
@@ -113,6 +114,7 @@ class AuthorRead(SQLModel):
     name: Optional[str] = None
     email: Optional[str] = None
     order: int = 0
+    primary_contact: bool = False
 
 
 class StepLogEntry(SQLModel):

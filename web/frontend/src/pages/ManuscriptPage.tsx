@@ -305,6 +305,14 @@ export function ManuscriptPage() {
           {manuscript.authors.length > 0 && (
             <div className="text-muted-foreground text-sm">
               {formatAuthors(manuscript.authors)}
+              {(() => {
+                const primary = manuscript.authors.find((a) => a.primary_contact);
+                return primary ? (
+                  <span className="ml-2 text-xs">
+                    (primary contact: {primary.name ?? "unknown"})
+                  </span>
+                ) : null;
+              })()}
             </div>
           )}
 

@@ -31,6 +31,7 @@ class OjsAuthor:
     name: str | None = None
     email: str | None = None
     order: int = 0
+    primary_contact: bool = False
 
 
 @dataclass(frozen=True)
@@ -82,6 +83,7 @@ def _extract_doi_suffix(doi: str | None, prefix: str) -> str | None:
 
 def _parse_authors(publication: dict) -> tuple[OjsAuthor, ...]:
     authors_raw = publication.get("authors") or []
+    primary_id = publication.get("primaryContactId")
     out: list[OjsAuthor] = []
     for idx, a in enumerate(authors_raw):
         given = (a.get("givenName") or {}).get("en") or a.get("givenName") or ""
@@ -92,7 +94,13 @@ def _parse_authors(publication: dict) -> tuple[OjsAuthor, ...]:
             family = next(iter(family.values()), "")
         name = f"{given} {family}".strip() or None
         email = a.get("email") or None
-        out.append(OjsAuthor(name=name, email=email, order=a.get("seq", idx)))
+        is_primary = primary_id is not None and a.get("id") == primary_id
+        out.append(OjsAuthor(
+            name=name,
+            email=email,
+            order=a.get("seq", idx),
+            primary_contact=is_primary,
+        ))
     out.sort(key=lambda x: x.order)
     return tuple(out)
 

@@ -371,23 +371,29 @@ def get_invite_template(
     author_url = _build_author_url(doi_suffix, mt.token)
     title = ms.title or ms.doi_suffix
 
-    # Default to first author only
+    # Default to the OJS-designated primary contact (if any),
+    # falling back to the first author with an email.
     authors = session.exec(
         select(ManuscriptAuthor)
         .where(ManuscriptAuthor.manuscript_id == doi_suffix)
         .order_by(ManuscriptAuthor.order)
     ).all()
-    first_with_email = next(
+    primary = next(
+        (Recipient(name=a.name or "Author", email=a.email)
+         for a in authors if a.primary_contact and a.email),
+        None,
+    )
+    default = primary or next(
         (Recipient(name=a.name or "Author", email=a.email)
          for a in authors if a.email),
         None,
     )
 
-    author_name = first_with_email.name if first_with_email else "Author"
+    author_name = default.name if default else "Author"
     return InviteTemplateRead(
         subject=f"Your manuscript is ready for review: {title}",
         body=email_module.default_template(title, author_url, author_name),
-        recipients=[first_with_email] if first_with_email else [],
+        recipients=[default] if default else [],
     )
 
 
@@ -478,6 +484,7 @@ def _apply_ojs_submission(ms, sub, doi_suffix, session):
         session.add(ManuscriptAuthor(
             manuscript_id=doi_suffix, name=a.name,
             email=a.email, order=a.order,
+            primary_contact=a.primary_contact,
         ))
     session.commit()
     session.refresh(ms)

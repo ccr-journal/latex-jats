@@ -72,6 +72,7 @@ export interface OjsAuthor {
   name: string | null;
   email: string | null;
   order: number;
+  primary_contact: boolean;
 }
 
 export interface OjsSubmission {

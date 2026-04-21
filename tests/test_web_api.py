@@ -1099,7 +1099,9 @@ def test_import_ojs_submission_creates_authors(client, engine):
             title="Something",
             authors=(
                 ojs_client.OjsAuthor(name="A Author", order=0),
-                ojs_client.OjsAuthor(name="Other", order=1),
+                ojs_client.OjsAuthor(
+                    name="Other", order=1, primary_contact=True,
+                ),
             ),
         )
     ])
@@ -1116,6 +1118,9 @@ def test_import_ojs_submission_creates_authors(client, engine):
             )
         ).all()
     assert {a.name for a in authors} == {"A Author", "Other"}
+    by_name = {a.name: a for a in authors}
+    assert by_name["A Author"].primary_contact is False
+    assert by_name["Other"].primary_contact is True
 
 
 def test_import_ojs_submission_duplicate(client):
@@ -1543,6 +1548,27 @@ def test_invite_template(client, engine):
     assert len(data["recipients"]) == 1
     assert data["recipients"][0]["name"] == "Alice"
     assert data["recipients"][0]["email"] == "alice@example.com"
+
+
+def test_invite_template_prefers_primary_contact(client, engine):
+    """Default recipient should be the primary contact, not the first author."""
+    with Session(engine) as session:
+        session.add(Manuscript(doi_suffix="CCR.PRIMARY", title="Paper"))
+        session.add(ManuscriptAuthor(
+            manuscript_id="CCR.PRIMARY", name="Alice",
+            email="alice@example.com", order=0, primary_contact=False,
+        ))
+        session.add(ManuscriptAuthor(
+            manuscript_id="CCR.PRIMARY", name="Bob",
+            email="bob@example.com", order=1, primary_contact=True,
+        ))
+        session.commit()
+    r = client.get("/api/manuscripts/CCR.PRIMARY/invite-authors")
+    assert r.status_code == 200
+    data = r.json()
+    assert len(data["recipients"]) == 1
+    assert data["recipients"][0]["email"] == "bob@example.com"
+    assert "Dear Bob" in data["body"]
 
 
 def test_invite_authors_success(client, engine):
