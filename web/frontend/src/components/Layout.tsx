@@ -38,7 +38,7 @@ export function Layout() {
               </span>
             )}
             <ThemeToggle />
-            {user && !isTokenScoped && (
+            {user && (
               <Button variant="outline" size="sm" onClick={handleLogout}>
                 Sign out
               </Button>
