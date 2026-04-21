@@ -7,6 +7,7 @@ from latex_jats.quarto import (
     fix_corresp_xref,
     fix_empty_history,
     group_affiliations,
+    inject_acknowledgements_from_yaml,
     inject_metadata_from_yaml,
     move_appendix_to_back,
     move_fn_group_to_back,
@@ -585,3 +586,65 @@ def test_inject_metadata_from_yaml(tmp_path, xml_file):
     assert am.find("permissions") is not None
     # abstract should now have a title
     assert root.find(".//abstract/title").text == "Abstract"
+
+
+def _write_qmd(tmp_path, yaml_body):
+    qmd = tmp_path / "test.qmd"
+    qmd.write_text(f"---\n{yaml_body}\n---\n\nBody.\n", encoding="utf-8")
+    return qmd
+
+
+def test_inject_acknowledgements_from_yaml(tmp_path, xml_file):
+    qmd = _write_qmd(tmp_path, 'acknowledgements: "We thank the reviewers."')
+    p = xml_file('<article><back/></article>')
+    inject_acknowledgements_from_yaml(p, str(qmd))
+    root = _parse(p)
+    paras = root.findall(".//back/ack/p")
+    assert len(paras) == 1
+    assert paras[0].text == "We thank the reviewers."
+
+
+def test_inject_acknowledgements_multipara(tmp_path, xml_file):
+    qmd = _write_qmd(
+        tmp_path,
+        "acknowledgements: |\n  First paragraph.\n\n  Second paragraph.",
+    )
+    p = xml_file('<article><back/></article>')
+    inject_acknowledgements_from_yaml(p, str(qmd))
+    root = _parse(p)
+    paras = root.findall(".//back/ack/p")
+    assert [p.text for p in paras] == ["First paragraph.", "Second paragraph."]
+
+
+def test_inject_acknowledgements_creates_back(tmp_path, xml_file):
+    qmd = _write_qmd(tmp_path, 'acknowledgements: "Thanks."')
+    p = xml_file('<article><body/></article>')
+    inject_acknowledgements_from_yaml(p, str(qmd))
+    root = _parse(p)
+    assert root.find(".//back/ack/p").text == "Thanks."
+
+
+def test_inject_acknowledgements_absent_is_noop(tmp_path, xml_file):
+    qmd = _write_qmd(tmp_path, 'title: "Test"')
+    p = xml_file('<article><back/></article>')
+    inject_acknowledgements_from_yaml(p, str(qmd))
+    root = _parse(p)
+    assert root.find(".//back/ack") is None
+
+
+def test_inject_acknowledgements_empty_is_noop(tmp_path, xml_file):
+    qmd = _write_qmd(tmp_path, 'acknowledgements: "   "')
+    p = xml_file('<article><back/></article>')
+    inject_acknowledgements_from_yaml(p, str(qmd))
+    root = _parse(p)
+    assert root.find(".//back/ack") is None
+
+
+def test_inject_acknowledgements_skips_when_already_present(tmp_path, xml_file):
+    qmd = _write_qmd(tmp_path, 'acknowledgements: "YAML value."')
+    p = xml_file('<article><back><ack><p>Author-written.</p></ack></back></article>')
+    inject_acknowledgements_from_yaml(p, str(qmd))
+    root = _parse(p)
+    acks = root.findall(".//back/ack")
+    assert len(acks) == 1
+    assert acks[0].find("p").text == "Author-written."

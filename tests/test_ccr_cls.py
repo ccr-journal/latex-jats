@@ -200,3 +200,15 @@ def test_install_creates_when_missing(tmp_path: Path):
     written = install_canonical_ccr_cls(tmp_path)
     assert written == tmp_path / "ccr.cls"
     assert compute_ccr_cls_sha256(written) == EXPECTED_CCR_CLS_SHA256
+
+
+def test_install_overwrites_both_copies(tmp_path: Path):
+    """Quarto submissions have ccr.cls at both the workspace root and inside
+    _extensions; install must sync both or PDF compile uses the stale copy."""
+    ext_dir = tmp_path / "_extensions" / "ccr-journal" / "ccr"
+    ext_dir.mkdir(parents=True)
+    _make_cls(tmp_path / "ccr.cls", "0.02")
+    _make_cls(ext_dir / "ccr.cls", "0.02")
+    install_canonical_ccr_cls(tmp_path)
+    assert compute_ccr_cls_sha256(tmp_path / "ccr.cls") == EXPECTED_CCR_CLS_SHA256
+    assert compute_ccr_cls_sha256(ext_dir / "ccr.cls") == EXPECTED_CCR_CLS_SHA256

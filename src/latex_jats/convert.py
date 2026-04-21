@@ -875,6 +875,31 @@ def warn_tfoot_notes(jats_file):
                 )
 
 
+def warn_section_acknowledgements(jats_file):
+    r"""Warn when \section{Acknowledgements} appears in the body.
+
+    JATS convention is <back><ack>, which ccr.cls provides via the
+    \acknowledgements{...} macro. Authors using \section{Acknowledgements}
+    end up with a regular body <sec> that the publisher won't recognize as
+    acknowledgements.
+    """
+    tree = ET.parse(jats_file)
+    body = tree.getroot().find(".//body")
+    if body is None:
+        return
+    for sec in body.findall(".//sec"):
+        title = sec.find("title")
+        if title is None or not title.text:
+            continue
+        normalized = title.text.strip().lower().rstrip("s")
+        if normalized in ("acknowledgement", "acknowledgment"):
+            logger.warning(
+                "Found '\\section{%s}' in body. Use '\\acknowledgements{...}' "
+                "instead so the content lands in JATS <back><ack>.",
+                title.text.strip(),
+            )
+
+
 def _warn_stray_text_after_includegraphics(tex_path):
     r"""Warn about trailing punctuation after \includegraphics in figure environments.
 
@@ -2722,6 +2747,7 @@ def convert(input_path: Path, output_path: Path, html: bool = False, lastpage=No
     fix_graphic_in_td(str(output_path))
     warn_tfoot_notes(str(output_path))
 
+    warn_section_acknowledgements(str(output_path))
     clean_body(str(output_path))
     fix_nested_p(str(output_path))
     fix_disp_formula_in_list_item(str(output_path))

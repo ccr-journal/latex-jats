@@ -32,6 +32,7 @@ from latex_jats.convert import (
     fix_ext_links,
     fix_pdf_graphic_refs,
     rename_graphics,
+    warn_section_acknowledgements,
 )
 
 logger = logging.getLogger(__name__)
@@ -280,6 +281,41 @@ def inject_metadata_from_yaml(jats_file: str, qmd_file: str,
         lastpage=meta.get("lastpage") or lastpage,
     )
 
+    tree.write(jats_file, encoding="unicode")
+
+
+def inject_acknowledgements_from_yaml(jats_file: str, qmd_file: str) -> None:
+    """Inject <back><ack> from the .qmd YAML ``acknowledgements`` key.
+
+    Quarto's jats_publishing output doesn't carry arbitrary YAML fields
+    through to JATS, so we add the element here — parallel to how the
+    LaTeX pipeline emits <ack> via the ``\\acknowledgements`` macro binding.
+    Paragraph breaks (blank lines) split the text into multiple <p> children.
+    """
+    meta = parse_qmd_frontmatter(Path(qmd_file))
+    raw = meta.get("acknowledgements")
+    if not isinstance(raw, str) or not raw.strip():
+        return
+
+    tree = ET.parse(jats_file)
+    root = tree.getroot()
+    back = root.find("back")
+    if back is None:
+        back = ET.SubElement(root, "back")
+
+    if back.find("ack") is not None:
+        return  # author-provided <ack> already present
+
+    ack = ET.Element("ack")
+    for para in re.split(r"\n\s*\n", raw.strip()):
+        text = para.strip()
+        if not text:
+            continue
+        p = ET.SubElement(ack, "p")
+        p.text = text
+    if len(ack) == 0:
+        return
+    back.insert(0, ack)
     tree.write(jats_file, encoding="unicode")
 
 
@@ -820,6 +856,8 @@ def convert_quarto(input_qmd: Path, output_xml: Path, html: bool = False,
     logger.info("Step 2: Post-processing JATS XML...")
     out_str = str(output_xml)
     inject_metadata_from_yaml(out_str, str(input_qmd), lastpage=lastpage)
+    inject_acknowledgements_from_yaml(out_str, str(input_qmd))
+    warn_section_acknowledgements(out_str)
     fix_empty_history(out_str)
     fix_corresp_xref(out_str)
     group_affiliations(out_str)

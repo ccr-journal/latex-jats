@@ -135,6 +135,20 @@ def test_abstract_and_keywords(tmp_path):
 
 
 @pytest.mark.integration
+def test_acknowledgements(tmp_path):
+    """\\acknowledgements{} produces <back><ack> with the content."""
+    output = tmp_path / "output.xml"
+    tex = _prepare_fixture(FIXTURES / "authors.tex", tmp_path)
+    run_latexmlc(str(tex), str(output), log_dir=tmp_path)
+
+    root = ET.parse(output).getroot()
+    ack = root.find(".//back/ack")
+    assert ack is not None, "Expected <ack> under <back>"
+    text = " ".join(ack.itertext())
+    assert "reviewers" in text, f"Expected 'reviewers' in ack text, got: {text!r}"
+
+
+@pytest.mark.integration
 def test_authors_names_and_affiliations(tmp_path):
     """Authors are split into surname/given-names with spaces preserved."""
     output = tmp_path / "output.xml"

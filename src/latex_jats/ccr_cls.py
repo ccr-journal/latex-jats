@@ -32,8 +32,8 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 
-EXPECTED_CCR_CLS_VERSION = "0.06"
-EXPECTED_CCR_CLS_SHA256 = "19de6ab297eec52cca61b61277164bf00af6dd4737e8dfaf785a16ecdb96a079"
+EXPECTED_CCR_CLS_VERSION = "0.07"
+EXPECTED_CCR_CLS_SHA256 = "4ca12cdb5b29bf49c91159dcaedcefc452a936419c6fd41611242b7ed73a33b8"
 
 CANONICAL_CCR_CLS_PATH = Path(__file__).parent / "ccr_canonical.cls"
 
@@ -41,34 +41,44 @@ _VERSION_RE = re.compile(r"^\s*%\s*Version\s+(\d+(?:\.\d+)+)", re.IGNORECASE)
 
 
 def install_canonical_ccr_cls(workspace_dir: Path) -> Path:
-    """Overwrite (or create) ``ccr.cls`` in the workspace with the canonical copy.
+    """Overwrite every ``ccr.cls`` in the workspace with the canonical copy.
 
-    If the workspace already has a ``ccr.cls`` (flat or Quarto-extension layout)
-    the existing file is replaced in place.  Otherwise the canonical copy is
-    written to ``workspace_dir / ccr.cls``.  Returns the path that was written.
+    Quarto submissions typically have two copies: one at the workspace root
+    (used by LaTeX compilation of flat sources) and one inside
+    ``_extensions/ccr-journal/ccr/ccr.cls`` (the one Quarto actually copies
+    to the rendering directory via ``format-resources``). Both must be
+    synced or PDF compilation uses the older vendored class.
+
+    If no existing copy is present, the canonical file is written to
+    ``workspace_dir / ccr.cls``. Returns the first path written (workspace
+    root if both layouts exist).
     """
-    target = find_ccr_cls(workspace_dir) or (workspace_dir / "ccr.cls")
-    target.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(CANONICAL_CCR_CLS_PATH, target)
-    logger.info("Installed canonical ccr.cls v%s at %s",
-                EXPECTED_CCR_CLS_VERSION, target)
-    return target
+    targets = find_ccr_cls_all(workspace_dir) or [workspace_dir / "ccr.cls"]
+    for target in targets:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(CANONICAL_CCR_CLS_PATH, target)
+        logger.info("Installed canonical ccr.cls v%s at %s",
+                    EXPECTED_CCR_CLS_VERSION, target)
+    return targets[0]
 
 
 def find_ccr_cls(workspace_dir: Path) -> Path | None:
-    """Locate ``ccr.cls`` in a prepared workspace.
+    """Locate the primary ``ccr.cls`` in a prepared workspace.
 
     Checks the flat LaTeX layout first, then the Quarto extension layout.
     Returns ``None`` if neither exists.
     """
+    copies = find_ccr_cls_all(workspace_dir)
+    return copies[0] if copies else None
+
+
+def find_ccr_cls_all(workspace_dir: Path) -> list[Path]:
+    """Return every ``ccr.cls`` copy in a prepared workspace, in priority order."""
     candidates = [
         workspace_dir / "ccr.cls",
         workspace_dir / "_extensions" / "ccr-journal" / "ccr" / "ccr.cls",
     ]
-    for c in candidates:
-        if c.is_file():
-            return c
-    return None
+    return [c for c in candidates if c.is_file()]
 
 
 def parse_ccr_cls_version(cls_path: Path) -> str | None:

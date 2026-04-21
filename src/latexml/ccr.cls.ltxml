@@ -68,6 +68,12 @@ DefMacro('\show@abstract', '\textbf{Abstract Placeholder}');
 DefConstructor('\keywords{}',
     "^ <ltx:keywords>#1</ltx:keywords>");
 DefMacro('\show@keywords', '\textbf{Keywords Placeholder}');
+# Use \@add@frontmatter (not "^" DefConstructor) so the element lands at
+# document root even when \acknowledgements{...} is called mid-body inside
+# an open \section. LaTeXML's JATS XSLT pulls <ltx:acknowledgements> from
+# the document root into <back><ack>.
+DefMacro('\acknowledgements{}',
+    '\@add@frontmatter{ltx:acknowledgements}{#1}');
 # Helper macros for a single author+affiliation entry (mirrors \lx@author pattern)
 DefMacro('\ccr@oneauthor{}',
     '\lx@count@author\@add@frontmatter{ltx:creator}[role=author]{\@personname{#1}}');

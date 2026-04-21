@@ -38,6 +38,9 @@
 \newcommand{\keywords}[1]{\def\@keywords{#1}}
 \newcommand{\show@keywords}{\@keywords}
 
+\newcommand{\acknowledgements}[1]{\section*{Acknowledgements}#1}
+\newcommand{\supplementarymaterial}[1]{#1}
+
 \def\@shortauthors{(please specify \textbackslash shortauthors)}
 \newcommand{\shortauthors}[1]{\def\@shortauthors{#1}}
 \newcommand{\show@shortauthors}{\@shortauthors}
