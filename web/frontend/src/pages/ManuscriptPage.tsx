@@ -514,7 +514,6 @@ export function ManuscriptPage() {
         checkStepDone ? (
           <MetadataCard
             doiSuffix={doiSuffix}
-            isEditor={isEditor}
             readOnly={isApproved}
             refreshKey={metadataRefreshKey}
             onSync={() => {

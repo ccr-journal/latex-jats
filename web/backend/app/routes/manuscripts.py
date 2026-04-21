@@ -496,14 +496,13 @@ class SyncOjsRequest(BaseModel):
 async def sync_ojs_field(
     doi_suffix: str,
     body: SyncOjsRequest,
-    _editor: str = Depends(require_editor),
+    user: CurrentUser = Depends(get_current_user),
+    role: Literal["editor", "author"] = Depends(get_current_role),
     session: Session = Depends(get_session),
     storage: Storage = Depends(get_storage),
 ):
     """Push a single metadata field from LaTeX/JATS output to OJS."""
-    ms = session.get(Manuscript, doi_suffix)
-    if ms is None:
-        raise HTTPException(404, detail=f"Manuscript '{doi_suffix}' not found")
+    ms = load_manuscript_for_user(doi_suffix, session, user, role)
     if not ms.ojs_submission_id:
         raise HTTPException(400, detail="Manuscript is not linked to an OJS submission")
     if body.field not in _UPDATABLE_FIELDS:

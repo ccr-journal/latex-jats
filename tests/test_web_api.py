@@ -1404,13 +1404,52 @@ def test_sync_ojs_rejects_matching_field(client, engine, test_storage):
     assert "already matches" in r.json()["detail"]
 
 
-def test_sync_ojs_requires_editor(client, author_client, engine, test_storage):
+def test_sync_ojs_rejects_author_for_wrong_manuscript(client, author_client, engine, test_storage):
+    # author_client is scoped to AUTHOR_FIXTURE_DOI, not CCR.SYNC
     doi = _setup_manuscript_with_comparison(engine, test_storage)
     r = author_client.post(
         f"/api/manuscripts/{doi}/sync-ojs",
         json={"field": "title"},
     )
-    assert r.status_code == 403
+    assert r.status_code == 404
+
+
+@patch("web.backend.app.routes.manuscripts.ojs_client.fetch_submission", new_callable=AsyncMock)
+@patch("web.backend.app.routes.manuscripts.ojs_client.update_publication_field", new_callable=AsyncMock)
+def test_sync_ojs_author_can_push(mock_update, mock_fetch, author_client, engine, test_storage):
+    doi = AUTHOR_FIXTURE_DOI
+    # Upgrade the author's fixture manuscript to be OJS-linked
+    with Session(engine) as session:
+        ms = session.get(Manuscript, doi)
+        ms.ojs_submission_id = 42
+        ms.title = "OJS Title"
+        session.add(ms)
+        session.add(ManuscriptAuthor(manuscript_id=doi, name="A Author", order=0))
+        session.commit()
+
+    convert_dir = test_storage.convert_output_dir(doi)
+    convert_dir.mkdir(parents=True, exist_ok=True)
+    comparison = [
+        {"field": "title", "status": "mismatch", "ojs": "OJS Title", "latex": "LaTeX Title"},
+    ]
+    (convert_dir / "metadata_comparison.json").write_text(json.dumps(comparison))
+    (convert_dir / f"{doi}.xml").write_text(
+        '<?xml version="1.0"?>'
+        '<article><front><article-meta>'
+        '<article-title>LaTeX Title</article-title>'
+        '</article-meta></front></article>'
+    )
+
+    mock_fetch.return_value = ojs_client.OjsSubmission(
+        submission_id=42, doi_suffix=doi, title="LaTeX Title",
+        authors=(ojs_client.OjsAuthor(name="A Author", order=0),),
+    )
+    r = author_client.post(
+        f"/api/manuscripts/{doi}/sync-ojs",
+        json={"field": "title"},
+    )
+    assert r.status_code == 200
+    mock_update.assert_called_once_with(42, "title", "LaTeX Title")
 
 
 def test_sync_ojs_no_ojs_link(client, engine, test_storage):

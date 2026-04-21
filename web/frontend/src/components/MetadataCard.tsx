@@ -38,13 +38,12 @@ function truncate(text: string, max: number): string {
 
 interface MetadataCardProps {
   doiSuffix: string;
-  isEditor: boolean;
   readOnly?: boolean;
   refreshKey?: number;
   onSync?: () => void;
 }
 
-export function MetadataCard({ doiSuffix, isEditor, readOnly, refreshKey, onSync }: MetadataCardProps) {
+export function MetadataCard({ doiSuffix, readOnly, refreshKey, onSync }: MetadataCardProps) {
   const [comparisons, setComparisons] = useState<MetadataComparison[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncingField, setSyncingField] = useState<string | null>(null);
@@ -94,7 +93,7 @@ export function MetadataCard({ doiSuffix, isEditor, readOnly, refreshKey, onSync
                   <TableHead>Field</TableHead>
                   <TableHead>Source (LaTeX)</TableHead>
                   <TableHead>OJS</TableHead>
-                  {isEditor && !readOnly && <TableHead className="w-30">Action</TableHead>}
+                  {!readOnly && <TableHead className="w-30">Action</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -115,7 +114,7 @@ export function MetadataCard({ doiSuffix, isEditor, readOnly, refreshKey, onSync
                     >
                       {truncate(formatValue(c.ojs), 120)}
                     </TableCell>
-                    {isEditor && !readOnly && (
+                    {!readOnly && (
                       <TableCell>
                         {UPDATABLE_FIELDS.has(c.field) ? (
                           <Button
