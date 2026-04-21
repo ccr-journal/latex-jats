@@ -75,6 +75,12 @@ Three sequential steps in `src/latex_jats/convert.py`:
 
 **HTML preview** (`convert_to_html`) — applies `src/xslt/main/jats-html.xsl` (NLM JATS-to-HTML stylesheet) and copies `src/css/jats-preview.css` to the output directory.
 
+## Ingenta Edify XML guidelines
+
+Ingenta sent us their authoritative JATS XML specification for Edify in April 2026 as two PDFs (`xml_guide.pdf` and `xml_guide_media.pdf`). Both files, and a combined markdown transcription at [xml_guide.md](xml_guide.md), are kept locally. **Do not commit the PDFs and do not share them outside the project** — we haven't yet received permission to publish them. The markdown transcription is our working reference; prefer reading it over re-parsing the PDFs. If Ingenta ships a revised spec, replace both the PDFs and [xml_guide.md](xml_guide.md) together so they stay in sync.
+
+The guide is the source of truth when deciding what JATS shapes to emit. A few constraints that already matter for this pipeline: `<contrib>` elements with any `contrib-type` other than `"author"` are silently ignored by Edify; `<fig>` and `<table-wrap>` both require an `@id`; only one `<ref-list>` is allowed in `<back>`; `<nlm-citation>` is deprecated (use `element-citation` or `mixed-citation`); `self-uri/@xlink:href` must match the PDF filename exactly with no folder prefix; and the Ingenta-rendered site only reliably shows affiliations when they're nested inside `<contrib>` (see memory note `project_aup_affiliation_shape`), even though the guide also documents the `xref`/`rid` style.
+
 ## Design principles
 
 - **Fix issues at the source, not post-hoc.** Prefer fixing conversion problems in the LaTeXML bindings (`ccr.cls.ltxml`, `biblatex.sty.ltxml`) or the XSLT wrapper over adding Python post-processing fixups. Post-processing should be reserved for things that genuinely cannot be handled earlier in the pipeline.

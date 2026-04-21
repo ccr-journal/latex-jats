@@ -59,6 +59,11 @@ luac.out
 node_modules/
 web/frontend/dist/
 
+# Ingenta XML guide — vendor-provided, not cleared for public redistribution
+/xml_guide.pdf
+/xml_guide_media.pdf
+/xml_guide.md
+
 # Runtime storage
 /storage/
 
