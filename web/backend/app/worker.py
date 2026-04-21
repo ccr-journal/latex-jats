@@ -35,6 +35,7 @@ from latex_jats.quarto import (
     get_doi_suffix_from_qmd,
     prepare_quarto_workspace,
     render_quarto_pdf,
+    upsert_qmd_frontmatter_keys,
 )
 
 from .models import (
@@ -91,6 +92,25 @@ def inject_ojs_metadata(tex_file: Path, manuscript) -> None:
         pipeline_logger = logging.getLogger("latex_jats")
         pipeline_logger.info("Injected missing metadata from OJS: %s",
                              ", ".join(injected))
+
+
+def inject_ojs_metadata_qmd(qmd_file: Path, manuscript) -> None:
+    """Inject missing journal metadata into a QMD's YAML front matter.
+
+    QMD front-matter keys match the LaTeX macro names 1:1 (``doi``,
+    ``volume``, ``pubnumber``, ``pubyear``, ``firstpage``).  ``firstpage``
+    defaults to ``"1"`` when the manuscript field is absent, matching the
+    LaTeX ``inject_ojs_metadata`` behaviour.
+    """
+    values: dict[str, str] = {}
+    for key, field in _OJS_MACRO_MAP.items():
+        if field is None:
+            values[key] = "1"
+            continue
+        v = getattr(manuscript, field, None)
+        if v is not None:
+            values[key] = str(v)
+    upsert_qmd_frontmatter_keys(qmd_file, values)
 
 
 class _LogCollector(logging.Handler):
@@ -419,11 +439,18 @@ def _run_quarto_pipeline(
         source_dir, workspace_dir,
         use_canonical_ccr_cls=use_canonical_ccr_cls,
     )
-    _finish_step(engine, doi_suffix, "prepare", collector.drain())
 
     workspace_qmd = find_qmd(workspace_dir)
     if workspace_qmd is None:
         raise FileNotFoundError(f"No .qmd file found in {workspace_dir}")
+
+    # Inject missing journal metadata from OJS before compilation
+    with Session(engine) as session:
+        ms = session.get(Manuscript, doi_suffix)
+        if ms and ms.ojs_submission_id:
+            inject_ojs_metadata_qmd(workspace_qmd, ms)
+
+    _finish_step(engine, doi_suffix, "prepare", collector.drain())
 
     # ── Step 2: compile PDF (for page count and publisher zip) ───────
     step_tracker[0] = "compile"

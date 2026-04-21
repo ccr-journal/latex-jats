@@ -14,6 +14,10 @@ import type { MetadataComparison } from "@/api/types";
 
 const UPDATABLE_FIELDS = new Set(["title", "subtitle", "abstract", "keywords"]);
 
+// Fields whose canonical value lives in OJS — the author should fix the
+// value in the source file (or remove it so OJS metadata is injected).
+const SOURCE_FIX_FIELDS = new Set(["doi", "volume", "issue", "year", "firstpage"]);
+
 const FIELD_LABELS: Record<string, string> = {
   title: "Title",
   subtitle: "Subtitle",
@@ -24,6 +28,7 @@ const FIELD_LABELS: Record<string, string> = {
   volume: "Volume",
   issue: "Issue",
   year: "Year",
+  firstpage: "First page",
 };
 
 function formatValue(value: string | string[]): string {
@@ -125,6 +130,10 @@ export function MetadataCard({ doiSuffix, readOnly, refreshKey, onSync }: Metada
                           >
                             {syncingField === c.field ? "Updating\u2026" : "Push to OJS"}
                           </Button>
+                        ) : SOURCE_FIX_FIELDS.has(c.field) ? (
+                          <span className="text-xs text-muted-foreground">
+                            Fix in source or remove
+                          </span>
                         ) : (
                           <span className="text-xs text-muted-foreground">Fix in OJS</span>
                         )}

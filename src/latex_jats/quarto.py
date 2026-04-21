@@ -186,6 +186,60 @@ def parse_qmd_frontmatter(qmd_file: Path) -> dict:
     return data
 
 
+def upsert_qmd_frontmatter_keys(qmd_file: Path,
+                                values: dict[str, str]) -> list[str]:
+    """Insert missing top-level keys into the QMD YAML front matter.
+
+    For each ``(key, value)`` in ``values`` whose key is absent from the
+    current front matter (using ``parse_qmd_frontmatter`` — empty values
+    count as absent, for parity with the LaTeX ``inject_ojs_metadata``
+    which only checks for macro presence), append ``key: "value"`` just
+    before the closing ``---``. Existing keys are never overwritten:
+    downstream ``compare_metadata`` catches mismatches instead.
+
+    Returns the list of keys actually inserted (in iteration order).
+    """
+    text = qmd_file.read_text(encoding="utf-8")
+    if not text.startswith("---"):
+        return []
+    body = text[3:]
+    # Match the closing fence at start-of-line, tolerating trailing whitespace.
+    close_match = re.search(r"(?m)^---\s*$", body)
+    if close_match is None:
+        return []
+
+    existing = parse_qmd_frontmatter(qmd_file)
+    # Treat missing-key, None-value, and empty-string as absent, for parity
+    # with inject_ojs_metadata (which checks \macro{...} presence by regex,
+    # not content) and with the fallback parser's behaviour.
+    to_insert = [
+        (k, v) for k, v in values.items()
+        if existing.get(k) in (None, "")
+    ]
+    if not to_insert:
+        return []
+
+    yaml_block = body[:close_match.start()]
+    suffix = body[close_match.start():]
+
+    def _quote(v: str) -> str:
+        # Double-quoted YAML scalar: escape backslashes and double-quotes.
+        escaped = v.replace("\\", "\\\\").replace('"', '\\"')
+        return f'"{escaped}"'
+
+    new_lines = "".join(f"{k}: {_quote(v)}\n" for k, v in to_insert)
+    # Ensure the existing block ends with a newline before we append.
+    if yaml_block and not yaml_block.endswith("\n"):
+        yaml_block += "\n"
+    new_text = "---" + yaml_block + new_lines + suffix
+    qmd_file.write_text(new_text, encoding="utf-8")
+
+    inserted = [k for k, _ in to_insert]
+    logger.info("Injected missing YAML front matter keys: %s",
+                ", ".join(f"{k}={v!r}" for k, v in to_insert))
+    return inserted
+
+
 def get_doi_suffix_from_qmd(qmd_file: Path) -> str:
     """Extract the DOI suffix (e.g. 'CCR2026.2.11.URMA') from the qmd YAML.
 
