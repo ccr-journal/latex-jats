@@ -69,8 +69,10 @@ Three sequential steps in `src/latex_jats/convert.py`:
    - `fix_references` — repairs bibliography entries using the `.bbl` file (if available)
    - `fix_lstlisting_labels` — fixes labels/captions on code listings
    - `fix_ext_links` — normalizes `<ext-link>` URLs
+   - `strip_mathml_alttext` — drops `@alttext` from `<mml:math>` (Ingenta re-serializes it unescaped)
+   - `normalize_mathml_chars` — rewrites Mathematical Alphanumeric Symbols (U+1D400–U+1D7FF) to `mathvariant` + BMP char, so Ingenta's Java parser doesn't re-serialize them as invalid surrogate char references (`&#55349;`)
    - `fix_pdf_graphic_refs` — rewrites `.pdf` graphic hrefs to `.svg`
-   - `finalize_xml` — final cleanup (XML declaration, whitespace normalization)
+   - `finalize_xml` — final cleanup (XML declaration, whitespace normalization); warns if any supplementary-plane chars survived
 
    After post-processing, PDF figures are converted to SVG using inkscape, and graphics are renamed to publisher format (`ID_fig1.ext`, etc.).
 

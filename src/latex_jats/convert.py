@@ -2468,6 +2468,149 @@ def strip_mathml_alttext(jats_file):
     tree.write(jats_file, encoding="unicode")
 
 
+_MATH_VARIANT_NAMES = {
+    frozenset({"BOLD", "ITALIC", "SANS-SERIF"}): "sans-serif-bold-italic",
+    frozenset({"BOLD", "SANS-SERIF"}):           "bold-sans-serif",
+    frozenset({"ITALIC", "SANS-SERIF"}):         "sans-serif-italic",
+    frozenset({"SANS-SERIF"}):                   "sans-serif",
+    frozenset({"BOLD", "SCRIPT"}):               "bold-script",
+    frozenset({"BOLD", "FRAKTUR"}):              "bold-fraktur",
+    frozenset({"BOLD", "ITALIC"}):               "bold-italic",
+    frozenset({"BOLD"}):                         "bold",
+    frozenset({"ITALIC"}):                       "italic",
+    frozenset({"SCRIPT"}):                       "script",
+    frozenset({"FRAKTUR"}):                      "fraktur",
+    frozenset({"DOUBLE-STRUCK"}):                "double-struck",
+    frozenset({"MONOSPACE"}):                    "monospace",
+}
+
+_MATH_VARIANT_WORDS = frozenset({
+    "BOLD", "ITALIC", "SCRIPT", "FRAKTUR", "DOUBLE-STRUCK",
+    "MONOSPACE", "SANS-SERIF",
+})
+
+_GREEK_LETTER_NAMES = frozenset({
+    "ALPHA", "BETA", "GAMMA", "DELTA", "EPSILON", "ZETA", "ETA", "THETA",
+    "IOTA", "KAPPA", "LAMDA", "LAMBDA", "MU", "NU", "XI", "OMICRON", "PI",
+    "RHO", "SIGMA", "TAU", "UPSILON", "PHI", "CHI", "PSI", "OMEGA", "DIGAMMA",
+})
+
+
+def _decompose_math_alphanumeric(ch: str):
+    """Map a U+1D400–U+1D7FF char to (mathvariant, bmp_char) or None.
+
+    Uses the character's Unicode name to avoid a 1024-entry table.
+    Example: 𝒘 (U+1D498, "MATHEMATICAL BOLD ITALIC SMALL W")
+             → ("bold-italic", "w").
+    """
+    import unicodedata
+    cp = ord(ch)
+    if not (0x1D400 <= cp <= 0x1D7FF):
+        return None
+    try:
+        name = unicodedata.name(ch)
+    except ValueError:
+        return None
+    if not name.startswith("MATHEMATICAL "):
+        return None
+    rest = name[len("MATHEMATICAL "):].split()
+    variants = frozenset(p for p in rest if p in _MATH_VARIANT_WORDS)
+    base_parts = [p for p in rest if p not in _MATH_VARIANT_WORDS]
+    variant = _MATH_VARIANT_NAMES.get(variants)
+    if variant is None:
+        return None
+
+    tokens = set(base_parts)
+    base_str = " ".join(base_parts)
+
+    if tokens & _GREEK_LETTER_NAMES or base_str in ("NABLA", "PARTIAL DIFFERENTIAL"):
+        candidates = []
+        if "SMALL" in tokens:
+            candidates.append("GREEK SMALL LETTER " + base_str.replace("SMALL ", ""))
+        if "CAPITAL" in tokens:
+            without_capital = base_str.replace("CAPITAL ", "")
+            candidates.append("GREEK CAPITAL LETTER " + without_capital)
+            candidates.append("GREEK LETTER " + without_capital)
+        if "SYMBOL" in tokens:
+            candidates.append("GREEK LUNATE " + base_str)
+        candidates.append("GREEK " + base_str)
+        candidates.append(base_str)
+    elif "DIGIT" in tokens:
+        candidates = [base_str]
+    else:
+        candidates = []
+        if "SMALL" in tokens:
+            candidates.append("LATIN SMALL LETTER " + base_str.replace("SMALL ", ""))
+        if "CAPITAL" in tokens:
+            candidates.append("LATIN CAPITAL LETTER " + base_str.replace("CAPITAL ", ""))
+
+    for cand in candidates:
+        try:
+            return variant, unicodedata.lookup(cand)
+        except KeyError:
+            continue
+    return None
+
+
+def normalize_mathml_chars(jats_file):
+    """Rewrite Mathematical Alphanumeric Symbols to mathvariant + BMP char.
+
+    LaTeXML emits e.g. <mml:mi>𝒘</mml:mi> for \\boldsymbol{w} — a
+    supplementary-plane code point (U+1D400–U+1D7FF). Ingenta's ingestion
+    pipeline re-serializes such code points as UTF-16 surrogate-pair decimal
+    character references (``&#55349;&#56472;``), then re-parses; the isolated
+    high surrogate is not a legal XML character, so the ingest fails.
+
+    MathML 3 §A.6 offers an equivalent BMP representation using ``mathvariant``
+    on a plain letter (e.g. ``<mml:mi mathvariant="bold-italic">w</mml:mi>``).
+    This rewrite keeps the MathML semantics identical while avoiding
+    supplementary code points entirely.
+    """
+    MML = "http://www.w3.org/1998/Math/MathML"
+    tree = ET.parse(jats_file)
+    root = tree.getroot()
+
+    def _rewrite_text(s):
+        if not s or not any(0x1D400 <= ord(c) <= 0x1D7FF for c in s):
+            return s, None
+        # If the entire text is one math char, we can set a mathvariant on the
+        # enclosing element. Otherwise just substitute each char with its BMP
+        # base (dropping variant info — the surrounding style should cover it).
+        if len(s) == 1:
+            decomp = _decompose_math_alphanumeric(s)
+            if decomp is not None:
+                return decomp[1], decomp[0]
+        out = []
+        for c in s:
+            decomp = _decompose_math_alphanumeric(c)
+            out.append(decomp[1] if decomp else c)
+        return "".join(out), None
+
+    for el in root.iter():
+        if not el.tag.startswith(f"{{{MML}}}"):
+            # Also clean plain text/tail outside MathML — the char itself is the
+            # problem regardless of context.
+            for attr in ("text", "tail"):
+                cur = getattr(el, attr)
+                if cur and any(0x1D400 <= ord(c) <= 0x1D7FF for c in cur):
+                    new, _ = _rewrite_text(cur)
+                    setattr(el, attr, new)
+            continue
+        # MathML leaf/token element — try to attach mathvariant if text is a
+        # single math char and no mathvariant is already set.
+        if el.text:
+            new_text, variant = _rewrite_text(el.text)
+            if new_text != el.text:
+                el.text = new_text
+                if variant and "mathvariant" not in el.attrib:
+                    el.set("mathvariant", variant)
+        if el.tail:
+            new_tail, _ = _rewrite_text(el.tail)
+            el.tail = new_tail
+
+    tree.write(jats_file, encoding="unicode")
+
+
 def finalize_xml(jats_file):
     """Add XML declaration, DOCTYPE, and required root <article> attributes."""
     ET.register_namespace("xlink", "http://www.w3.org/1999/xlink")
@@ -2483,6 +2626,15 @@ def finalize_xml(jats_file):
         f.write(_XML_DECL)
         f.write(_DOCTYPE)
         f.write(xml_body)
+
+    supplementary = sorted({c for c in xml_body if ord(c) > 0xFFFF})
+    if supplementary:
+        sample = ", ".join(f"U+{ord(c):04X}" for c in supplementary[:5])
+        logger.warning(
+            "%d supplementary-plane character(s) remain in %s (e.g. %s); "
+            "Ingenta's parser may reject this as an invalid '&#55349;' reference",
+            len(supplementary), jats_file, sample,
+        )
 
 
 def get_doi_suffix(input_path: Path) -> str:
@@ -2585,6 +2737,7 @@ def convert(input_path: Path, output_path: Path, html: bool = False, lastpage=No
     fix_fig_structure(str(output_path))
     fix_ext_links(str(output_path))
     strip_mathml_alttext(str(output_path))
+    normalize_mathml_chars(str(output_path))
     fix_pdf_graphic_refs(str(output_path))
     finalize_xml(str(output_path))
 
