@@ -824,6 +824,35 @@ def fix_table_notes(jats_file):
     tree.write(jats_file, encoding="unicode")
 
 
+def fix_graphic_in_td(jats_file):
+    """Rewrite <graphic> inside <td>/<th> to <inline-graphic>.
+
+    Ingenta's Edify renderer silently drops block-level <graphic> elements in
+    table cells, even though the JATS is schema-valid. The xml_guide documents
+    <inline-graphic> as the inline-content equivalent with the same filename
+    rules, so we rename the tag (keeping attributes and the surrounding <p>
+    wrapper) and warn the author.
+    """
+    tree = ET.parse(jats_file)
+    root = tree.getroot()
+    changed = False
+    XLINK = "http://www.w3.org/1999/xlink"
+    for cell in root.iter():
+        if cell.tag not in ("td", "th"):
+            continue
+        for graphic in cell.iter("graphic"):
+            href = graphic.get(f"{{{XLINK}}}href", "")
+            graphic.tag = "inline-graphic"
+            changed = True
+            logger.warning(
+                "Rewrote <graphic> to <inline-graphic> inside <%s> (href=%s) — "
+                "author should verify the image renders as expected at Ingenta",
+                cell.tag, href or "?",
+            )
+    if changed:
+        tree.write(jats_file, encoding="unicode")
+
+
 def warn_tfoot_notes(jats_file):
     """Warns about <tfoot> elements inside <table-wrap>.
 
@@ -2099,6 +2128,12 @@ _ROOT_ATTRS = {
 }
 
 
+def _iter_graphics(root):
+    """Yield every <graphic> and <inline-graphic> element under ``root``."""
+    yield from root.iter("graphic")
+    yield from root.iter("inline-graphic")
+
+
 def _convert_pdf_figures(jats_file, latex_dir):
     """Convert PDF figures referenced in JATS to SVG using inkscape.
 
@@ -2114,7 +2149,7 @@ def _convert_pdf_figures(jats_file, latex_dir):
         tree = ET.parse(jats_file)
         root = tree.getroot()
         pdf_srcs = []
-        for el in root.iter("graphic"):
+        for el in _iter_graphics(root):
             href = el.get(f"{{{XLINK}}}href", "")
             if href.lower().endswith(".svg"):
                 pdf_src = latex_dir / (href[:-4] + ".pdf")
@@ -2133,7 +2168,7 @@ def _convert_pdf_figures(jats_file, latex_dir):
     root = tree.getroot()
     output_dir = Path(jats_file).parent
 
-    for el in root.iter("graphic"):
+    for el in _iter_graphics(root):
         href = el.get(f"{{{XLINK}}}href", "")
         if not href.lower().endswith(".svg"):
             continue
@@ -2185,7 +2220,7 @@ def _flatten_raster_alpha(jats_file):
     output_dir = Path(jats_file).parent
     flattened = []
 
-    for el in root.iter("graphic"):
+    for el in _iter_graphics(root):
         href = el.get(f"{{{XLINK}}}href", "")
         if not href or href.startswith("http"):
             continue
@@ -2231,7 +2266,7 @@ def fix_graphic_hrefs(jats_file, output_dir: Path):
     tree = ET.parse(jats_file)
     root = tree.getroot()
     count = 0
-    for el in root.iter("graphic"):
+    for el in _iter_graphics(root):
         href = el.get(f"{{{XLINK}}}href", "")
         if not href:
             continue
@@ -2260,7 +2295,7 @@ def fix_pdf_graphic_refs(jats_file):
     tree = ET.parse(jats_file)
     root = tree.getroot()
     count = 0
-    for el in root.iter("graphic"):
+    for el in _iter_graphics(root):
         href = el.get(f"{{{XLINK}}}href", "")
         if href.lower().endswith(".pdf"):
             new_href = href[:-4] + ".svg"
@@ -2424,7 +2459,7 @@ def rename_graphics(jats_file):
 
     fig_num = 0
     changed = False
-    for el in root.iter("graphic"):
+    for el in _iter_graphics(root):
         href = el.get(f"{{{XLINK}}}href", "")
         if not href or href.startswith("http"):
             continue
@@ -2471,6 +2506,7 @@ def convert(input_path: Path, output_path: Path, html: bool = False, lastpage=No
     fix_metadata(str(output_path), str(input_path), lastpage=lastpage)
     fix_table_in_p(str(output_path))
     fix_table_notes(str(output_path))
+    fix_graphic_in_td(str(output_path))
     warn_tfoot_notes(str(output_path))
 
     clean_body(str(output_path))
