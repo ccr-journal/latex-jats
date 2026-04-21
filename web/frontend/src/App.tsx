@@ -9,6 +9,7 @@ import { PreviewPage } from "@/pages/PreviewPage";
 import { PdfPreviewPage } from "@/pages/PdfPreviewPage";
 import { XmlPreviewPage } from "@/pages/XmlPreviewPage";
 import { LoginPage } from "@/pages/LoginPage";
+import { LandingPage } from "@/pages/LandingPage";
 import { TokenLandingPage } from "@/pages/TokenLandingPage";
 
 export default function App() {
@@ -17,6 +18,7 @@ export default function App() {
       <AuthProvider>
         <OjsProvider>
           <Routes>
+            <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/m/:doiSuffix" element={<TokenLandingPage />} />
             <Route
@@ -26,7 +28,7 @@ export default function App() {
                 </RequireAuth>
               }
             >
-              <Route path="/" element={<DashboardPage />} />
+              <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/manuscripts/:doiSuffix" element={<ManuscriptPage />} />
               <Route
                 path="/manuscripts/:doiSuffix/preview"

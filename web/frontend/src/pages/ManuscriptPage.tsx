@@ -210,7 +210,7 @@ export function ManuscriptPage() {
     setDeleteError(null);
     try {
       await deleteManuscript(doiSuffix);
-      navigate("/");
+      navigate("/dashboard");
     } catch (err) {
       setDeleteError(err instanceof ApiError ? err.message : "Failed to delete manuscript");
       setDeleting(false);
@@ -221,7 +221,7 @@ export function ManuscriptPage() {
     <div className="space-y-6">
       {!isTokenScoped && (
         <div>
-          <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">
+          <Link to="/dashboard" className="text-sm text-muted-foreground hover:text-foreground">
             &larr; Manuscripts
           </Link>
         </div>

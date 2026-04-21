@@ -22,7 +22,7 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!loading && user) navigate("/", { replace: true });
+    if (!loading && user) navigate("/dashboard", { replace: true });
   }, [loading, user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -32,7 +32,7 @@ export function LoginPage() {
     try {
       await login(username, password);
       await refresh();
-      navigate("/", { replace: true });
+      navigate("/dashboard", { replace: true });
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         setError("Invalid username or password");
