@@ -16,9 +16,9 @@ export function XmlPreviewPage() {
 function XmlContent({ doiSuffix, presignToken }: { doiSuffix: string; presignToken: string }) {
   const [xmlText, setXmlText] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const url = outputUrl(doiSuffix, `${doiSuffix}.xml`, presignToken);
 
   useEffect(() => {
-    const url = outputUrl(doiSuffix, `${doiSuffix}.xml`, presignToken);
     fetch(url)
       .then((res) => {
         if (!res.ok) throw new Error(`Failed to fetch XML: ${res.statusText}`);
@@ -26,10 +26,10 @@ function XmlContent({ doiSuffix, presignToken }: { doiSuffix: string; presignTok
       })
       .then(setXmlText)
       .catch((err) => setError(err.message));
-  }, [doiSuffix, presignToken]);
+  }, [url]);
 
   if (error) return <p className="text-sm text-red-600">{error}</p>;
   if (!xmlText) return <p className="text-muted-foreground">Loading XML...</p>;
 
-  return <XmlViewer xml={xmlText} />;
+  return <XmlViewer xml={xmlText} sourceUrl={url} />;
 }

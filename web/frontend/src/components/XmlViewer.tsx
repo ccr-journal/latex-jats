@@ -26,9 +26,10 @@ function Attrs({ attrs }: { attrs: Attr[] }) {
 
 interface XmlViewerProps {
   xml: string;
+  sourceUrl?: string;
 }
 
-export function XmlViewer({ xml }: XmlViewerProps) {
+export function XmlViewer({ xml, sourceUrl }: XmlViewerProps) {
   const [expandAll, setExpandAll] = useState(false);
   const [key, setKey] = useState(0);
 
@@ -63,7 +64,17 @@ export function XmlViewer({ xml }: XmlViewerProps) {
 
   return (
     <div className="space-y-2">
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-3">
+        {sourceUrl && (
+          <a
+            href={sourceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-muted-foreground hover:text-foreground"
+          >
+            View source
+          </a>
+        )}
         <button
           type="button"
           onClick={toggleAll}
