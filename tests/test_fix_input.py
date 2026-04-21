@@ -42,6 +42,34 @@ class TestFixBareAngleBrackets:
         result = fix_bare_angle_brackets(lines, "test.tex")
         assert result == lines
 
+    def test_makeatletter_block_unchanged(self):
+        # MULL regression: inside \makeatletter…\makeatother, > is an operator
+        # in \ifdim, not a bare angle bracket that needs $>$ wrapping.
+        lines = [
+            "\\makeatletter\n",
+            "\\def\\maxwidth{ %\n",
+            "  \\ifdim\\Gin@nat@width>\\linewidth\n",
+            "    \\linewidth\n",
+            "  \\else\n",
+            "    \\Gin@nat@width\n",
+            "  \\fi\n",
+            "}\n",
+            "\\makeatother\n",
+        ]
+        result = fix_bare_angle_brackets(lines, "test.tex")
+        assert result == lines
+
+    def test_text_after_makeatother_still_fixed(self):
+        lines = [
+            "\\makeatletter\n",
+            "\\def\\foo{\\ifdim\\x>0pt\\fi}\n",
+            "\\makeatother\n",
+            "accuracy > baseline\n",
+        ]
+        result = fix_bare_angle_brackets(lines, "test.tex")
+        assert result[:3] == lines[:3]
+        assert result[3] == "accuracy $>$ baseline\n"
+
 
 class TestFixStrayAfterIncludegraphics:
     def test_trailing_period(self):

@@ -54,12 +54,15 @@ def _read_lines(path: Path) -> list[str]:
 def fix_bare_angle_brackets(lines: list[str], filename: str) -> list[str]:
     r"""Replace bare < and > in text mode with $<$ and $>$.
 
-    Skips math environments, inline math, comments, and tabularx column
-    specs (lines containing \begin{tabularx} or >{\...}).
+    Skips math environments, inline math, comments, tabularx column specs
+    (lines containing \begin{tabularx} or >{\...}), and \makeatletter blocks
+    (where < and > are typically operators in \ifdim/\ifnum or catcode-altered
+    internals, not text to render).
     """
     out = []
     in_math_env = False
     in_verbatim_env = False
+    in_makeat = False
     for lineno, line in enumerate(lines, 1):
         stripped = re.sub(r'(?<!\\)%.*', '', line)
 
@@ -75,7 +78,14 @@ def fix_bare_angle_brackets(lines: list[str], filename: str) -> list[str]:
             out.append(line)
             continue
 
-        if in_math_env or in_verbatim_env:
+        if r'\makeatletter' in stripped:
+            in_makeat = True
+        if r'\makeatother' in stripped:
+            in_makeat = False
+            out.append(line)
+            continue
+
+        if in_math_env or in_verbatim_env or in_makeat:
             out.append(line)
             continue
 
