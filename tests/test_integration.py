@@ -5,7 +5,12 @@ import pytest
 
 import shutil
 
-from latex_jats.convert import preprocess_for_latexml, run_latexmlc, validate_jats
+from latex_jats.convert import (
+    collapse_affiliations,
+    preprocess_for_latexml,
+    run_latexmlc,
+    validate_jats,
+)
 
 FIXTURES = Path(__file__).parent / "fixtures" / "latex"
 
@@ -138,7 +143,7 @@ def test_authors_names_and_affiliations(tmp_path):
 
     root = ET.parse(output).getroot()
     contribs = root.findall(".//contrib[@contrib-type='author']")
-    assert len(contribs) == 2, f"Expected 2 authors, got {len(contribs)}"
+    assert len(contribs) == 3, f"Expected 3 authors, got {len(contribs)}"
 
     names = [(c.findtext(".//surname"), c.findtext(".//given-names")) for c in contribs]
 
@@ -149,6 +154,44 @@ def test_authors_names_and_affiliations(tmp_path):
     # Second author: John van der Berg — given-names must have spaces (the bug we fixed)
     assert names[1][0] == "Berg"
     assert names[1][1] == "John van der"
+
+    # Third author: Alice Smith — shares affiliation with Jane Doe
+    assert names[2][0] == "Smith"
+    assert names[2][1] == "Alice"
+
+
+@pytest.mark.integration
+def test_collapse_affiliations_post_pipeline(tmp_path):
+    """After collapse_affiliations runs, shared affiliations collapse to a
+    single <aff> sibling of <contrib> inside <contrib-group>, linked by
+    <xref ref-type="aff" rid="affN"/>.
+    """
+    output = tmp_path / "output.xml"
+    tex = _prepare_fixture(FIXTURES / "authors.tex", tmp_path)
+    run_latexmlc(str(tex), str(output), log_dir=tmp_path)
+    collapse_affiliations(str(output))
+
+    cg = ET.parse(output).getroot().find(".//contrib-group")
+    assert cg is not None
+
+    # 3 contribs, each with exactly one <xref ref-type="aff">; no nested <aff>.
+    contribs = cg.findall("contrib")
+    assert len(contribs) == 3
+    rids = []
+    for c in contribs:
+        assert c.find("aff") is None
+        xrefs = c.findall("xref")
+        assert len(xrefs) == 1 and xrefs[0].get("ref-type") == "aff"
+        rids.append(xrefs[0].get("rid"))
+
+    # 2 unique <aff> siblings of <contrib> in first-occurrence order.
+    affs = cg.findall("aff")
+    assert [a.get("id") for a in affs] == ["aff1", "aff2"]
+    assert affs[0].text == "University of Amsterdam"
+    assert affs[1].text == "Radboud University"
+
+    # Authors 1 and 3 share aff1 (University of Amsterdam); author 2 is aff2.
+    assert rids == ["aff1", "aff2", "aff1"]
 
 
 @pytest.mark.integration

@@ -1931,6 +1931,66 @@ def fix_metadata(jats_file, tex_file, lastpage=None):
     tree.write(jats_file, encoding="unicode")
 
 
+def collapse_affiliations(jats_file):
+    """Collapse duplicate <aff> elements and move them to sibling position.
+
+    Rewrites the inline-inside-contrib shape (Style 1 in the Ingenta Edify
+    guide, which LaTeXML emits) into the id-linked shape (Style 2):
+
+        <contrib-group>
+          <contrib><name>…</name><xref ref-type="aff" rid="aff1"/></contrib>
+          <contrib><name>…</name><xref ref-type="aff" rid="aff1"/></contrib>
+          <aff id="aff1">University of Amsterdam</aff>
+        </contrib-group>
+
+    Identical affiliation strings (after whitespace normalization) are
+    collapsed to a single <aff> sibling of <contrib>; xrefs are numbered
+    aff1, aff2, … in first-occurrence order.
+    """
+    tree = ET.parse(jats_file)
+    root = tree.getroot()
+    contrib_group = root.find(".//article-meta/contrib-group")
+    if contrib_group is None:
+        return
+
+    unique_affs = []  # list of (aff_id, first_aff_elem)
+    text_to_id = {}   # normalized_text -> aff_id
+    changed = False
+
+    for contrib in contrib_group.findall("contrib"):
+        for aff in list(contrib.findall("aff")):
+            text = " ".join("".join(aff.itertext()).split())
+            if not text:
+                contrib.remove(aff)
+                changed = True
+                continue
+            aff_id = text_to_id.get(text)
+            if aff_id is None:
+                aff_id = f"aff{len(unique_affs) + 1}"
+                text_to_id[text] = aff_id
+                unique_affs.append((aff_id, aff))
+            idx = list(contrib).index(aff)
+            tail = aff.tail
+            contrib.remove(aff)
+            xref = ET.Element("xref", {"ref-type": "aff", "rid": aff_id})
+            if tail:
+                xref.tail = tail
+            contrib.insert(idx, xref)
+            changed = True
+
+    if not unique_affs:
+        if changed:
+            tree.write(jats_file, encoding="unicode")
+        return
+
+    for aff_id, aff in unique_affs:
+        aff.set("id", aff_id)
+        aff.tail = None
+        contrib_group.append(aff)
+
+    tree.write(jats_file, encoding="unicode")
+
+
 # ── Metadata comparison (OJS vs JATS) ──────────────────────────────────────
 
 
@@ -2504,6 +2564,7 @@ def convert(input_path: Path, output_path: Path, html: bool = False, lastpage=No
     sanitize_ids(str(output_path))
     fix_citation_ref_types(str(output_path))
     fix_metadata(str(output_path), str(input_path), lastpage=lastpage)
+    collapse_affiliations(str(output_path))
     fix_table_in_p(str(output_path))
     fix_table_notes(str(output_path))
     fix_graphic_in_td(str(output_path))

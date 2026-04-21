@@ -55,11 +55,11 @@
 
   <!-- Authors inline with superscript letter markers, followed by a
        deduped list of affiliations with matching letter prefixes. Matches
-       the AUP/Ingenta web layout and the PDF produced by ccr.cls. -->
+       the AUP/Ingenta web layout (Edify "Style 2": <aff> elements are
+       siblings of <contrib> inside <contrib-group>, linked via
+       <xref ref-type="aff" rid="..."/>) and the PDF produced by ccr.cls. -->
   <xsl:template mode="metadata" match="article-meta/contrib-group">
-    <xsl:variable name="unique-affs"
-      select="contrib/aff[generate-id() =
-              generate-id(key('aff-by-text', normalize-space(.))[1])]"/>
+    <xsl:variable name="affs" select="aff"/>
     <div class="metadata contrib-group" title="Authors">
       <p class="author-list">
         <xsl:for-each select="contrib">
@@ -80,14 +80,15 @@
               <xsl:when test="anonymous">Anonymous</xsl:when>
             </xsl:choose>
           </span>
-          <xsl:apply-templates select="xref" mode="metadata-inline"/>
-          <xsl:if test="aff">
+          <xsl:apply-templates select="xref[not(@ref-type='aff')]"
+                               mode="metadata-inline"/>
+          <xsl:if test="xref[@ref-type='aff']">
             <sup class="aff-marker">
-              <xsl:for-each select="aff">
+              <xsl:for-each select="xref[@ref-type='aff']">
                 <xsl:if test="position() &gt; 1">,</xsl:if>
-                <xsl:variable name="aff-text" select="normalize-space(.)"/>
-                <xsl:for-each select="$unique-affs">
-                  <xsl:if test="normalize-space(.) = $aff-text">
+                <xsl:variable name="rid" select="@rid"/>
+                <xsl:for-each select="$affs">
+                  <xsl:if test="@id = $rid">
                     <xsl:value-of select="substring(
                       'abcdefghijklmnopqrstuvwxyz', position(), 1)"/>
                   </xsl:if>
@@ -97,9 +98,9 @@
           </xsl:if>
         </xsl:for-each>
       </p>
-      <xsl:if test="$unique-affs">
+      <xsl:if test="$affs">
         <ul class="aff-list">
-          <xsl:for-each select="$unique-affs">
+          <xsl:for-each select="$affs">
             <li class="aff-item" title="Affiliation">
               <sup class="aff-marker">
                 <xsl:value-of select="substring(
@@ -113,17 +114,13 @@
       </xsl:if>
     </div>
     <xsl:variable name="misc-contrib-data"
-      select="*[not(self::contrib | self::xref)]"/>
+      select="*[not(self::contrib | self::xref | self::aff)]"/>
     <xsl:if test="$misc-contrib-data">
       <div class="metadata contrib-group-misc">
         <xsl:apply-templates mode="metadata" select="$misc-contrib-data"/>
       </div>
     </xsl:if>
   </xsl:template>
-
-  <xsl:key name="aff-by-text"
-           match="article-meta/contrib-group/contrib/aff"
-           use="normalize-space(.)"/>
 
   <!-- Section headings -->
   <xsl:template name="main-title"
