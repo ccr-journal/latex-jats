@@ -5,6 +5,7 @@ YAML front matter rather than a LaTeX preamble.
 """
 
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Optional
 
 from latex_jats.quarto import parse_qmd_frontmatter, upsert_qmd_frontmatter_keys
@@ -17,6 +18,9 @@ class FakeManuscript:
     volume: Optional[str] = None
     issue_number: Optional[str] = None
     year: Optional[int] = None
+    date_received: Optional[str] = None
+    date_accepted: Optional[str] = None
+    date_published: Optional[str] = None
     ojs_submission_id: Optional[int] = 1
 
 
@@ -94,6 +98,72 @@ def test_document_content_preserved(tmp_path):
     text = qmd.read_text(encoding="utf-8")
     assert "# Body" in text
     assert "Some text." in text
+
+
+# ── Date injection ───────────────────────────────────────────────────────────
+
+
+def test_inject_all_dates_present(tmp_path):
+    qmd = _write_qmd(tmp_path)
+    ms = FakeManuscript(
+        date_received="2025-05-28",
+        date_accepted="2026-01-14",
+        date_published="2026-02-16",
+    )
+    inject_ojs_metadata_qmd(qmd, ms)
+    meta = parse_qmd_frontmatter(qmd)
+    assert meta["date-received"] == "2025-05-28"
+    assert meta["date-accepted"] == "2026-01-14"
+    assert meta["date-published"] == "2026-02-16"
+
+
+def test_skip_all_dates_when_accepted_missing(tmp_path):
+    qmd = _write_qmd(tmp_path)
+    ms = FakeManuscript(
+        doi="10.5117/CCR2025.1.2.YAO",
+        date_received="2025-05-28",
+        date_accepted=None,
+        date_published="2026-02-16",
+    )
+    inject_ojs_metadata_qmd(qmd, ms)
+    meta = parse_qmd_frontmatter(qmd)
+    assert "date-received" not in meta
+    assert "date-accepted" not in meta
+    assert "date-published" not in meta
+    assert meta["doi"] == "10.5117/CCR2025.1.2.YAO"
+
+
+def test_datepublished_falls_back_to_today(tmp_path):
+    qmd = _write_qmd(tmp_path)
+    ms = FakeManuscript(
+        date_received="2025-05-28",
+        date_accepted="2026-01-14",
+        date_published=None,
+    )
+    inject_ojs_metadata_qmd(qmd, ms)
+    meta = parse_qmd_frontmatter(qmd)
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+    assert meta["date-published"] == today
+    assert meta["date-received"] == "2025-05-28"
+    assert meta["date-accepted"] == "2026-01-14"
+
+
+def test_existing_date_keys_not_overwritten(tmp_path):
+    qmd = _write_qmd(
+        tmp_path,
+        extra='date-received: "2020-01-01"\ndate-accepted: "2020-02-02"\n',
+    )
+    ms = FakeManuscript(
+        date_received="2025-05-28",
+        date_accepted="2026-01-14",
+        date_published="2026-02-16",
+    )
+    inject_ojs_metadata_qmd(qmd, ms)
+    meta = parse_qmd_frontmatter(qmd)
+    assert meta["date-received"] == "2020-01-01"
+    assert meta["date-accepted"] == "2020-02-02"
+    # Not previously set → inserted from manuscript
+    assert meta["date-published"] == "2026-02-16"
 
 
 # ── upsert_qmd_frontmatter_keys (pure helper) ────────────────────────────────

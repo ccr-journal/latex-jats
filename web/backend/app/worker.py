@@ -45,7 +45,9 @@ from .storage import Storage
 
 logger = logging.getLogger(__name__)
 
-# LaTeX macro name → Manuscript field name
+# LaTeX macro / QMD YAML key → Manuscript field name. These five keys
+# are identical between LaTeX and Quarto, so a single map serves both
+# injectors.
 _OJS_MACRO_MAP = {
     "doi": "doi",
     "volume": "volume",
@@ -53,6 +55,40 @@ _OJS_MACRO_MAP = {
     "pubyear": "year",
     "firstpage": None,  # default to "1" if missing
 }
+
+# Date fields: LaTeX macro and QMD YAML key diverge (\datereceived vs.
+# date-received), so they get a dedicated list of (latex, yaml, field)
+# tuples rather than reusing _OJS_MACRO_MAP.
+_OJS_DATE_FIELDS = [
+    ("datereceived",  "date-received",  "date_received"),
+    ("dateaccepted",  "date-accepted",  "date_accepted"),
+    ("datepublished", "date-published", "date_published"),
+]
+
+
+def _resolve_date_values(manuscript) -> dict[str, str] | None:
+    """Return ``{field: YYYY-MM-DD}`` for all three dates, or None to skip.
+
+    All-or-nothing. The PDF footer renders a single sentence —
+    ``Manuscript received X, accepted Y, published Z`` — and a blank
+    middle value looks like a rendering bug. So if ``date_accepted`` is
+    missing (the one field that can legitimately be absent at import
+    time, since an Accept decision may not have been recorded in OJS
+    yet), skip the whole date block. A warning was already logged at OJS
+    fetch time; the editor can resolve it via the reimport-ojs route
+    once OJS catches up.
+
+    ``date_published`` falls back to today's UTC date, since articles in
+    copyediting normally don't have a publication date yet.
+    """
+    if not manuscript.date_accepted:
+        return None
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+    return {
+        "date_received":  manuscript.date_received or today,
+        "date_accepted":  manuscript.date_accepted,
+        "date_published": manuscript.date_published or today,
+    }
 
 
 def inject_ojs_metadata(tex_file: Path, manuscript) -> None:
@@ -85,6 +121,13 @@ def inject_ojs_metadata(tex_file: Path, manuscript) -> None:
             value = "1"
         injected.append(rf"\{macro}{{{value}}}")
 
+    dates = _resolve_date_values(manuscript)
+    if dates is not None:
+        for macro, _yaml_key, field in _OJS_DATE_FIELDS:
+            if re.search(r'\\' + macro + r'\s*\{', preamble):
+                continue
+            injected.append(rf"\{macro}{{{dates[field]}}}")
+
     if injected:
         insert_block = "\n% Injected from OJS metadata\n" + "\n".join(injected) + "\n"
         text = preamble + insert_block + r"\begin{document}" + rest
@@ -110,6 +153,10 @@ def inject_ojs_metadata_qmd(qmd_file: Path, manuscript) -> None:
         v = getattr(manuscript, field, None)
         if v is not None:
             values[key] = str(v)
+    dates = _resolve_date_values(manuscript)
+    if dates is not None:
+        for _macro, yaml_key, field in _OJS_DATE_FIELDS:
+            values[yaml_key] = dates[field]
     upsert_qmd_frontmatter_keys(qmd_file, values)
 
 

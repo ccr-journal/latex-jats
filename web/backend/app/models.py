@@ -52,6 +52,9 @@ class Manuscript(SQLModel, table=True):
     volume: Optional[str] = None
     issue_number: Optional[str] = None
     year: Optional[int] = None
+    date_received: Optional[str] = None    # YYYY-MM-DD; from OJS dateSubmitted
+    date_accepted: Optional[str] = None    # YYYY-MM-DD; from OJS accept decision
+    date_published: Optional[str] = None   # YYYY-MM-DD; from OJS datePublished
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     fix_source: bool = True
@@ -142,6 +145,9 @@ class ManuscriptRead(SQLModel):
     volume: Optional[str] = None
     issue_number: Optional[str] = None
     year: Optional[int] = None
+    date_received: Optional[str] = None
+    date_accepted: Optional[str] = None
+    date_published: Optional[str] = None
     authors: list[AuthorRead] = []
     fix_source: bool = True
     use_canonical_ccr_cls: bool = True

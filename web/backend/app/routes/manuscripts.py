@@ -472,6 +472,9 @@ def _apply_ojs_submission(ms, sub, doi_suffix, session):
     ms.volume = sub.volume
     ms.issue_number = sub.issue_number
     ms.year = sub.year
+    ms.date_received = sub.date_received
+    ms.date_accepted = sub.date_accepted
+    ms.date_published = sub.date_published
     session.add(ms)
 
     # Replace authors

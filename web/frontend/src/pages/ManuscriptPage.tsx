@@ -341,6 +341,22 @@ export function ManuscriptPage() {
             </div>
           )}
 
+          {(manuscript.date_received ||
+            manuscript.date_accepted ||
+            manuscript.date_published) && (
+            <div className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 text-sm">
+              {manuscript.date_received && (
+                <span>Received {manuscript.date_received}</span>
+              )}
+              {manuscript.date_accepted && (
+                <span>Accepted {manuscript.date_accepted}</span>
+              )}
+              {manuscript.date_published && (
+                <span>Published {manuscript.date_published}</span>
+              )}
+            </div>
+          )}
+
           {manuscript.abstract && (
             <div>
               <div

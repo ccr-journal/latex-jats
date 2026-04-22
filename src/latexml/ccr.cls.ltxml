@@ -145,6 +145,12 @@ DefMacro('\firstpage', '');
 DefMacro('\show@firstpage', '\textbf{First Page Placeholder}');
 DefMacro('\doi', '');
 DefMacro('\show@doi', '10.5117/ccr20xx.xxx.xxxx');
+DefMacro('\datereceived', '');
+DefMacro('\show@datereceived', 'YYYY-MM-DD');
+DefMacro('\dateaccepted', '');
+DefMacro('\show@dateaccepted', 'YYYY-MM-DD');
+DefMacro('\datepublished', '');
+DefMacro('\show@datepublished', 'YYYY-MM-DD');
 
 # some other stuff
 DefMacro('\IE', '\hspace{1em}');  

@@ -42,6 +42,9 @@ export interface Manuscript {
   volume: string | null;
   issue_number: string | null;
   year: number | null;
+  date_received: string | null;
+  date_accepted: string | null;
+  date_published: string | null;
   authors: OjsAuthor[];
   fix_source: boolean;
   use_canonical_ccr_cls: boolean;

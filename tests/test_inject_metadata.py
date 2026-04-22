@@ -1,6 +1,7 @@
 """Unit tests for inject_ojs_metadata: injecting OJS metadata into LaTeX preamble."""
 
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -16,6 +17,9 @@ class FakeManuscript:
     volume: Optional[str] = None
     issue_number: Optional[str] = None
     year: Optional[int] = None
+    date_received: Optional[str] = None
+    date_accepted: Optional[str] = None
+    date_published: Optional[str] = None
     ojs_submission_id: Optional[int] = 1
 
 
@@ -109,3 +113,88 @@ def test_document_content_preserved(tmp_path):
     text = tex.read_text()
     assert "Hello world." in text
     assert r"\end{document}" in text
+
+
+# ── Date injection ───────────────────────────────────────────────────────────
+
+
+def test_inject_all_dates_present(tmp_path):
+    """All three date macros are injected when all three dates are set."""
+    tex = _write_tex(tmp_path)
+    ms = FakeManuscript(
+        date_received="2025-05-28",
+        date_accepted="2026-01-14",
+        date_published="2026-02-16",
+    )
+    inject_ojs_metadata(tex, ms)
+    text = tex.read_text()
+    assert r"\datereceived{2025-05-28}" in text
+    assert r"\dateaccepted{2026-01-14}" in text
+    assert r"\datepublished{2026-02-16}" in text
+
+
+def test_skip_all_dates_when_accepted_missing(tmp_path):
+    """No date macros injected when date_accepted is unset (all-or-nothing)."""
+    tex = _write_tex(tmp_path)
+    ms = FakeManuscript(
+        doi="10.5117/CCR2025.1.2.YAO",
+        date_received="2025-05-28",
+        date_accepted=None,
+        date_published="2026-02-16",
+    )
+    inject_ojs_metadata(tex, ms)
+    text = tex.read_text()
+    assert r"\datereceived" not in text
+    assert r"\dateaccepted" not in text
+    assert r"\datepublished" not in text
+    # Other injections still work
+    assert r"\doi{10.5117/CCR2025.1.2.YAO}" in text
+
+
+def test_datepublished_falls_back_to_today(tmp_path):
+    """Missing date_published falls back to today's date at injection time."""
+    tex = _write_tex(tmp_path)
+    ms = FakeManuscript(
+        date_received="2025-05-28",
+        date_accepted="2026-01-14",
+        date_published=None,
+    )
+    inject_ojs_metadata(tex, ms)
+    text = tex.read_text()
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+    assert rf"\datepublished{{{today}}}" in text
+    assert r"\datereceived{2025-05-28}" in text
+    assert r"\dateaccepted{2026-01-14}" in text
+
+
+def test_datereceived_falls_back_to_today(tmp_path):
+    """Missing date_received also falls back to today (defensive; rare in practice)."""
+    tex = _write_tex(tmp_path)
+    ms = FakeManuscript(
+        date_received=None,
+        date_accepted="2026-01-14",
+        date_published="2026-02-16",
+    )
+    inject_ojs_metadata(tex, ms)
+    text = tex.read_text()
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+    assert rf"\datereceived{{{today}}}" in text
+
+
+def test_existing_date_macros_not_overwritten(tmp_path):
+    """Dates already in the preamble are left untouched."""
+    tex = _write_tex(
+        tmp_path,
+        preamble_lines=r"\datereceived{2020-01-01}" + "\n" + r"\dateaccepted{2020-02-02}",
+    )
+    ms = FakeManuscript(
+        date_received="2025-05-28",
+        date_accepted="2026-01-14",
+        date_published="2026-02-16",
+    )
+    inject_ojs_metadata(tex, ms)
+    text = tex.read_text()
+    assert r"\datereceived{2020-01-01}" in text
+    assert r"\dateaccepted{2020-02-02}" in text
+    # date_published was not already set → injected from manuscript
+    assert r"\datepublished{2026-02-16}" in text

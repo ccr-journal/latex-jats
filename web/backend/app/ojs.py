@@ -25,6 +25,24 @@ _STAGE_COPYEDITING = 4
 _STAGE_PRODUCTION = 5
 _PAGE_SIZE = 100
 
+# OJS editorial-decision codes that indicate acceptance. 2 is the normal
+# "Accept Submission" decision; 17 is "Accept and Skip Review" used for
+# editor-invited papers. Anything else (including legacy code 19) is treated
+# as not-an-accept, and _enrich_from_decisions logs a warning.
+_ACCEPT_DECISION_CODES = {2, 17}
+
+
+def _iso_date(value) -> str | None:
+    """Return ``YYYY-MM-DD`` from an OJS date string, or None.
+
+    OJS returns a mix of ``"2025-05-28 16:43:54"`` (submission/decision
+    timestamps) and ``"2026-02-16"`` (publication dates). We just want
+    the date portion.
+    """
+    if not isinstance(value, str) or not value.strip():
+        return None
+    return value.strip()[:10]
+
 
 @dataclass(frozen=True)
 class OjsAuthor:
@@ -47,6 +65,9 @@ class OjsSubmission:
     volume: str | None = None
     issue_number: str | None = None
     year: int | None = None
+    date_received: str | None = None    # YYYY-MM-DD; from submission.dateSubmitted
+    date_accepted: str | None = None    # YYYY-MM-DD; from /decisions endpoint
+    date_published: str | None = None   # YYYY-MM-DD; from publication.datePublished
 
 
 class OjsUnavailable(Exception):
@@ -227,6 +248,11 @@ async def fetch_submission(
                     issue = await _fetch_issue(client, cfg, issue_id, headers)
                     if issue is not None:
                         sub = _enrich_from_issue(sub, issue)
+            decisions = await _fetch_decisions(
+                client, cfg, sub.submission_id, headers
+            )
+            if decisions is not None:
+                sub = _enrich_from_decisions(sub, decisions)
             return sub
     except httpx.RequestError as exc:
         raise OjsUnavailable(str(exc)) from exc
@@ -276,7 +302,30 @@ def _enrich_from_publication(sub: OjsSubmission, publication: dict) -> OjsSubmis
         authors=authors,
         abstract=abstract,
         keywords=tuple(kw_list),
+        date_published=_iso_date(publication.get("datePublished")),
     )
+
+
+def _enrich_from_decisions(
+    sub: OjsSubmission, decisions: list[dict]
+) -> OjsSubmission:
+    """Pick the acceptance date from an OJS editorial-decisions list.
+
+    Looks for the most recent decision whose code is in
+    ``_ACCEPT_DECISION_CODES``. Logs a warning and leaves ``date_accepted``
+    unset when none is found — an editor will then need to enter the date
+    manually on the manuscript record, or resolve the mismatch in OJS.
+    """
+    accepts = [d for d in decisions if d.get("decision") in _ACCEPT_DECISION_CODES]
+    if not accepts:
+        logger.warning(
+            "OJS submission %s has no Accept Submission / Accept and Skip Review "
+            "decision; leaving date_accepted unset",
+            sub.submission_id,
+        )
+        return sub
+    latest = max(accepts, key=lambda d: d.get("dateDecided") or "")
+    return replace(sub, date_accepted=_iso_date(latest.get("dateDecided")))
 
 
 def _enrich_from_issue(sub: OjsSubmission, issue: dict) -> OjsSubmission:
@@ -319,6 +368,46 @@ async def _fetch_publication(
         )
         return None
     return resp.json()
+
+
+async def _fetch_decisions(
+    client: httpx.AsyncClient,
+    cfg: AuthConfig,
+    submission_id: int,
+    headers: dict,
+) -> list[dict] | None:
+    """Fetch the editorial-decisions list for a submission.
+
+    Used to locate the acceptance date. Returns ``None`` on transport or
+    HTTP error — _enrich_from_decisions is skipped and the caller proceeds
+    with ``date_accepted`` unset (same fallback shape as _fetch_publication).
+    """
+    url = (
+        f"{cfg.ojs_base_url.rstrip('/')}"
+        f"/index.php/{cfg.ojs_journal_path}/api/v1/submissions/"
+        f"{submission_id}/decisions"
+    )
+    try:
+        resp = await client.get(url, headers=headers)
+    except httpx.RequestError as exc:
+        logger.warning(
+            "Failed to fetch decisions for submission %s: %s", submission_id, exc
+        )
+        return None
+    if resp.status_code >= 400:
+        logger.warning(
+            "OJS returned %s fetching decisions for submission %s: %s",
+            resp.status_code, submission_id, resp.text[:200],
+        )
+        return None
+    payload = resp.json()
+    if not isinstance(payload, list):
+        logger.warning(
+            "OJS decisions response for submission %s is not a list: %r",
+            submission_id, str(payload)[:200],
+        )
+        return None
+    return payload
 
 
 async def _fetch_issue(
@@ -561,5 +650,6 @@ def _parse_submission(
         subtitle=subtitle,
         authors=(),
         doi=doi,
+        date_received=_iso_date(item.get("dateSubmitted")),
     )
     return sub, int(publication.get("id") or current_id)

@@ -123,6 +123,9 @@ async def import_submission(
         volume=target.volume,
         issue_number=target.issue_number,
         year=target.year,
+        date_received=target.date_received,
+        date_accepted=target.date_accepted,
+        date_published=target.date_published,
         created_at=now,
         updated_at=now,
     )
