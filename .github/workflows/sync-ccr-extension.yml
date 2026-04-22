@@ -1,0 +1,96 @@
+name: Sync CCR Quarto extension
+
+# Keep src/latex_jats/ccr_canonical_extension/ in lockstep with the upstream
+# Quarto extension. Runs daily and on manual dispatch; opens a PR rather than
+# committing to main so CI (tests + integration) gates any behavior change,
+# and so a human sees the diff for files CI doesn't exercise (notably ccr.lua).
+#
+# Source of truth:
+#   - ccr.cls         → ccr-journal/ccr-latex (canonical author of the class)
+#   - everything else → ccr-journal/ccr-quarto/_extensions/ccr/
+#
+# ccr-quarto ships its own mirrored copy of ccr.cls (via its sync-ccr-cls
+# workflow), but we bypass that mirror: the mirror can lag the canonical
+# until ccr-quarto's own daily sync PR is merged, and we want our canonical
+# to always reflect ccr-latex directly.
+
+on:
+  schedule:
+    - cron: '0 10 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      CCR_QUARTO_REPO: https://github.com/ccr-journal/ccr-quarto
+      CCR_CLS_URL: https://raw.githubusercontent.com/ccr-journal/ccr-latex/main/ccr.cls
+      LOCAL_PATH: src/latex_jats/ccr_canonical_extension
+      SYNC_BRANCH: sync/ccr-extension
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fetch upstream extension bundle
+        run: |
+          rm -rf /tmp/ccr-quarto
+          git clone --depth=1 "$CCR_QUARTO_REPO" /tmp/ccr-quarto
+
+      - name: Assemble candidate bundle
+        # Take the whole _extensions/ccr tree from ccr-quarto, then overlay
+        # ccr.cls from the canonical ccr-latex so a stale mirror in ccr-quarto
+        # can't regress our class file.
+        run: |
+          rm -rf /tmp/new-bundle
+          cp -r /tmp/ccr-quarto/_extensions/ccr /tmp/new-bundle
+          curl -fsSL "$CCR_CLS_URL" -o /tmp/new-bundle/ccr.cls
+
+      - name: Check for differences
+        id: diff
+        run: |
+          if diff -rq "$LOCAL_PATH" /tmp/new-bundle >/dev/null; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No changes; canonical bundle is already in sync."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Upstream bundle differs from canonical. Summary:"
+            diff -rq "$LOCAL_PATH" /tmp/new-bundle || true
+          fi
+
+      - name: Configure git
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Create or update sync branch
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          git checkout -B "$SYNC_BRANCH"
+          rm -rf "$LOCAL_PATH"
+          cp -r /tmp/new-bundle "$LOCAL_PATH"
+          git add "$LOCAL_PATH"
+          git commit -m "Sync CCR Quarto extension from upstream"
+          git push --force origin "$SYNC_BRANCH"
+
+      - name: Open pull request if one doesn't exist
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh pr list --head "$SYNC_BRANCH" --state open --json number --jq '.[0].number' | grep -q .; then
+            echo "Open PR already exists for $SYNC_BRANCH; force-push updated it in place."
+          else
+            gh pr create \
+              --base main \
+              --head "$SYNC_BRANCH" \
+              --title "Sync CCR Quarto extension from upstream" \
+              --body "Automated sync of \`src/latex_jats/ccr_canonical_extension/\` from [ccr-journal/ccr-quarto](https://github.com/ccr-journal/ccr-quarto) (with \`ccr.cls\` pulled directly from [ccr-journal/ccr-latex](https://github.com/ccr-journal/ccr-latex)).
+
+          **Before merging:**
+          - Let CI run — integration tests exercise \`ccr.cls\` macros like \`\\\\acknowledgements\` and will fail if a regression slips through.
+          - Review the diff manually for files CI does not directly exercise (notably \`ccr.lua\`; a missing filter regresses PDF placement silently)."
+          fi
