@@ -160,6 +160,29 @@ def test_supplementary_material_inserted_before_permissions(xml_file):
     assert tags.index("supplementary-material") < tags.index("permissions")
 
 
+def test_supplementary_material_inserted_before_history(xml_file):
+    """<supplementary-material> must come before <history> per JATS 1.2."""
+    doc = """\
+<article xmlns:xlink="http://www.w3.org/1999/xlink">
+  <front>
+    <article-meta>
+      <title-group><article-title>T</article-title></title-group>
+      <fpage>1</fpage>
+      <history><date date-type="received"><year>2025</year></date></history>
+      <permissions><copyright-statement>c</copyright-statement></permissions>
+    </article-meta>
+  </front>
+  <body><p><styled-content style-type="ccr-suppmat">X <ext-link xlink:href="https://e.org">e</ext-link></styled-content></p></body>
+</article>"""
+    path = xml_file(doc)
+    fix_supplementary_material(path)
+
+    root = _parse(path)
+    am = root.find(".//article-meta")
+    tags = [e.tag for e in am]
+    assert tags.index("supplementary-material") < tags.index("history")
+
+
 def test_no_markers_no_change(xml_file):
     """Absence of markers leaves the file untouched."""
     body = '<sec><p>plain content</p></sec>'

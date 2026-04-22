@@ -157,6 +157,141 @@ def test_article_meta(tmp_path):
     assert fpage_idx < perm_idx
 
 
+def test_history_and_expanded_pub_date(tmp_path):
+    """fix_metadata emits <history><date date-type="..."/></history> and expands
+    <pub-date> to <day><month><year> when date_published is present."""
+    xml_file = _write_xml(
+        tmp_path,
+        """\
+<article xmlns:xlink="http://www.w3.org/1999/xlink">
+  <front>
+    <journal-meta><journal-id>x</journal-id><issn>x</issn></journal-meta>
+    <article-meta>
+      <title-group><article-title>T</article-title></title-group>
+      <contrib-group/>
+      <permissions><copyright-statement>x</copyright-statement></permissions>
+    </article-meta>
+  </front>
+</article>""",
+    )
+    tex_file = _write_tex(
+        tmp_path,
+        r"""\
+\volume{6}
+\pubnumber{1}
+\pubyear{2026}
+\firstpage{1}
+\doi{10.5117/CCR2026.1.2.SMOKE}
+\datereceived{2025-05-28}
+\dateaccepted{2026-01-14}
+\datepublished{2026-02-16}
+\begin{document}
+""",
+    )
+
+    fix_metadata(xml_file, tex_file)
+
+    root = ET.parse(xml_file).getroot()
+    am = root.find(".//article-meta")
+
+    # <pub-date> expanded to day/month/year
+    pub_date = am.find("pub-date")
+    assert pub_date.findtext("day") == "16"
+    assert pub_date.findtext("month") == "2"
+    assert pub_date.findtext("year") == "2026"
+
+    # <history> with received + accepted dates
+    hist = am.find("history")
+    assert hist is not None
+    dates = hist.findall("date")
+    by_type = {d.get("date-type"): d for d in dates}
+    assert set(by_type) == {"received", "accepted"}
+    assert by_type["received"].findtext("day") == "28"
+    assert by_type["received"].findtext("month") == "5"
+    assert by_type["received"].findtext("year") == "2025"
+    assert by_type["accepted"].findtext("day") == "14"
+    assert by_type["accepted"].findtext("month") == "1"
+    assert by_type["accepted"].findtext("year") == "2026"
+
+    # <history> must sit before <permissions>
+    children = list(am)
+    hist_idx = children.index(hist)
+    perm_idx = next(i for i, e in enumerate(children) if e.tag == "permissions")
+    assert hist_idx < perm_idx
+
+
+def test_history_not_emitted_when_no_dates(tmp_path):
+    """Without date_received/date_accepted the <history> block is not added."""
+    xml_file = _write_xml(
+        tmp_path,
+        """\
+<article xmlns:xlink="http://www.w3.org/1999/xlink">
+  <front>
+    <journal-meta><journal-id>x</journal-id><issn>x</issn></journal-meta>
+    <article-meta>
+      <title-group><article-title>T</article-title></title-group>
+    </article-meta>
+  </front>
+</article>""",
+    )
+    tex_file = _write_tex(tmp_path, r"\pubyear{2024}" + "\n" + r"\begin{document}")
+    fix_metadata(xml_file, tex_file)
+    root = ET.parse(xml_file).getroot()
+    assert root.find(".//article-meta/history") is None
+
+
+def test_existing_empty_history_replaced(tmp_path):
+    """Quarto-emitted empty <history/> is replaced by the re-emitted block."""
+    xml_file = _write_xml(
+        tmp_path,
+        """\
+<article xmlns:xlink="http://www.w3.org/1999/xlink">
+  <front>
+    <journal-meta><journal-id>x</journal-id><issn>x</issn></journal-meta>
+    <article-meta>
+      <title-group><article-title>T</article-title></title-group>
+      <history/>
+    </article-meta>
+  </front>
+</article>""",
+    )
+    tex_file = _write_tex(
+        tmp_path,
+        r"""\
+\datereceived{2025-05-28}
+\dateaccepted{2026-01-14}
+\begin{document}
+""",
+    )
+    fix_metadata(xml_file, tex_file)
+    root = ET.parse(xml_file).getroot()
+    am = root.find(".//article-meta")
+    histories = am.findall("history")
+    assert len(histories) == 1
+    assert len(histories[0]) == 2  # one <date> per type
+
+
+def test_pub_date_year_only_fallback(tmp_path):
+    """When only \\pubyear is set (no \\datepublished), emit <pub-date><year/>."""
+    xml_file = _write_xml(
+        tmp_path,
+        """\
+<article xmlns:xlink="http://www.w3.org/1999/xlink">
+  <front>
+    <journal-meta><journal-id>x</journal-id><issn>x</issn></journal-meta>
+    <article-meta/>
+  </front>
+</article>""",
+    )
+    tex_file = _write_tex(tmp_path, r"\pubyear{2024}" + "\n" + r"\begin{document}")
+    fix_metadata(xml_file, tex_file)
+    pub_date = ET.parse(xml_file).getroot().find(".//pub-date")
+    assert pub_date is not None
+    assert pub_date.findtext("year") == "2024"
+    assert pub_date.find("day") is None
+    assert pub_date.find("month") is None
+
+
 def test_kwd_whitespace_trimmed(tmp_path):
     """fix_metadata strips leading/trailing whitespace from <kwd> text (LaTeXML
     comma-tokenisation leaves a leading space on all but the first keyword)."""

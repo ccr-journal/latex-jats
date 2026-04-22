@@ -431,6 +431,8 @@ def _reformat_article_info_cell(html_file):
     issue = fields.get("Issue", "")
     page = fields.get("Page", fields.get("Pages", ""))
     doi = fields.get("DOI", "")
+    received = fields.get("Date received", "")
+    accepted = fields.get("Date accepted", "")
 
     # page may be "fpage–lpage" or just "fpage"
     if "\u2013" in page:
@@ -462,6 +464,17 @@ def _reformat_article_info_cell(html_file):
             f'</p>'
         )
         mg.append(doi_line)
+
+    if received or accepted:
+        parts = []
+        if received:
+            parts.append(f"Received {received}")
+        if accepted:
+            parts.append(f"Accepted {accepted}")
+        date_line = lxml_html.fragment_fromstring(
+            f'<p class="metadata-entry">{" \u00b7 ".join(parts)}</p>'
+        )
+        mg.append(date_line)
 
     doctype = (
         b'<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"'
@@ -1797,14 +1810,57 @@ def apply_journal_meta(root):
         front.insert(0, new_jm)
 
 
+def _split_iso_date(value):
+    """Split a ``YYYY-MM-DD`` string into (day, month, year) string parts.
+
+    Returns ``None`` if the value isn't parsable. Accepts date-only strings;
+    strips any trailing time portion if present (defensive — callers should
+    already pass date-only strings via web.backend.app.ojs._iso_date).
+    """
+    if not isinstance(value, str):
+        return None
+    head = value.strip().split()[0] if value.strip() else ""
+    m = re.match(r"^(\d{4})-(\d{2})-(\d{2})$", head)
+    if not m:
+        return None
+    year, month, day = m.group(1), m.group(2), m.group(3)
+    # Strip leading zeros for day/month per JATS convention (e.g. "5" not "05").
+    return str(int(day)), str(int(month)), year
+
+
+def _make_date_elem(tag, attrs, date_str):
+    """Build ``<tag attrs><day/><month/><year/></tag>`` from an ISO date.
+
+    Returns ``None`` if the date can't be parsed.
+    """
+    parts = _split_iso_date(date_str)
+    if parts is None:
+        return None
+    day, month, year = parts
+    elem = ET.Element(tag, attrs)
+    ET.SubElement(elem, "day").text = day
+    ET.SubElement(elem, "month").text = month
+    ET.SubElement(elem, "year").text = year
+    return elem
+
+
 def apply_article_meta(root, *, doi=None, volume=None, issue=None,
-                       pubyear=None, firstpage=None, lastpage=None):
+                       pubyear=None, firstpage=None, lastpage=None,
+                       date_received=None, date_accepted=None,
+                       date_published=None):
     """Inject article-id, article-categories, pub-date, volume, issue, fpage,
-    lpage, permissions, and abstract/keywords titles into <article-meta>.
+    lpage, history, permissions, and abstract/keywords titles into <article-meta>.
 
     Used by both the LaTeX (fix_metadata) and Quarto (inject_metadata_from_yaml)
     pipelines so they produce identical front matter. Values are pre-extracted
     from whichever source format is being processed.
+
+    ``date_published`` (ISO ``YYYY-MM-DD``) expands ``<pub-date>`` to include
+    ``<day>``/``<month>``/``<year>`` per the Ingenta Edify guide's strong
+    recommendation; otherwise ``pubyear`` alone emits a ``<year>``-only form.
+    ``date_received`` and ``date_accepted`` go into a ``<history>`` block
+    (any pre-existing ``<history>`` is replaced so we never duplicate the
+    empty placeholder Quarto emits).
     """
     am = root.find(".//article-meta")
     if am is None:
@@ -1831,6 +1887,12 @@ def apply_article_meta(root, *, doi=None, volume=None, issue=None,
     )
     am.insert(insert_pos, art_cat)
 
+    # Drop any pre-existing <history> (Quarto emits an empty one) so it doesn't
+    # throw off the insertion-index lookup or leave a stale duplicate. If we
+    # were given date_received / date_accepted below we'll emit a fresh one.
+    for old_hist in am.findall("history"):
+        am.remove(old_hist)
+
     # Find insertion point: just before <permissions> if present, otherwise
     # before whichever of <abstract>/<kwd-group>/<contrib-group>/<title-group>
     # appears first (these all come AFTER pub-date/volume/issue/fpage in JATS).
@@ -1848,10 +1910,13 @@ def apply_article_meta(root, *, doi=None, volume=None, issue=None,
         perm_idx = len(children)
 
     new_elems = []
-    if pubyear:
-        pub_date = ET.Element("pub-date", {"pub-type": "epub"})
+    pub_date_attrs = {"pub-type": "epub"}
+    pub_date = _make_date_elem("pub-date", pub_date_attrs, date_published)
+    if pub_date is None and pubyear:
+        pub_date = ET.Element("pub-date", pub_date_attrs)
         year_elem = ET.SubElement(pub_date, "year")
         year_elem.text = str(pubyear)
+    if pub_date is not None:
         new_elems.append(pub_date)
     if volume:
         vol = ET.Element("volume")
@@ -1870,6 +1935,21 @@ def apply_article_meta(root, *, doi=None, volume=None, issue=None,
         new_elems.append(lpage)
     else:
         logger.warning("No lastpage available; <lpage> will be missing from JATS output")
+
+    date_children = []
+    if date_received:
+        elem = _make_date_elem("date", {"date-type": "received"}, date_received)
+        if elem is not None:
+            date_children.append(elem)
+    if date_accepted:
+        elem = _make_date_elem("date", {"date-type": "accepted"}, date_accepted)
+        if elem is not None:
+            date_children.append(elem)
+    if date_children:
+        hist = ET.Element("history")
+        for d in date_children:
+            hist.append(d)
+        new_elems.append(hist)
 
     for i, elem in enumerate(new_elems):
         am.insert(perm_idx + i, elem)
@@ -1951,6 +2031,9 @@ def fix_metadata(jats_file, tex_file, lastpage=None):
         pubyear=_get("pubyear"),
         firstpage=_get("firstpage"),
         lastpage=_get("lastpage") or lastpage,
+        date_received=_get("datereceived"),
+        date_accepted=_get("dateaccepted"),
+        date_published=_get("datepublished"),
     )
 
     tree.write(jats_file, encoding="unicode")
@@ -2117,14 +2200,15 @@ def fix_supplementary_material(jats_file):
                 prev.tail = (prev.tail or "") + marker_tail
 
     # Per JATS Publishing 1.2, <supplementary-material> in <article-meta>
-    # comes after fpage/lpage and before permissions/abstract/kwd-group/etc.
+    # comes after fpage/lpage and before history/permissions/abstract/etc.
     children = list(article_meta)
     insert_at = next(
         (i for i, e in enumerate(children)
-         if e.tag in ("permissions", "self-uri", "related-article",
-                      "related-object", "abstract", "trans-abstract",
-                      "kwd-group", "funding-group", "support-group",
-                      "conference", "counts", "custom-meta-group")),
+         if e.tag in ("history", "pub-history", "permissions", "self-uri",
+                      "related-article", "related-object", "abstract",
+                      "trans-abstract", "kwd-group", "funding-group",
+                      "support-group", "conference", "counts",
+                      "custom-meta-group")),
         len(children),
     )
     for i, sm in enumerate(new_supps):
@@ -2311,6 +2395,35 @@ def compare_metadata(jats_file, manuscript, authors, output_json=None):
     year_elem = am.find(".//pub-date/year")
     ojs_year = str(manuscript.year) if manuscript.year else None
     _compare("year", ojs_year, _elem_text(year_elem), normalize=False)
+
+    # ── Publication history dates ────────────────────────────────────────
+    def _jats_date_iso(elem):
+        """Render ``<day/><month/><year/>`` as a ``YYYY-MM-DD`` string."""
+        if elem is None:
+            return ""
+        y = (elem.findtext("year") or "").strip()
+        mo = (elem.findtext("month") or "").strip()
+        d = (elem.findtext("day") or "").strip()
+        if not y:
+            return ""
+        return f"{y}-{int(mo or 1):02d}-{int(d or 1):02d}"
+
+    _compare("date_received",
+             getattr(manuscript, "date_received", None),
+             _jats_date_iso(am.find("history/date[@date-type='received']")),
+             normalize=False)
+    _compare("date_accepted",
+             getattr(manuscript, "date_accepted", None),
+             _jats_date_iso(am.find("history/date[@date-type='accepted']")),
+             normalize=False)
+    # Only flag date_published if OJS actually has it — otherwise the JATS
+    # side carries the today-fallback injected into <datepublished> and
+    # comparing that to a None in OJS would always report a "mismatch".
+    if getattr(manuscript, "date_published", None):
+        _compare("date_published",
+                 manuscript.date_published,
+                 _jats_date_iso(am.find("pub-date")),
+                 normalize=False)
 
     # ── Write structured output ──────────────────────────────────────────
     if output_json:

@@ -283,6 +283,9 @@ def inject_metadata_from_yaml(jats_file: str, qmd_file: str,
         pubyear=meta.get("pubyear"),
         firstpage=meta.get("firstpage"),
         lastpage=meta.get("lastpage") or lastpage,
+        date_received=meta.get("date-received"),
+        date_accepted=meta.get("date-accepted"),
+        date_published=meta.get("date-published"),
     )
 
     tree.write(jats_file, encoding="unicode")

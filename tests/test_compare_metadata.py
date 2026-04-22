@@ -23,6 +23,9 @@ class FakeManuscript:
     volume: Optional[str] = None
     issue_number: Optional[str] = None
     year: Optional[int] = None
+    date_received: Optional[str] = None
+    date_accepted: Optional[str] = None
+    date_published: Optional[str] = None
     ojs_submission_id: Optional[int] = 1
 
 
@@ -250,3 +253,89 @@ def test_no_output_json(tmp_path):
     ms = FakeManuscript(title="Original")
     # Should not raise
     compare_metadata(jats, ms, [])
+
+
+# ── Publication history dates ────────────────────────────────────────────────
+
+
+_JATS_WITH_DATES = """\
+<article xmlns:xlink="http://www.w3.org/1999/xlink">
+  <front>
+    <article-meta>
+      <article-id pub-id-type="doi">10.5117/X</article-id>
+      <title-group><article-title>T</article-title></title-group>
+      <pub-date pub-type="epub">
+        <day>{pub_d}</day><month>{pub_m}</month><year>{pub_y}</year>
+      </pub-date>
+      <history>
+        <date date-type="received">
+          <day>{rec_d}</day><month>{rec_m}</month><year>{rec_y}</year>
+        </date>
+        <date date-type="accepted">
+          <day>{acc_d}</day><month>{acc_m}</month><year>{acc_y}</year>
+        </date>
+      </history>
+    </article-meta>
+  </front>
+</article>"""
+
+
+def _write_dated_jats(tmp_path, *, received="2025-05-28",
+                     accepted="2026-01-14", published="2026-02-16"):
+    ry, rm, rd = received.split("-")
+    ay, am_, ad = accepted.split("-")
+    py, pm, pd = published.split("-")
+    xml = _JATS_WITH_DATES.format(
+        rec_y=ry, rec_m=str(int(rm)), rec_d=str(int(rd)),
+        acc_y=ay, acc_m=str(int(am_)), acc_d=str(int(ad)),
+        pub_y=py, pub_m=str(int(pm)), pub_d=str(int(pd)),
+    )
+    p = tmp_path / "article.xml"
+    p.write_text(xml, encoding="utf-8")
+    return str(p)
+
+
+def test_dates_match(tmp_path):
+    jats = _write_dated_jats(tmp_path)
+    ms = FakeManuscript(
+        date_received="2025-05-28",
+        date_accepted="2026-01-14",
+        date_published="2026-02-16",
+    )
+    out = tmp_path / "comparison.json"
+    compare_metadata(jats, ms, [], output_json=out)
+    results = json.loads(out.read_text())
+    by_field = {r["field"]: r for r in results}
+    assert by_field["date_received"]["status"] == "ok"
+    assert by_field["date_accepted"]["status"] == "ok"
+    assert by_field["date_published"]["status"] == "ok"
+
+
+def test_date_received_mismatch(tmp_path):
+    jats = _write_dated_jats(tmp_path, received="2020-01-01")
+    ms = FakeManuscript(
+        date_received="2025-05-28",
+        date_accepted="2026-01-14",
+        date_published="2026-02-16",
+    )
+    out = tmp_path / "comparison.json"
+    compare_metadata(jats, ms, [], output_json=out)
+    results = json.loads(out.read_text())
+    by_field = {r["field"]: r for r in results}
+    assert by_field["date_received"]["status"] == "mismatch"
+    assert by_field["date_accepted"]["status"] == "ok"
+
+
+def test_date_published_skipped_when_ojs_has_none(tmp_path):
+    """When OJS has no date_published the comparison is skipped (avoids a
+    spurious mismatch against the today-fallback in the source)."""
+    jats = _write_dated_jats(tmp_path)
+    ms = FakeManuscript(
+        date_received="2025-05-28",
+        date_accepted="2026-01-14",
+        date_published=None,
+    )
+    out = tmp_path / "comparison.json"
+    compare_metadata(jats, ms, [], output_json=out)
+    results = json.loads(out.read_text())
+    assert not any(r["field"] == "date_published" for r in results)
