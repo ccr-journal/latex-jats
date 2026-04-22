@@ -12,6 +12,9 @@ dependencies = ["lxml", "pyyaml", "Pillow"]
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+latex_jats = ["ccr_canonical_extension/**/*"]
+
 [project.optional-dependencies]
 test = ["pytest", "httpx", "respx", "aiosmtpd"]
 web = [

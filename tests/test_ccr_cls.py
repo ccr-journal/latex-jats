@@ -9,11 +9,16 @@ import pytest
 
 from latex_jats.ccr_cls import (
     CANONICAL_CCR_CLS_PATH,
+    CANONICAL_EXTENSION_DIR,
     EXPECTED_CCR_CLS_SHA256,
     EXPECTED_CCR_CLS_VERSION,
+    EXPECTED_EXTENSION_SHA256,
     compute_ccr_cls_sha256,
+    compute_extension_sha256,
     find_ccr_cls,
+    find_ccr_extension,
     install_canonical_ccr_cls,
+    install_canonical_ccr_extension,
     parse_ccr_cls_version,
     warn_if_outdated,
 )
@@ -39,11 +44,23 @@ def _make_cls(path: Path, version: str | None, extra: str = "") -> Path:
 # --- pinned constants sanity --------------------------------------------------
 
 
-def test_canonical_fixture_matches_pinned_hash():
-    """The committed canonical fixture must match the pinned constants. If this
-    fails, either the fixture was modified or the pins need bumping."""
-    assert parse_ccr_cls_version(CANONICAL_FIXTURE) == EXPECTED_CCR_CLS_VERSION
-    assert compute_ccr_cls_sha256(CANONICAL_FIXTURE) == EXPECTED_CCR_CLS_SHA256
+def test_canonical_fixture_has_parseable_version():
+    """The committed canonical fixture must have a parseable % Version comment;
+    EXPECTED_CCR_CLS_VERSION is derived from it at import time."""
+    assert parse_ccr_cls_version(CANONICAL_FIXTURE) is not None
+    assert EXPECTED_CCR_CLS_VERSION == parse_ccr_cls_version(CANONICAL_FIXTURE)
+
+
+def test_canonical_providesclass_matches_version_comment():
+    """The \\ProvidesClass[... vX.XX] tag should match the % Version comment.
+    They drift easily under hand edits — catch it loudly."""
+    text = CANONICAL_FIXTURE.read_text(encoding="utf-8")
+    import re
+    m = re.search(r"\\ProvidesClass\{ccr\}\[.*?v(\d+(?:\.\d+)+)\]", text)
+    assert m is not None, "no \\ProvidesClass[...vX.XX] tag in canonical"
+    assert m.group(1) == EXPECTED_CCR_CLS_VERSION, (
+        f"\\ProvidesClass says v{m.group(1)} but % Version says v{EXPECTED_CCR_CLS_VERSION}"
+    )
 
 
 # --- find_ccr_cls -------------------------------------------------------------
@@ -108,8 +125,11 @@ def test_old_version_in_quarto_extension_layout(tmp_path: Path, caplog: pytest.L
     with caplog.at_level(logging.WARNING, logger="latex_jats.ccr_cls"):
         warn_if_outdated(tmp_path)
     warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
-    assert len(warnings) == 1
-    assert "v0.04" in warnings[0].getMessage()
+    # Two warnings: the cls version and the bundle drift (bare extension dir).
+    assert any("v0.04" in w.getMessage() for w in warnings), \
+        f"expected a version warning, got {[w.getMessage() for w in warnings]}"
+    assert any("extension" in w.getMessage() for w in warnings), \
+        f"expected an extension drift warning, got {[w.getMessage() for w in warnings]}"
 
 
 def test_canonical_content_no_warning(tmp_path: Path, caplog: pytest.LogCaptureFixture):
@@ -212,3 +232,86 @@ def test_install_overwrites_both_copies(tmp_path: Path):
     install_canonical_ccr_cls(tmp_path)
     assert compute_ccr_cls_sha256(tmp_path / "ccr.cls") == EXPECTED_CCR_CLS_SHA256
     assert compute_ccr_cls_sha256(ext_dir / "ccr.cls") == EXPECTED_CCR_CLS_SHA256
+
+
+# --- install_canonical_ccr_extension -----------------------------------------
+
+
+def test_canonical_bundle_has_expected_files():
+    """The canonical bundle must ship the files Quarto expects. Catch anyone
+    accidentally removing a partial or the class file."""
+    required = [
+        "ccr.cls", "ccrtemplate.tex", "ccr.lua", "_extension.yml",
+        "aup_logo.pdf",
+        "partials/before-body.tex", "partials/title.tex",
+    ]
+    for rel in required:
+        assert (CANONICAL_EXTENSION_DIR / rel).is_file(), \
+            f"canonical bundle missing {rel}"
+
+
+def test_install_extension_creates_bundle_when_absent(tmp_path: Path):
+    install_canonical_ccr_extension(tmp_path)
+    ext = tmp_path / "_extensions" / "ccr-journal" / "ccr"
+    assert ext.is_dir()
+    assert compute_extension_sha256(ext) == EXPECTED_EXTENSION_SHA256
+
+
+def test_install_extension_overwrites_stale_bundle(tmp_path: Path):
+    ext = tmp_path / "_extensions" / "ccr-journal" / "ccr"
+    (ext / "partials").mkdir(parents=True)
+    _make_cls(ext / "ccr.cls", "0.02")  # stale
+    (ext / "_extension.yml").write_text("stale: true\n", encoding="utf-8")
+    (ext / "orphan.tex").write_text("leftover\n", encoding="utf-8")
+
+    install_canonical_ccr_extension(tmp_path)
+
+    assert compute_extension_sha256(ext) == EXPECTED_EXTENSION_SHA256
+    assert not (ext / "orphan.tex").exists(), \
+        "install should wipe leftover files, not merge"
+
+
+def test_install_extension_also_syncs_flat_cls(tmp_path: Path):
+    """Mixed layout: both _extensions/.../ccr.cls and a flat ccr.cls exist.
+    install_canonical_ccr_extension must sync both."""
+    ext = tmp_path / "_extensions" / "ccr-journal" / "ccr"
+    (ext / "partials").mkdir(parents=True)
+    _make_cls(tmp_path / "ccr.cls", "0.02")
+    _make_cls(ext / "ccr.cls", "0.02")
+    install_canonical_ccr_extension(tmp_path)
+    assert compute_ccr_cls_sha256(tmp_path / "ccr.cls") == EXPECTED_CCR_CLS_SHA256
+    assert compute_ccr_cls_sha256(ext / "ccr.cls") == EXPECTED_CCR_CLS_SHA256
+
+
+# --- extension drift warning -------------------------------------------------
+
+
+def _install_clean_extension(workspace: Path) -> Path:
+    install_canonical_ccr_extension(workspace)
+    return workspace / "_extensions" / "ccr-journal" / "ccr"
+
+
+def test_clean_bundle_no_drift_warning(tmp_path: Path, caplog: pytest.LogCaptureFixture):
+    _install_clean_extension(tmp_path)
+    with caplog.at_level(logging.WARNING, logger="latex_jats.ccr_cls"):
+        warn_if_outdated(tmp_path)
+    assert [r for r in caplog.records if r.levelno == logging.WARNING] == []
+
+
+def test_edited_bundle_file_triggers_drift_warning(tmp_path: Path, caplog: pytest.LogCaptureFixture):
+    ext = _install_clean_extension(tmp_path)
+    (ext / "partials" / "before-body.tex").write_text("% hand-edited\n", encoding="utf-8")
+    with caplog.at_level(logging.WARNING, logger="latex_jats.ccr_cls"):
+        warn_if_outdated(tmp_path)
+    warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+    assert any("extension" in w.getMessage() for w in warnings), \
+        f"expected extension drift warning, got {[w.getMessage() for w in warnings]}"
+
+
+def test_find_extension_returns_dir_when_present(tmp_path: Path):
+    _install_clean_extension(tmp_path)
+    assert find_ccr_extension(tmp_path) == tmp_path / "_extensions" / "ccr-journal" / "ccr"
+
+
+def test_find_extension_none_when_absent(tmp_path: Path):
+    assert find_ccr_extension(tmp_path) is None

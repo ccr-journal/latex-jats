@@ -197,20 +197,26 @@ git push origin v0.2.0
 
 CI builds and pushes Docker images (`ccsamsterdam/latex-jats-api`, `ccsamsterdam/latex-jats-caddy`) on `v*` tags.
 
-## Syncing the CCR class pin
+## Syncing the CCR extension bundle
 
-The prepare step warns authors when their vendored `ccr.cls` is older than, or differs from, the latest upstream release at [ccr-journal/ccr-latex](https://github.com/ccr-journal/ccr-latex). "Latest" is defined by two pinned constants in `src/latex_jats/ccr_cls.py` — `EXPECTED_CCR_CLS_VERSION` and `EXPECTED_CCR_CLS_SHA256` — plus a committed canonical copy at `src/latex_jats/ccr_canonical.cls`. The canonical copy ships inside the Python package so it is also available at runtime when the web UI's "Use most recent ccr.cls" option injects it into a workspace.
+The prepare step warns authors when their vendored CCR Quarto extension — `ccr.cls`, `ccrtemplate.tex`, partials, `_extension.yml`, etc. — drifts from the canonical copy. Everything in that directory is publishing-toolchain infrastructure, not author content; customizations belong in the document, not the extension. The canonical bundle lives at `src/latex_jats/ccr_canonical_extension/` and is shipped inside the Python package so the web UI's "Use most recent ccr.cls" toggle can install it into a workspace (via `install_canonical_ccr_extension`).
 
-When upstream releases a new version, bump all three together:
+`src/latex_jats/ccr_cls.py` derives its pins at import time:
 
-1. Replace `src/latex_jats/ccr_canonical.cls` with the new upstream file (`curl -fsSL https://raw.githubusercontent.com/ccr-journal/ccr-latex/main/ccr.cls -o src/latex_jats/ccr_canonical.cls`).
-2. Update `EXPECTED_CCR_CLS_VERSION` in `src/latex_jats/ccr_cls.py` to match the new `% Version X.XX` comment in the file.
-3. Recompute the hash and update `EXPECTED_CCR_CLS_SHA256`:
-   ```sh
-   uv run python -c "from latex_jats.ccr_cls import compute_ccr_cls_sha256; \
-     import pathlib; print(compute_ccr_cls_sha256(pathlib.Path('src/latex_jats/ccr_canonical.cls')))"
-   ```
-4. Run `uv run pytest tests/test_ccr_cls.py`. The `test_canonical_fixture_matches_pinned_hash` self-check fails loudly if the fixture and pins diverge, so you'll know immediately if any of the three got skipped.
+- `EXPECTED_CCR_CLS_VERSION` — the `% Version X.XX` comment in `ccr.cls`.
+- `EXPECTED_CCR_CLS_SHA256` — hash of `ccr.cls` alone (after CRLF→LF normalization).
+- `EXPECTED_EXTENSION_SHA256` — hash of the whole bundle (paths + normalized contents).
+
+When upstream releases a new version, refresh the canonical bundle from [ccr-journal/ccr-quarto](https://github.com/ccr-journal/ccr-quarto):
+
+```sh
+rm -rf src/latex_jats/ccr_canonical_extension
+cp -r ~/path/to/ccr-quarto/_extensions/ccr src/latex_jats/ccr_canonical_extension
+```
+
+The `% Version X.XX` comment and `\ProvidesClass[...vX.XX]` tag inside `ccr.cls` are the source of truth for the class version. Run `uv run pytest tests/test_ccr_cls.py` — `test_canonical_providesclass_matches_version_comment` fails if those two tags disagree, and `test_canonical_bundle_has_expected_files` fails if anyone accidentally drops a partial or the class file from the bundle.
+
+Note: until in-flight changes land upstream, the canonical bundle may be ahead of `ccr-journal/ccr-quarto` on specific files (e.g. a new partial, a newer `ccr.cls`). When resyncing, make sure you don't regress those additions.
 
 ## Tests
 
