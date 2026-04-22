@@ -162,4 +162,11 @@ DefMacro('\caption',
   . '{\@ifstar{\lx@scaption}{\expandafter\@caption\expandafter{\@captype}}}');
 DefMacro('\lx@scaption {}', '\@@caption{#1}');
 
+# \supplementarymaterial{...}: renders #1 inline (transparent in body and
+# footnote contexts) and tags it for post-processing extraction into
+# <supplementary-material> in <article-meta>. LaTeXML's JATS XSLT maps
+# <ltx:text class='X'> to <styled-content style-type='X'>.
+DefConstructor('\supplementarymaterial{}',
+    "<ltx:text class='ccr-suppmat'>#1</ltx:text>");
+
 1;

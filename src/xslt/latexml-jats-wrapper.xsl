@@ -219,6 +219,16 @@
     <p><xsl:apply-imports/></p>
   </xsl:template>
 
+  <!-- \supplementarymaterial marker: emit <styled-content> with a distinctive
+       style-type so fix_supplementary_material can locate and lift it into
+       <article-meta>. The stock ltx:text template drops @class, so without
+       this override the marker would disappear. -->
+  <xsl:template match="ltx:text[@class='ccr-suppmat']">
+    <styled-content style-type="ccr-suppmat">
+      <xsl:apply-templates/>
+    </styled-content>
+  </xsl:template>
+
   <!-- Fix: nested tabular inside a table cell → flatten to line-break-separated content.
        JATS does not allow <table> inside <td>/<th>. The LaTeX pattern
        \begin{tabular}[c]{@{}c@{}}line1\\line2\end{tabular} inside table cells

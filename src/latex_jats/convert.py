@@ -2016,6 +2016,123 @@ def collapse_affiliations(jats_file):
     tree.write(jats_file, encoding="unicode")
 
 
+def fix_supplementary_material(jats_file):
+    """Lift ccr-suppmat markers into <supplementary-material> entries in
+    <article-meta>, then unwrap the markers so their inline content still
+    renders in place (body paragraph or footnote).
+
+    Two marker shapes are recognized, one per authoring path:
+      * ``<styled-content style-type="ccr-suppmat">`` — emitted by the LaTeX
+        pipeline from ``\\supplementarymaterial{...}`` via ccr.cls.ltxml and
+        the wrapper XSLT.
+      * ``<named-content content-type="ccr-suppmat">`` — emitted by Pandoc's
+        JATS writer (used by Quarto) from ``[…]{.ccr-suppmat}`` spans.
+
+    Markers may live in <body> or inside <back>/<fn-group>/<fn> depending on
+    whether the author wrapped the marker in a footnote, so we walk the
+    whole tree. Multiple invocations are numbered suppmat1, suppmat2, … in
+    document order. The first descendant <ext-link>'s xlink:href is used as
+    the <supplementary-material> xlink:href; if none is present we warn and
+    emit the element without an xlink:href attribute.
+    """
+    import copy
+
+    XLINK = "http://www.w3.org/1999/xlink"
+    ET.register_namespace("xlink", XLINK)
+    tree = ET.parse(jats_file)
+    root = tree.getroot()
+
+    article_meta = root.find(".//article-meta")
+    if article_meta is None:
+        return
+
+    markers = [
+        el for el in root.iter()
+        if (el.tag == "styled-content" and el.get("style-type") == "ccr-suppmat")
+        or (el.tag == "named-content" and el.get("content-type") == "ccr-suppmat")
+    ]
+    if not markers:
+        return
+
+    parents = {c: p for p in root.iter() for c in p}
+    new_supps = []
+
+    for n, marker in enumerate(markers, start=1):
+        links = [e for e in marker.iter("ext-link")
+                 if e.get(f"{{{XLINK}}}href") or e.get("xlink:href")]
+        href = None
+        if not links:
+            logger.warning(
+                "\\supplementarymaterial #%d has no <ext-link>/URL; "
+                "emitting <supplementary-material> without xlink:href", n)
+        else:
+            href = links[0].get(f"{{{XLINK}}}href") or links[0].get("xlink:href")
+            if len(links) > 1:
+                extras = [
+                    l.get(f"{{{XLINK}}}href") or l.get("xlink:href")
+                    for l in links[1:]
+                ]
+                logger.warning(
+                    "\\supplementarymaterial #%d contains %d URLs; using the "
+                    "first (%s) as xlink:href. Additional URLs remain visible "
+                    "in the caption but are not machine-linked: %s",
+                    n, len(links), href, ", ".join(extras))
+
+        attrs = {"id": f"suppmat{n}"}
+        if href:
+            attrs[f"{{{XLINK}}}href"] = href
+        sm = ET.Element("supplementary-material", attrs)
+        caption = ET.SubElement(sm, "caption")
+        p = ET.SubElement(caption, "p")
+        p.text = marker.text
+        for child in marker:
+            p.append(copy.deepcopy(child))
+        new_supps.append(sm)
+
+        parent = parents[marker]
+        idx = list(parent).index(marker)
+        marker_children = list(marker)
+        marker_text = marker.text or ""
+        marker_tail = marker.tail or ""
+
+        parent.remove(marker)
+        for i, child in enumerate(marker_children):
+            parent.insert(idx + i, child)
+
+        if marker_text:
+            if idx == 0:
+                parent.text = (parent.text or "") + marker_text
+            else:
+                prev = list(parent)[idx - 1]
+                prev.tail = (prev.tail or "") + marker_text
+
+        if marker_tail:
+            if marker_children:
+                last = list(parent)[idx + len(marker_children) - 1]
+                last.tail = (last.tail or "") + marker_tail
+            elif idx == 0:
+                parent.text = (parent.text or "") + marker_tail
+            else:
+                prev = list(parent)[idx - 1]
+                prev.tail = (prev.tail or "") + marker_tail
+
+    # Per JATS Publishing 1.2, <supplementary-material> in <article-meta>
+    # comes after fpage/lpage and before permissions/abstract/kwd-group/etc.
+    children = list(article_meta)
+    insert_at = next(
+        (i for i, e in enumerate(children)
+         if e.tag in ("permissions", "self-uri", "related-article",
+                      "related-object", "abstract", "trans-abstract",
+                      "kwd-group", "funding-group", "support-group",
+                      "conference", "counts", "custom-meta-group")),
+        len(children),
+    )
+    for i, sm in enumerate(new_supps):
+        article_meta.insert(insert_at + i, sm)
+
+    tree.write(jats_file, encoding="unicode")
+
+
 # ── Metadata comparison (OJS vs JATS) ──────────────────────────────────────
 
 
@@ -2762,6 +2879,7 @@ def convert(input_path: Path, output_path: Path, html: bool = False, lastpage=No
     fix_lstlisting_labels(str(output_path), str(input_path))
     fix_fig_structure(str(output_path))
     fix_ext_links(str(output_path))
+    fix_supplementary_material(str(output_path))
     strip_mathml_alttext(str(output_path))
     normalize_mathml_chars(str(output_path))
     fix_pdf_graphic_refs(str(output_path))

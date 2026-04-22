@@ -1,0 +1,26 @@
+\documentclass{ccr}
+
+\title{Supplementary Material Test}
+\authorsnames{Jane Doe}
+\authorsaffiliations{{University of Amsterdam}}
+\abstract{A test abstract.}
+\keywords{test}
+\volume{1}
+\pubnumber{1}
+\pubyear{2025}
+\firstpage{1}
+\doi{10.0000/suppmat}
+
+% Fallback definition for authors whose vendored ccr.cls predates the macro.
+% Harmless if upstream ccr.cls already defines it.
+\providecommand{\supplementarymaterial}[1]{#1}
+
+\begin{document}
+\maketitle
+
+\section{Introduction}
+Some text.\footnote{\supplementarymaterial{All materials: \url{https://doi.org/10.17605/OSF.IO/TQRJ3}}}
+
+\supplementarymaterial{Bare reference: \url{https://example.org/extra}}
+
+\end{document}

@@ -31,6 +31,7 @@ from latex_jats.convert import (
     finalize_xml,
     fix_ext_links,
     fix_pdf_graphic_refs,
+    fix_supplementary_material,
     rename_graphics,
     warn_section_acknowledgements,
 )
@@ -874,6 +875,7 @@ def convert_quarto(input_qmd: Path, output_xml: Path, html: bool = False,
     move_appendix_to_back(out_str)
     reorder_back_matter(out_str)
     fix_ext_links(out_str)
+    fix_supplementary_material(out_str)
     fix_pdf_graphic_refs(out_str)
     finalize_xml(out_str)
 

@@ -7,6 +7,8 @@ import shutil
 
 from latex_jats.convert import (
     collapse_affiliations,
+    fix_footnotes,
+    fix_supplementary_material,
     preprocess_for_latexml,
     run_latexmlc,
     validate_jats,
@@ -285,6 +287,40 @@ def test_description_list_produces_def_list(tmp_path):
     def3 = def_items[2].find("def")
     assert def3 is not None and def3.find("p") is not None
     assert "bare item" in "".join(def3.itertext())
+
+
+@pytest.mark.integration
+def test_supplementary_material_lifted_to_article_meta(tmp_path):
+    """\\supplementarymaterial{} produces <supplementary-material> entries in
+    <article-meta> (with xlink:href from the inner \\url) while its content
+    still renders inline in the body/footnote where the macro was written.
+    """
+    XLINK = "http://www.w3.org/1999/xlink"
+    output = tmp_path / "output.xml"
+    tex = _prepare_fixture(FIXTURES / "supplementary.tex", tmp_path)
+    run_latexmlc(str(tex), str(output), log_dir=tmp_path)
+    fix_footnotes(str(output))
+    fix_supplementary_material(str(output))
+
+    root = ET.parse(output).getroot()
+    sms = root.findall(".//article-meta/supplementary-material")
+    assert len(sms) == 2, f"Expected 2 <supplementary-material>, got {len(sms)}"
+
+    hrefs = {sm.get(f"{{{XLINK}}}href") for sm in sms}
+    assert "https://doi.org/10.17605/OSF.IO/TQRJ3" in hrefs
+    assert "https://example.org/extra" in hrefs
+
+    for sm in sms:
+        caption = sm.find("caption/p")
+        assert caption is not None, "Each supplementary-material needs <caption><p>"
+        assert caption.find("ext-link") is not None, "Caption should contain the ext-link"
+
+    # Markers are gone from the body/back; inline content is preserved.
+    assert root.find(".//styled-content[@style-type='ccr-suppmat']") is None
+    body_text = " ".join(root.find(".//body").itertext())
+    assert "Bare reference:" in body_text
+    back_text = " ".join(root.find(".//back").itertext()) if root.find(".//back") is not None else ""
+    assert "All materials:" in back_text
 
 
 @pytest.mark.integration

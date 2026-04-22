@@ -69,6 +69,7 @@ Three sequential steps in `src/latex_jats/convert.py`:
    - `fix_references` — repairs bibliography entries using the `.bbl` file (if available)
    - `fix_lstlisting_labels` — fixes labels/captions on code listings
    - `fix_ext_links` — normalizes `<ext-link>` URLs
+   - `fix_supplementary_material` — lifts ccr-suppmat markers into `<supplementary-material>` elements in `<article-meta>` using the first inner `<ext-link>`'s URL for `xlink:href`; the marker is unwrapped in place so its text still renders in the body paragraph or footnote. Two marker shapes are recognized, one per authoring path: `<styled-content style-type="ccr-suppmat">` from the LaTeX pipeline (`\supplementarymaterial{…}` via `ccr.cls.ltxml` + wrapper XSLT) and `<named-content content-type="ccr-suppmat">` from the Quarto pipeline (`[…]{.ccr-suppmat}` spans emitted by Pandoc's JATS writer). IDs are `suppmat1`, `suppmat2`, … to avoid colliding with body section IDs (`S1`, `S2`, …). Shared between both pipelines.
    - `strip_mathml_alttext` — drops `@alttext` from `<mml:math>` (Ingenta re-serializes it unescaped)
    - `normalize_mathml_chars` — rewrites Mathematical Alphanumeric Symbols (U+1D400–U+1D7FF) to `mathvariant` + BMP char, so Ingenta's Java parser doesn't re-serialize them as invalid surrogate char references (`&#55349;`)
    - `fix_pdf_graphic_refs` — rewrites `.pdf` graphic hrefs to `.svg`
