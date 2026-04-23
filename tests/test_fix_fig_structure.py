@@ -16,7 +16,7 @@ MINIMAL_DOC = """\
 KNOWN_GOOD = (
     '<fig id="F1">'
     '<label>Figure 1:</label>'
-    '<caption><title>A title</title></caption>'
+    '<caption><p>A title</p></caption>'
     '<graphic xlink:href="fig1.png" xmlns:xlink="http://www.w3.org/1999/xlink"/>'
     '</fig>'
 )
@@ -42,7 +42,7 @@ def test_bare_p_graphic_is_unwrapped(xml_file, caplog):
     fig = (
         '<fig id="F2">'
         '<label>Figure 2:</label>'
-        '<caption><title>Another title</title></caption>'
+        '<caption><p>Another title</p></caption>'
         '<p><graphic xlink:href="fig2.png" xmlns:xlink="http://www.w3.org/1999/xlink"/></p>'
         '</fig>'
     )
@@ -78,7 +78,7 @@ def test_mixed_p_content_warns(xml_file, caplog):
     fig = (
         '<fig id="F3">'
         '<label>Figure 3:</label>'
-        '<caption><title>t</title></caption>'
+        '<caption><p>t</p></caption>'
         '<p>caption-like text<graphic xlink:href="f.png" xmlns:xlink="http://www.w3.org/1999/xlink"/></p>'
         '</fig>'
     )
@@ -99,7 +99,7 @@ def test_two_graphics_in_one_p_warns(xml_file, caplog):
     fig = (
         '<fig id="F4">'
         '<label>Figure 4:</label>'
-        '<caption><title>t</title></caption>'
+        '<caption><p>t</p></caption>'
         '<p>'
         '<graphic xlink:href="a.png" xmlns:xlink="http://www.w3.org/1999/xlink"/>'
         '<graphic xlink:href="b.png" xmlns:xlink="http://www.w3.org/1999/xlink"/>'
@@ -122,7 +122,7 @@ def test_extra_sibling_after_graphic_warns(xml_file, caplog):
     fig = (
         '<fig id="F5">'
         '<label>Figure 5:</label>'
-        '<caption><title>t</title></caption>'
+        '<caption><p>t</p></caption>'
         '<graphic xlink:href="f.png" xmlns:xlink="http://www.w3.org/1999/xlink"/>'
         '<p>stray prose</p>'
         '</fig>'
@@ -143,7 +143,7 @@ def test_caption_with_extra_children_warns(xml_file, caplog):
     fig = (
         '<fig id="F6">'
         '<label>Figure 6:</label>'
-        '<caption><title>t</title><p>extra caption prose</p></caption>'
+        '<caption><p>t</p><p>extra caption prose</p></caption>'
         '<graphic xlink:href="f.png" xmlns:xlink="http://www.w3.org/1999/xlink"/>'
         '</fig>'
     )
@@ -166,7 +166,7 @@ def test_nested_subfig_warns(xml_file, caplog):
     fig = (
         '<fig id="F_outer">'
         '<label>Figure 1:</label>'
-        '<caption><title>outer</title></caption>'
+        '<caption><p>outer</p></caption>'
         '<fig id="F_inner"><graphic xlink:href="sub.png" xmlns:xlink="http://www.w3.org/1999/xlink"/></fig>'
         '</fig>'
     )
@@ -186,7 +186,7 @@ def test_listing_fig_warns(xml_file, caplog):
     fig = (
         '<fig fig-type="listing" id="LST1">'
         '<label>Listing 1:</label>'
-        '<caption><title>a listing</title></caption>'
+        '<caption><p>a listing</p></caption>'
         '<code>print("hello")</code>'
         '</fig>'
     )
@@ -203,7 +203,7 @@ def test_listing_fig_warns(xml_file, caplog):
 def test_missing_label_warns(xml_file, caplog):
     fig = (
         '<fig id="F7">'
-        '<caption><title>t</title></caption>'
+        '<caption><p>t</p></caption>'
         '<graphic xlink:href="f.png" xmlns:xlink="http://www.w3.org/1999/xlink"/>'
         '</fig>'
     )

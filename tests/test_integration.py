@@ -249,6 +249,39 @@ def test_adjustbox_table_structure(tmp_path):
 
 
 @pytest.mark.integration
+def test_caption_shape_is_p_not_title(tmp_path):
+    """Captions on <fig>/<fig-group>/<table-wrap> must wrap text in <p>, not <title>.
+
+    Regression test for #27: Edify renders <caption><title> as a bold heading
+    and suppresses the sibling <label> line, merging "Figure N:" into the
+    caption. <caption><p> gives the intended two-line layout.
+    """
+    for fixture_name in ("subfigure.tex", "adjustbox_table.tex"):
+        output = tmp_path / f"{fixture_name}.xml"
+        tex = _prepare_fixture(FIXTURES / fixture_name, tmp_path / fixture_name)
+        run_latexmlc(str(tex), str(output), log_dir=tmp_path / fixture_name)
+
+        root = ET.parse(output).getroot()
+        elements = (
+            root.findall(".//fig")
+            + root.findall(".//fig-group")
+            + root.findall(".//table-wrap")
+        )
+        assert elements, f"{fixture_name} produced no captioned elements"
+        for elem in elements:
+            cap = elem.find("caption")
+            if cap is None:
+                continue
+            assert cap.find("title") is None, (
+                f"{elem.tag} {elem.get('id')} in {fixture_name} still has "
+                f"<caption><title>; Ingenta/Edify will merge the label into the caption"
+            )
+            assert cap.find("p") is not None, (
+                f"{elem.tag} {elem.get('id')} in {fixture_name} has <caption> without <p>"
+            )
+
+
+@pytest.mark.integration
 def test_description_list_produces_def_list(tmp_path):
     """\\begin{description}\\item[LABEL] produces JATS <def-list> with <term> labels."""
     output = tmp_path / "output.xml"

@@ -70,14 +70,10 @@
                       |ltx:subsection/ltx:title/ltx:tag
                       |ltx:subsubsection/ltx:title/ltx:tag"/>
 
-  <!-- Fix (15): Use <title> inside <caption> instead of <p>.
-       Also strips the <ltx:tag> child (the figure/table label like "Figure 1:")
-       so that it does not appear in the caption text. -->
-  <xsl:template match="ltx:caption">
-    <caption>
-      <title><xsl:apply-templates select="node()[not(self::ltx:tag)]"/></title>
-    </caption>
-  </xsl:template>
+  <!-- Note: we rely on the system XSLT's ltx:caption template, which wraps
+       caption content in <p> (or leaves an existing <ltx:p> as-is). An earlier
+       revision forced <caption><title> here, but Edify renders that as bold
+       heading text and suppresses the sibling <label> line (issue #27). -->
 
   <!-- Fix (14): Emit <label> for figures before the caption.
        LaTeXML puts the label text in <ltx:caption/ltx:tag> (e.g. "Figure 1"

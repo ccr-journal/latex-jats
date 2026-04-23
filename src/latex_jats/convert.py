@@ -762,7 +762,7 @@ def fix_fig_structure(jats_file):
     """Enforce the known-good <fig> shape and warn on deviations.
 
     The only shape that renders reliably at AUP/Ingenta is
-    ``<fig> > (<label> + <caption> > <title> + <graphic>)``.  LaTeXML will
+    ``<fig> > (<label> + <caption> > <p> + <graphic>)``.  LaTeXML will
     emit this shape for a straightforward ``\\begin{figure} \\includegraphics
     \\caption ... \\end{figure}``, but author tricks like
     ``\\makebox{\\includegraphics{...}}`` wrap the ``<graphic>`` in a stray
@@ -771,7 +771,7 @@ def fix_fig_structure(jats_file):
     This fixup:
 
     1. Unwraps the one safe case — ``<fig>`` with children
-       ``<label>, <caption>(<title>), <p>(<graphic>)`` — promoting the
+       ``<label>, <caption>(<p>), <p>(<graphic>)`` — promoting the
        ``<graphic>`` out of the ``<p>`` so the figure matches the known-good
        shape.  Logs an ``INFO`` note so the author sees that their source
        was auto-corrected.
@@ -791,12 +791,12 @@ def fix_fig_structure(jats_file):
             and not (p[0].tail and p[0].tail.strip())
         )
 
-    def _caption_is_title_only(caption):
+    def _caption_is_p_only(caption):
         return (
             caption is not None
             and not (caption.text and caption.text.strip())
             and len(list(caption)) == 1
-            and caption[0].tag == "title"
+            and caption[0].tag == "p"
             and not (caption[0].tail and caption[0].tail.strip())
         )
 
@@ -804,9 +804,9 @@ def fix_fig_structure(jats_file):
         children = [c.tag for c in fig]
         if children == ["label", "caption", "graphic"]:
             caption = fig[1]
-            if not _caption_is_title_only(caption):
+            if not _caption_is_p_only(caption):
                 cap_children = [c.tag for c in caption]
-                return f"<caption> should contain only <title> (found: {cap_children})"
+                return f"<caption> should contain only <p> (found: {cap_children})"
             return None  # known-good
         if "label" not in children:
             return f"missing <label> (children: {children})"
@@ -825,7 +825,7 @@ def fix_fig_structure(jats_file):
         # Try to unwrap the one known-fixable case.
         if (
             tags == ["label", "caption", "p"]
-            and _caption_is_title_only(children[1])
+            and _caption_is_p_only(children[1])
             and _is_bare_p_graphic(children[2])
         ):
             p = children[2]
