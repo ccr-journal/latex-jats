@@ -14,6 +14,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     librsvg2-bin \
     # pdfinfo for page count detection
     poppler-utils \
+    # JATS RelaxNG validation
+    jing \
     # Python
     python3 python3-pip python3-venv \
     # R (for Quarto .qmd articles with R code chunks)
@@ -24,7 +26,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Quarto (for .qmd article conversion)
-RUN curl -LO https://github.com/quarto-dev/quarto-cli/releases/download/v1.7.29/quarto-1.7.29-linux-amd64.deb \
+RUN curl -fLO --retry 5 --retry-all-errors https://github.com/quarto-dev/quarto-cli/releases/download/v1.7.29/quarto-1.7.29-linux-amd64.deb \
     && gdebi -n quarto-1.7.29-linux-amd64.deb \
     && rm quarto-1.7.29-linux-amd64.deb
 
