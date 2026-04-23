@@ -25,6 +25,7 @@ from web.backend.app.models import (  # noqa: F401
     AccessToken,
     Manuscript,
     ManuscriptAuthor,
+    ManuscriptStatus,
     ManuscriptToken,
 )
 from web.backend.app.storage import Storage
@@ -1604,3 +1605,70 @@ def test_invite_authors_success(client, engine):
     assert call_args[0][0] == [("Alice", "alice@example.com"), ("Bob", "bob@example.com")]
     # subject
     assert call_args[0][1] == "Check your paper"
+
+
+# ── Orphaned-job reset on startup ──────────────────────────────────────────────
+
+
+def test_reset_orphaned_jobs_flips_stuck_manuscripts_to_failed(engine):
+    """Server restart mid-pipeline: queued/processing rows must become failed."""
+    from web.backend.app.main import _reset_orphaned_jobs
+    from web.backend.app.worker import init_pipeline_steps
+
+    steps = init_pipeline_steps()
+    steps[0]["status"] = "ok"
+    steps[1]["status"] = "running"   # compile was mid-flight
+    steps[1]["started_at"] = "2026-04-23T19:46:01"
+
+    with Session(engine) as session:
+        session.add(Manuscript(
+            doi_suffix="STUCK.001", status=ManuscriptStatus.processing,
+            pipeline_steps=steps, job_log="some earlier output",
+        ))
+        session.add(Manuscript(
+            doi_suffix="QUEUED.002", status=ManuscriptStatus.queued,
+        ))
+        session.add(Manuscript(
+            doi_suffix="DONE.003", status=ManuscriptStatus.ready,
+        ))
+        session.commit()
+
+    _reset_orphaned_jobs(engine)
+
+    with Session(engine) as session:
+        stuck = session.get(Manuscript, "STUCK.001")
+        queued = session.get(Manuscript, "QUEUED.002")
+        done = session.get(Manuscript, "DONE.003")
+
+    assert stuck.status == ManuscriptStatus.failed
+    assert stuck.job_completed_at is not None
+    assert "server restarted" in stuck.job_log
+    # The step that was running is now failed; pending steps after it skipped.
+    step_statuses = [s["status"] for s in stuck.pipeline_steps]
+    assert step_statuses[0] == "ok"
+    assert step_statuses[1] == "failed"
+    assert all(s == "skipped" for s in step_statuses[2:])
+
+    assert queued.status == ManuscriptStatus.failed
+    # Untouched: already-terminal manuscripts stay as they were.
+    assert done.status == ManuscriptStatus.ready
+
+
+def test_reset_orphaned_jobs_noop_when_no_stuck_manuscripts(engine):
+    """Clean startup (no stuck rows) must not touch any manuscript."""
+    from web.backend.app.main import _reset_orphaned_jobs
+
+    with Session(engine) as session:
+        session.add(Manuscript(doi_suffix="A", status=ManuscriptStatus.ready))
+        session.add(Manuscript(doi_suffix="B", status=ManuscriptStatus.draft))
+        session.commit()
+
+    _reset_orphaned_jobs(engine)
+
+    with Session(engine) as session:
+        a = session.get(Manuscript, "A")
+        b = session.get(Manuscript, "B")
+    assert a.status == ManuscriptStatus.ready
+    assert b.status == ManuscriptStatus.draft
+    assert a.job_log == ""
+    assert b.job_log == ""

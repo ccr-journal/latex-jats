@@ -14,11 +14,18 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import inspect
 from sqlmodel import create_engine
 
+from datetime import datetime
+
+from sqlmodel import Session, select
+
 from . import deps
 from .models import (  # noqa: F401 — registers metadata
     AccessToken,
     Manuscript,
     ManuscriptAuthor,
+    ManuscriptStatus,
+    PIPELINE_STEPS,
+    StepStatus,
 )
 from .routes import auth, download, manuscripts, ojs, output, status, upload
 from .storage import Storage
@@ -68,6 +75,50 @@ def _init_db_schema(engine) -> None:
     alembic_command.upgrade(_alembic_config(engine), "head")
 
 
+def _reset_orphaned_jobs(engine) -> None:
+    """Mark any in-flight pipeline jobs as failed at startup.
+
+    A manuscript with status ``queued`` or ``processing`` can only reach this
+    point if the previous server process died mid-pipeline (reload, crash,
+    Ctrl-C). The BackgroundTask is gone, so the row is wedged — the
+    ``/process`` endpoint refuses to restart while status is in that set.
+    Flip them to ``failed`` so the editor can retry.
+    """
+    log = logging.getLogger("latex_jats.web")
+    stuck_statuses = (ManuscriptStatus.queued, ManuscriptStatus.processing)
+    with Session(engine) as session:
+        orphans = session.exec(
+            select(Manuscript).where(Manuscript.status.in_(stuck_statuses))
+        ).all()
+        if not orphans:
+            return
+        now = datetime.utcnow()
+        for ms in orphans:
+            if ms.pipeline_steps:
+                steps = [dict(s) for s in ms.pipeline_steps]
+                hit_running = False
+                for step in steps:
+                    if step.get("status") == StepStatus.running:
+                        step["status"] = StepStatus.failed
+                        step["completed_at"] = now.isoformat()
+                        hit_running = True
+                    elif hit_running and step.get("status") == StepStatus.pending:
+                        step["status"] = StepStatus.skipped
+                ms.pipeline_steps = steps
+            note = "ERROR: server restarted while job was running; marking as failed"
+            ms.job_log = (ms.job_log + "\n" + note) if ms.job_log else note
+            ms.status = ManuscriptStatus.failed
+            ms.job_completed_at = now
+            ms.updated_at = now
+            session.add(ms)
+        session.commit()
+        log.warning(
+            "Reset %d orphaned job(s) to failed: %s",
+            len(orphans),
+            ", ".join(ms.doi_suffix for ms in orphans),
+        )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     _STORAGE_ROOT.mkdir(parents=True, exist_ok=True)
@@ -77,6 +128,7 @@ async def lifespan(app: FastAPI):
         connect_args={"check_same_thread": False},
     )
     _init_db_schema(engine)
+    _reset_orphaned_jobs(engine)
 
     deps._engine = engine
     deps._storage = Storage(_STORAGE_ROOT)
