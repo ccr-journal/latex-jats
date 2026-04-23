@@ -1,4 +1,5 @@
 """Unit and integration tests for parse_bbl, fix_references, and _build_mixed_citation."""
+import logging
 import xml.etree.ElementTree as ET
 from pathlib import Path
 import pytest
@@ -395,6 +396,112 @@ def test_url_without_doi(tmp_path):
     assert link is not None
     assert link.get('ext-link-type') == 'uri'
     assert link.get(f'{{{XLINK}}}href') == 'https://example.com/resource'
+
+
+# ---------------------------------------------------------------------------
+# fix_references — misc/online are not promoted to publication-type="journal"
+# (issue #23). Zotero biblatex exports routinely set journaltitle on @misc
+# for websites/magazines/newspapers, so the old heuristic was wrong.
+# ---------------------------------------------------------------------------
+
+def _bbl_with_journaltitle(entry_type, key='kramer2020',
+                           title='A piece', journal='Pew Research Center'):
+    return _bbl(f"""\
+    \\entry{{{key}}}{{{entry_type}}}{{}}
+      \\name{{author}}{{1}}{{}}{{%
+        {{{{un=0,uniquepart=base,hash=abc}}{{%
+           family={{Kramer}},
+           familyi={{K\\bibinitperiod}},
+           given={{Stephanie}},
+           giveni={{S\\bibinitperiod}},
+           givenun=0}}}}%
+      }}
+      \\field{{labelnamesource}}{{author}}
+      \\field{{labeltitlesource}}{{title}}
+      \\field{{title}}{{{title}}}
+      \\field{{journaltitle}}{{{journal}}}
+      \\field{{year}}{{2020}}
+    \\endentry
+""")
+
+
+def _flat_jats_one(surname='Kramer'):
+    return (
+        '<article><back><ref-list>'
+        f'<ref id="bib.bibx1"><mixed-citation>{surname} 2020</mixed-citation></ref>'
+        '</ref-list></back></article>'
+    )
+
+
+def test_misc_with_journaltitle_emits_other(tmp_path, caplog):
+    bbl = tmp_path / 'test.bbl'
+    bbl.write_text(_bbl_with_journaltitle('misc'), encoding='utf-8')
+    xml_path = tmp_path / 'test.xml'
+    xml_path.write_text(_flat_jats_one(), encoding='utf-8')
+
+    with caplog.at_level(logging.WARNING, logger='latex_jats.convert'):
+        fix_references(str(xml_path), str(bbl))
+
+    mc = ET.parse(xml_path).getroot().find('.//mixed-citation')
+    assert mc.get('publication-type') == 'other'
+    assert mc.find('article-title').text == 'A piece'
+    assert mc.find('source/italic').text == 'Pew Research Center'
+    assert any("is typed @misc but has journaltitle" in rec.message
+               for rec in caplog.records)
+    assert any("publication-type='other'" in rec.message
+               for rec in caplog.records)
+
+
+def test_online_with_journaltitle_emits_web(tmp_path, caplog):
+    bbl = tmp_path / 'test.bbl'
+    bbl.write_text(_bbl_with_journaltitle('online'), encoding='utf-8')
+    xml_path = tmp_path / 'test.xml'
+    xml_path.write_text(_flat_jats_one(), encoding='utf-8')
+
+    with caplog.at_level(logging.WARNING, logger='latex_jats.convert'):
+        fix_references(str(xml_path), str(bbl))
+
+    mc = ET.parse(xml_path).getroot().find('.//mixed-citation')
+    assert mc.get('publication-type') == 'web'
+    assert mc.find('article-title').text == 'A piece'
+    assert mc.find('source/italic').text == 'Pew Research Center'
+    assert any("is typed @online but has journaltitle" in rec.message
+               for rec in caplog.records)
+    assert any("publication-type='web'" in rec.message
+               for rec in caplog.records)
+
+
+def test_misc_without_journaltitle_emits_other_no_warning(tmp_path, caplog):
+    bbl_text = _bbl("""\
+    \\entry{jones2021}{misc}{}
+      \\name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=xyz}{%
+           family={Jones},
+           familyi={J\\bibinitperiod},
+           given={Alice},
+           giveni={A\\bibinitperiod},
+           givenun=0}}%
+      }
+      \\field{labelnamesource}{author}
+      \\field{labeltitlesource}{title}
+      \\field{title}{Some resource}
+      \\field{year}{2021}
+    \\endentry
+""")
+    bbl = tmp_path / 'test.bbl'
+    bbl.write_text(bbl_text, encoding='utf-8')
+    xml_path = tmp_path / 'test.xml'
+    xml_path.write_text(_flat_jats_one('Jones'), encoding='utf-8')
+
+    with caplog.at_level(logging.WARNING, logger='latex_jats.convert'):
+        fix_references(str(xml_path), str(bbl))
+
+    mc = ET.parse(xml_path).getroot().find('.//mixed-citation')
+    assert mc.get('publication-type') == 'other'
+    # No journaltitle → title falls into <source>, no article-title, no warning.
+    assert mc.find('article-title') is None
+    assert mc.find('source/italic').text == 'Some resource'
+    assert not any("is typed @misc" in rec.message for rec in caplog.records)
 
 
 # ---------------------------------------------------------------------------

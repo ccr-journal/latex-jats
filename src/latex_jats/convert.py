@@ -1468,8 +1468,8 @@ _PUB_TYPE = {
     'inbook': 'book', 'incollection': 'book', 'inproceedings': 'confproc',
     'proceedings': 'confproc',
     'thesis': 'thesis', 'phdthesis': 'thesis', 'mastersthesis': 'thesis',
-    'report': 'book', 'techreport': 'book', 'misc': 'book',
-    'online': 'book', 'software': 'book',
+    'report': 'book', 'techreport': 'book', 'misc': 'other',
+    'online': 'web', 'software': 'book',
 }
 
 
@@ -1523,21 +1523,27 @@ def _build_mixed_citation(entry, warnings=None):
     journaltitle = entry.get('journaltitle', '')
     booktitle = entry.get('booktitle', '')
 
-    # Heuristic: misc/online with a journaltitle → treat as journal article
-    treat_as_article = entry_type == 'article'
-    if not treat_as_article and entry_type in ('misc', 'online') and journaltitle:
-        treat_as_article = True
-        warnings.append(
-            f"bbl key {entry['key']!r}: type is {entry_type!r} but has "
-            f"journaltitle; treating as journal article — please verify")
-
-    # publication-type
     if is_collab:
         pub_type = 'collab'
-    elif treat_as_article:
+    elif entry_type == 'article':
         pub_type = 'journal'
     else:
         pub_type = _PUB_TYPE.get(entry_type, 'book')
+
+    # misc/online with a journaltitle render APA-style (article-title +
+    # italic source) but must not claim publication-type='journal' — the
+    # venue is usually a magazine/newspaper/website, not a scholarly journal.
+    has_article_shape = entry_type == 'article' or (
+        entry_type in ('misc', 'online') and journaltitle)
+    if has_article_shape and entry_type != 'article':
+        warnings.append(
+            f"Reference {entry['key']!r} is typed @{entry_type} but has "
+            f"journaltitle={journaltitle!r}. Emitting as "
+            f"publication-type={pub_type!r}. If this is a peer-reviewed "
+            f"article, change the bib entry to @article. If it's a "
+            f"magazine/newspaper/website, @online is appropriate; consider "
+            f"moving the venue name to `organization` if it isn't the title "
+            f"of a periodical.")
 
     mc = ET.Element('mixed-citation', {'publication-type': pub_type})
 
@@ -1572,7 +1578,7 @@ def _build_mixed_citation(entry, warnings=None):
         year_elem.text = year_val
         year_elem.tail = '). '
 
-    if treat_as_article:
+    if has_article_shape:
         # Article title
         if title:
             at = ET.SubElement(mc, 'article-title')
@@ -1645,8 +1651,8 @@ def _build_mixed_citation(entry, warnings=None):
                 src.tail = '. '
 
     # Publisher (skip for journal articles and collab entries)
-    publisher = entry.get('publisher', '') if not treat_as_article and not is_collab else ''
-    location = entry.get('location', '') if not treat_as_article and not is_collab else ''
+    publisher = entry.get('publisher', '') if not has_article_shape and not is_collab else ''
+    location = entry.get('location', '') if not has_article_shape and not is_collab else ''
     if publisher:
         pub = ET.SubElement(mc, 'publisher-name')
         pub.text = publisher
