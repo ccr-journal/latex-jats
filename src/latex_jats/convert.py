@@ -1688,11 +1688,8 @@ def _build_mixed_citation(entry, warnings=None):
     url = entry.get('url', '')
     if doi:
         _append_text(mc, ' ')
-        href = f'https://doi.org/{doi}'
-        link = ET.SubElement(mc, 'ext-link',
-                             {'ext-link-type': 'doi',
-                              '{%s}href' % _XLINK_NS: href})
-        link.text = href
+        pub_id = ET.SubElement(mc, 'pub-id', {'pub-id-type': 'doi'})
+        pub_id.text = doi
     elif url and not url.startswith('https://doi.org/'):
         _append_text(mc, ' ')
         link = ET.SubElement(mc, 'ext-link',
@@ -1742,7 +1739,48 @@ def fix_references(jats_file, bbl_file):
         mc.text = new_mc.text
         for child in new_mc:
             mc.append(child)
+
+    # Sweep: rewrite any remaining DOI <ext-link> inside <ref> to <pub-id> so
+    # Edify auto-constructs the Crossref link (xml_guide.md §3.3).  Covers refs
+    # that the builder skipped (family-name mismatch, mismatched counts) and
+    # refs where the .bbl-driven rewrite didn't run at all.
+    for ref in root.findall('.//ref'):
+        _rewrite_doi_ext_links(ref)
+
     tree.write(jats_file, encoding='unicode', xml_declaration=False)
+
+
+_DOI_URL_RE = re.compile(r'^https?://(?:dx\.)?doi\.org/(.+)$', re.IGNORECASE)
+
+
+def _rewrite_doi_ext_links(ref_elem):
+    """Replace <ext-link ext-link-type="doi"> (or any doi.org ext-link) inside
+    ref_elem with <pub-id pub-id-type="doi">{bare-doi}</pub-id>, preserving the
+    element's position and tail whitespace."""
+    parent_map = {c: p for p in ref_elem.iter() for c in p}
+    for elem in list(ref_elem.iter('ext-link')):
+        href = elem.get(f'{{{_XLINK_NS}}}href') or ''
+        is_doi = elem.get('ext-link-type') == 'doi'
+        m = _DOI_URL_RE.match(href)
+        if m:
+            doi = m.group(1).strip()
+        elif is_doi:
+            text = (elem.text or '').strip()
+            m2 = _DOI_URL_RE.match(text)
+            doi = m2.group(1).strip() if m2 else text
+        else:
+            continue
+        if not doi:
+            continue
+        parent = parent_map.get(elem)
+        if parent is None:
+            continue
+        idx = list(parent).index(elem)
+        pub_id = ET.Element('pub-id', {'pub-id-type': 'doi'})
+        pub_id.text = doi
+        pub_id.tail = elem.tail
+        parent.remove(elem)
+        parent.insert(idx, pub_id)
 
 
 _JOURNAL_META_XML = """\

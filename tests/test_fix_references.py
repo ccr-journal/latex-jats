@@ -177,10 +177,66 @@ def test_journal_article_with_doi(tmp_path):
     fix_references(str(xml_path), str(bbl))
     root = ET.parse(xml_path).getroot()
     mc = root.find('.//mixed-citation')
-    link = mc.find('ext-link')
-    assert link is not None
-    assert link.get('ext-link-type') == 'doi'
-    assert '10.1000/test' in link.get(f'{{{XLINK}}}href', '')
+    pub_id = mc.find('pub-id')
+    assert pub_id is not None
+    assert pub_id.get('pub-id-type') == 'doi'
+    assert pub_id.text == '10.1000/test'
+    # No DOI <ext-link> should survive — Edify auto-links <pub-id> instead.
+    assert mc.find("ext-link[@ext-link-type='doi']") is None
+
+
+def test_doi_ext_link_rewritten_when_builder_skips(tmp_path):
+    """If the .bbl-driven builder can't run for a ref (family-name sanity
+    check fails, mismatched counts, etc.), the sweep should still rewrite a
+    DOI <ext-link> produced by the XSLT into a <pub-id>."""
+    # bbl has a family name ('Smith') that won't match the flat text ('Nobody')
+    # so _build_mixed_citation is skipped for this ref.
+    bbl = tmp_path / 'test.bbl'
+    bbl.write_text(_bbl_article_raw(doi='10.1000/test'), encoding='utf-8')
+
+    xml_path = tmp_path / 'test.xml'
+    xml_path.write_text(
+        '<article xmlns:xlink="http://www.w3.org/1999/xlink"><back><ref-list>'
+        '<ref id="bib.bibx1"><mixed-citation>Nobody 2020 '
+        '<ext-link ext-link-type="doi" xlink:href="https://doi.org/10.1000/test">'
+        'https://doi.org/10.1000/test</ext-link>'
+        '</mixed-citation></ref>'
+        '</ref-list></back></article>',
+        encoding='utf-8',
+    )
+
+    fix_references(str(xml_path), str(bbl))
+    root = ET.parse(xml_path).getroot()
+    mc = root.find('.//mixed-citation')
+    assert mc.find("ext-link[@ext-link-type='doi']") is None
+    pub_id = mc.find('pub-id')
+    assert pub_id is not None
+    assert pub_id.get('pub-id-type') == 'doi'
+    assert pub_id.text == '10.1000/test'
+
+
+def test_doi_ext_link_rewrites_dx_doi_org_prefix(tmp_path):
+    """Old-style http://dx.doi.org/ hrefs should be normalized to bare DOI."""
+    bbl = tmp_path / 'test.bbl'
+    bbl.write_text(_bbl_article_raw(), encoding='utf-8')  # no doi in bbl
+
+    xml_path = tmp_path / 'test.xml'
+    xml_path.write_text(
+        '<article xmlns:xlink="http://www.w3.org/1999/xlink"><back><ref-list>'
+        '<ref id="bib.bibx1"><mixed-citation>Nobody 2020 '
+        '<ext-link ext-link-type="doi" xlink:href="http://dx.doi.org/10.1000/xyz">'
+        'http://dx.doi.org/10.1000/xyz</ext-link>'
+        '</mixed-citation></ref>'
+        '</ref-list></back></article>',
+        encoding='utf-8',
+    )
+
+    fix_references(str(xml_path), str(bbl))
+    root = ET.parse(xml_path).getroot()
+    mc = root.find('.//mixed-citation')
+    pub_id = mc.find('pub-id')
+    assert pub_id is not None
+    assert pub_id.text == '10.1000/xyz'
 
 
 # ---------------------------------------------------------------------------

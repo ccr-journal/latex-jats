@@ -319,11 +319,11 @@ def test_rebuild_element_citations_journal(xml_file):
     assert mc.find("issue").text == "3"
     assert mc.find("fpage").text == "45"
     assert mc.find("lpage").text == "67"
-    link = mc.find("ext-link")
-    assert link is not None
-    assert link.get("ext-link-type") == "doi"
-    assert link.get(f"{_XLINK}href") == "https://doi.org/10.1234/abc.2024.003"
-    assert link.text == "https://doi.org/10.1234/abc.2024.003"
+    pub_id = mc.find("pub-id")
+    assert pub_id is not None
+    assert pub_id.get("pub-id-type") == "doi"
+    assert pub_id.text == "10.1234/abc.2024.003"
+    assert mc.find("ext-link[@ext-link-type='doi']") is None
     # Given names should be collapsed to APA initials for consistency with
     # the biblatex-driven LaTeX pipeline.
     given = [g.text for g in mc.findall("string-name/given-names")]
@@ -336,7 +336,7 @@ def test_rebuild_element_citations_journal(xml_file):
     assert ", & Doe, J." in flat
     assert " (2024). " in flat
     assert ". Journal of Things, " in flat
-    assert "12(3), 45\u201367. https://doi.org/" in flat
+    assert "12(3), 45\u201367. 10.1234/abc.2024.003" in flat
 
 
 def test_rebuild_element_citations_chapter(xml_file):
@@ -396,9 +396,11 @@ def test_rebuild_element_citations_book(xml_file):
     assert mc.find("publisher-name").text == "Routledge"
     assert mc.find("article-title") is None
     assert mc.find("chapter-title") is None
-    link = mc.find("ext-link")
-    assert link.get("ext-link-type") == "doi"
-    assert link.get(f"{_XLINK}href") == "https://doi.org/10.4324/9780203824979"
+    pub_id = mc.find("pub-id")
+    assert pub_id is not None
+    assert pub_id.get("pub-id-type") == "doi"
+    assert pub_id.text == "10.4324/9780203824979"
+    assert mc.find("ext-link[@ext-link-type='doi']") is None
 
 
 def test_rebuild_element_citations_uri_only(xml_file):
