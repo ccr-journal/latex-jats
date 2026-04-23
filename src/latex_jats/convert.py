@@ -1831,13 +1831,22 @@ def _split_iso_date(value):
 def _make_date_elem(tag, attrs, date_str):
     """Build ``<tag attrs><day/><month/><year/></tag>`` from an ISO date.
 
+    For ``<date>`` elements inside ``<history>`` we also set the
+    ``iso-8601-date`` attribute — the Ingenta Edify guide only specifies
+    the internal shape for ``<pub-date>`` explicitly, so emitting both the
+    structured children and the attribute gives any downstream renderer
+    two ways to read the value (both are valid JATS 1.2).
+
     Returns ``None`` if the date can't be parsed.
     """
     parts = _split_iso_date(date_str)
     if parts is None:
         return None
     day, month, year = parts
-    elem = ET.Element(tag, attrs)
+    full_attrs = dict(attrs)
+    if tag == "date":
+        full_attrs["iso-8601-date"] = f"{year}-{int(month):02d}-{int(day):02d}"
+    elem = ET.Element(tag, full_attrs)
     ET.SubElement(elem, "day").text = day
     ET.SubElement(elem, "month").text = month
     ET.SubElement(elem, "year").text = year

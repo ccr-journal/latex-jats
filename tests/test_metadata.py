@@ -209,9 +209,16 @@ def test_history_and_expanded_pub_date(tmp_path):
     assert by_type["received"].findtext("day") == "28"
     assert by_type["received"].findtext("month") == "5"
     assert by_type["received"].findtext("year") == "2025"
+    assert by_type["received"].get("iso-8601-date") == "2025-05-28"
     assert by_type["accepted"].findtext("day") == "14"
     assert by_type["accepted"].findtext("month") == "1"
     assert by_type["accepted"].findtext("year") == "2026"
+    assert by_type["accepted"].get("iso-8601-date") == "2026-01-14"
+
+    # <pub-date> does NOT carry iso-8601-date — the guide's spec for pub-date
+    # only shows the child-elements form, so we keep it minimal there.
+    pub_date = am.find("pub-date")
+    assert pub_date.get("iso-8601-date") is None
 
     # <history> must sit before <permissions>
     children = list(am)
