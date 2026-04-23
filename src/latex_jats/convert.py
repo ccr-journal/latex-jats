@@ -465,12 +465,14 @@ def _reformat_article_info_cell(html_file):
         )
         mg.append(doi_line)
 
-    if received or accepted:
+    if received or accepted or year:
         parts = []
         if received:
             parts.append(f"Received {received}")
         if accepted:
             parts.append(f"Accepted {accepted}")
+        if year:
+            parts.append(f"Published {year}")
         date_line = lxml_html.fragment_fromstring(
             f'<p class="metadata-entry">{" \u00b7 ".join(parts)}</p>'
         )
@@ -2045,6 +2047,10 @@ def fix_metadata(jats_file, tex_file, lastpage=None):
         date_published=_get("datepublished"),
     )
 
+    # ET.indent only touches elements without text content, so <p>, <title>,
+    # <abstract>, etc. are left alone — only the metadata siblings we injected
+    # (pub-date, volume, issue, fpage, history, ...) gain line breaks.
+    ET.indent(tree, space="  ")
     tree.write(jats_file, encoding="unicode")
 
 

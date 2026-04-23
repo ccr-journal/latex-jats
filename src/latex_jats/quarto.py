@@ -288,6 +288,10 @@ def inject_metadata_from_yaml(jats_file: str, qmd_file: str,
         date_published=meta.get("date-published"),
     )
 
+    # ET.indent only touches elements without text content, so <p>, <title>,
+    # <abstract>, etc. are left alone — only the metadata siblings we injected
+    # (pub-date, volume, issue, fpage, history, ...) gain line breaks.
+    ET.indent(tree, space="  ")
     tree.write(jats_file, encoding="unicode")
 
 
