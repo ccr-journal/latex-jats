@@ -328,6 +328,54 @@ h3.section-title {
 }
 
 /* ============================================================
+   DEFINITION LISTS
+   ============================================================ */
+
+/* Echoes AUP Online's def-list rendering: right-aligned term column
+   + definition column + right margin, at 75% of body font size.
+   Proportions are relaxed slightly from AUP (20% margin vs. their 40%,
+   ~24% term vs. their 30%) to avoid wrapping short lines too aggressively
+   at our narrower --page-width. */
+div.def-list.table {
+  display: block;
+  margin: 0.6rem 20% 0.8rem 0;
+  font-size: 75%;
+}
+
+div.def-list.table .def-item.row {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 0.6em;
+  margin: 0 0 0.4rem;
+}
+
+div.def-list.table .def-term.cell {
+  flex: 0 0 30%;
+  text-align: right;
+}
+
+div.def-list.table .def-term.cell p {
+  margin: 0;
+  font-size: inherit;
+  text-align: right;
+}
+
+div.def-list.table .def-def.cell {
+  flex: 1;
+  min-width: 0;
+}
+
+div.def-list.table .def-def.cell p {
+  margin: 0 0 0.3em;
+  font-size: inherit;
+}
+
+div.def-list.table .def-def.cell p:last-child {
+  margin-bottom: 0;
+}
+
+/* ============================================================
    TABLES
    ============================================================ */
 
@@ -678,6 +726,15 @@ pre.code code {
     display: block;
     max-width: 100%;
     margin: 0.5rem auto;
+  }
+
+  /* Relax def-list margins on narrow screens */
+  div.def-list.table {
+    margin-right: 10%;
+  }
+
+  div.def-list.table .def-term.cell {
+    flex: 0 0 25%;
   }
 }
 
