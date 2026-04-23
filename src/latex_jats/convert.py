@@ -392,6 +392,39 @@ def _move_keywords_to_front(html_file):
         f.write(lxml_html.tostring(root, pretty_print=True))
 
 
+_EN_MONTHS = {
+    "january": 1, "february": 2, "march": 3, "april": 4,
+    "may": 5, "june": 6, "july": 7, "august": 8,
+    "september": 9, "october": 10, "november": 11, "december": 12,
+}
+
+
+def _to_iso_date(value: str) -> str:
+    """Convert ``'15 January 2023'`` to ``'2023-01-15'``.
+
+    The NLM JATS XSL renders dates in English long form; we re-format
+    them here so the HTML preview shows ISO dates (matching the JATS
+    XML's iso-8601-date attributes). Returns the input unchanged if it
+    doesn't parse — caller substitutes no-op for blanks or already-ISO
+    strings.
+    """
+    if not value:
+        return value
+    parts = value.strip().split()
+    if len(parts) != 3:
+        return value
+    day_s, month_s, year_s = parts
+    month = _EN_MONTHS.get(month_s.lower())
+    if month is None:
+        return value
+    try:
+        day = int(day_s)
+        year = int(year_s)
+    except ValueError:
+        return value
+    return f"{year:04d}-{month:02d}-{day:02d}"
+
+
 def _reformat_article_info_cell(html_file):
     """Replace the 6-row article-info cell in the header with two compact lines:
     'CCR {vol}.{issue} ({year}) {page} – ?' and a DOI link."""
@@ -426,13 +459,13 @@ def _reformat_article_info_cell(html_file):
         value = (spans[0].tail or "").strip()
         fields[label] = value
 
-    year = fields.get("Publication date (electronic)", "")
+    year = _to_iso_date(fields.get("Publication date (electronic)", ""))
     vol = fields.get("Volume", "")
     issue = fields.get("Issue", "")
     page = fields.get("Page", fields.get("Pages", ""))
     doi = fields.get("DOI", "")
-    received = fields.get("Date received", "")
-    accepted = fields.get("Date accepted", "")
+    received = _to_iso_date(fields.get("Date received", ""))
+    accepted = _to_iso_date(fields.get("Date accepted", ""))
 
     # page may be "fpage–lpage" or just "fpage"
     if "\u2013" in page:
