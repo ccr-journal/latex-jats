@@ -161,7 +161,7 @@ export function UploadZone({ onUpload }: UploadZoneProps) {
             </div>
             {listExpanded && (
               <ul className="max-h-40 overflow-auto border-t px-3 py-2 text-xs space-y-1">
-                {files.map((f, i) => (
+                {files.map((_f, i) => (
                   <li
                     key={i}
                     className="flex items-center justify-between gap-2 text-muted-foreground"

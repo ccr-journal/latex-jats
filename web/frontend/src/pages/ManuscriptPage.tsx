@@ -15,7 +15,7 @@ import { MetadataCard } from "@/components/MetadataCard";
 import { UploadZone } from "@/components/UploadZone";
 import { LinkUpstreamDialog } from "@/components/LinkUpstreamDialog";
 import { useAuth } from "@/auth/AuthContext";
-import { getManuscript, getStatus, getVersion, uploadFiles, startProcessing, updateManuscript, reimportOjsMetadata, approveManuscript, withdrawApproval, deleteManuscript, archiveManuscript, unarchiveManuscript, downloadUrl, outputUrl, presign, getAuthorToken, regenerateAuthorToken, getInviteTemplate, inviteAuthors, syncUpstream, unlinkUpstream, type Recipient } from "@/api/client";
+import { getManuscript, getStatus, getVersion, uploadFiles, startProcessing, updateManuscript, reimportOjsMetadata, approveManuscript, withdrawApproval, deleteManuscript, archiveManuscript, unarchiveManuscript, downloadUrl, presign, getAuthorToken, regenerateAuthorToken, getInviteTemplate, inviteAuthors, syncUpstream, unlinkUpstream, type Recipient } from "@/api/client";
 import { ApiError } from "@/api/client";
 import type { Manuscript, PipelineStep } from "@/api/types";
 
