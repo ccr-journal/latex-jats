@@ -1,4 +1,4 @@
-"""Unit tests for latex_jats.web.ojs parsing helpers."""
+"""Unit tests for jatsmith.web.ojs parsing helpers."""
 
 from __future__ import annotations
 
@@ -181,7 +181,7 @@ def test_enrich_from_decisions_no_accept_warns(caplog):
         _decision(19, "2024-07-24 09:41:11"),  # legacy code, not in accept set
         _decision(7, "2024-07-24 09:41:27"),
     ]
-    with caplog.at_level("WARNING", logger="latex_jats.web.ojs"):
+    with caplog.at_level("WARNING", logger="jatsmith.web.ojs"):
         enriched = _enrich_from_decisions(sub, decisions)
     assert enriched.date_accepted is None
     assert any(

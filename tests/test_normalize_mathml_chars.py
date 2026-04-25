@@ -1,6 +1,6 @@
 import xml.etree.ElementTree as ET
 
-from latex_jats.convert import (
+from jatsmith.convert import (
     _decompose_math_alphanumeric,
     normalize_mathml_chars,
 )

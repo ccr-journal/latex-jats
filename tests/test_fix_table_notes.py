@@ -1,6 +1,6 @@
 import xml.etree.ElementTree as ET
 
-from latex_jats.convert import fix_table_notes
+from jatsmith.convert import fix_table_notes
 
 MINIMAL_DOC = """\
 <article>

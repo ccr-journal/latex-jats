@@ -36,7 +36,7 @@ if config.config_file_name is not None:
     # disable_existing_loggers=False: alembic runs at FastAPI startup (see
     # _init_db_schema in app/main.py); the default True would flip
     # .disabled on every logger already created at import time (including
-    # latex_jats.*), silently dropping their records in the running app.
+    # jatsmith.*), silently dropping their records in the running app.
     fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 

@@ -1,7 +1,7 @@
 import base64
 import xml.etree.ElementTree as ET
 
-from latex_jats.convert import fix_listing_data
+from jatsmith.convert import fix_listing_data
 
 LTX_NS = "http://dlmf.nist.gov/LaTeXML"
 LTX = f"{{{LTX_NS}}}"

@@ -11,7 +11,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/auth/AuthContext";
 import { getVersion } from "@/api/client";
 
-const GITHUB_URL = "https://github.com/ccr-journal/latex-jats";
+const GITHUB_URL = "https://github.com/ccr-journal/jatsmith";
 
 export function LandingPage() {
   const { user, loading } = useAuth();

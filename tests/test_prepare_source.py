@@ -1,7 +1,7 @@
 import unicodedata
 from pathlib import Path
 
-from latex_jats.prepare_source import _normalize_bbl, _parse_latex_log_errors
+from jatsmith.prepare_source import _normalize_bbl, _parse_latex_log_errors
 
 
 class TestNormalizeBbl:

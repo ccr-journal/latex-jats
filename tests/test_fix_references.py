@@ -4,7 +4,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 import pytest
 
-from latex_jats.convert import fix_references, parse_bbl
+from jatsmith.convert import fix_references, parse_bbl
 
 XLINK = 'http://www.w3.org/1999/xlink'
 
@@ -439,7 +439,7 @@ def test_misc_with_journaltitle_emits_other(tmp_path, caplog):
     xml_path = tmp_path / 'test.xml'
     xml_path.write_text(_flat_jats_one(), encoding='utf-8')
 
-    with caplog.at_level(logging.WARNING, logger='latex_jats.convert'):
+    with caplog.at_level(logging.WARNING, logger='jatsmith.convert'):
         fix_references(str(xml_path), str(bbl))
 
     mc = ET.parse(xml_path).getroot().find('.//mixed-citation')
@@ -458,7 +458,7 @@ def test_online_with_journaltitle_emits_web(tmp_path, caplog):
     xml_path = tmp_path / 'test.xml'
     xml_path.write_text(_flat_jats_one(), encoding='utf-8')
 
-    with caplog.at_level(logging.WARNING, logger='latex_jats.convert'):
+    with caplog.at_level(logging.WARNING, logger='jatsmith.convert'):
         fix_references(str(xml_path), str(bbl))
 
     mc = ET.parse(xml_path).getroot().find('.//mixed-citation')
@@ -493,7 +493,7 @@ def test_misc_without_journaltitle_emits_other_no_warning(tmp_path, caplog):
     xml_path = tmp_path / 'test.xml'
     xml_path.write_text(_flat_jats_one('Jones'), encoding='utf-8')
 
-    with caplog.at_level(logging.WARNING, logger='latex_jats.convert'):
+    with caplog.at_level(logging.WARNING, logger='jatsmith.convert'):
         fix_references(str(xml_path), str(bbl))
 
     mc = ET.parse(xml_path).getroot().find('.//mixed-citation')
@@ -538,7 +538,7 @@ YAO_GOLD = PROJECT_ROOT / 'CCR2025.1.2.YAO_gold' / 'CCR2025.1.2.YAO.xml'
 def test_yao_references_match_gold(tmp_path):
     """Full pipeline on YAO article; spot-check ref-list against gold."""
     import shutil
-    from latex_jats.convert import (
+    from jatsmith.convert import (
         clean_body, fix_citation_ref_types, fix_footnotes, fix_metadata,
         fix_references, fix_table_notes, preprocess_for_latexml, run_latexmlc,
     )

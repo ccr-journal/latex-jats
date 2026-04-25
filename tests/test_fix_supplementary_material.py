@@ -1,7 +1,7 @@
 import logging
 import xml.etree.ElementTree as ET
 
-from latex_jats.convert import fix_supplementary_material
+from jatsmith.convert import fix_supplementary_material
 
 XLINK = "http://www.w3.org/1999/xlink"
 NS = {"xlink": XLINK}
@@ -103,7 +103,7 @@ def test_marker_with_multiple_ext_links_warns(xml_file, caplog):
         '</styled-content></p>'
     )
     path = xml_file(DOC_TEMPLATE.format(body=body, back=""))
-    with caplog.at_level(logging.WARNING, logger="latex_jats.convert"):
+    with caplog.at_level(logging.WARNING, logger="jatsmith.convert"):
         fix_supplementary_material(path)
 
     root = _parse(path)
@@ -124,7 +124,7 @@ def test_marker_without_ext_link_warns(xml_file, caplog):
         '</styled-content></p>'
     )
     path = xml_file(DOC_TEMPLATE.format(body=body, back=""))
-    with caplog.at_level(logging.WARNING, logger="latex_jats.convert"):
+    with caplog.at_level(logging.WARNING, logger="jatsmith.convert"):
         fix_supplementary_material(path)
 
     root = _parse(path)

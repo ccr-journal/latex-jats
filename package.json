@@ -1,5 +1,5 @@
 {
-  "name": "latex-jats",
+  "name": "jatsmith",
   "private": true,
   "scripts": {
     "install:frontend": "npm -C web/frontend install",

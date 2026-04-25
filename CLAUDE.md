@@ -21,8 +21,8 @@ Output goes to `output/<article-id>/` at the project root, with `prepare/` and `
 
 **Direct conversion (single file):**
 ```sh
-uv run latex-jats path/to/main.tex path/to/output.xml --html
-uv run latex-jats path/to/main.tex --zip   # also generate publisher-format zip
+uv run jatsmith path/to/main.tex path/to/output.xml --html
+uv run jatsmith path/to/main.tex --zip   # also generate publisher-format zip
 ```
 
 Pass `--html` to also generate `<doi-suffix>.html` alongside a copy of `jats-preview.css`.
@@ -47,7 +47,7 @@ uv run check-zip output.zip              # verify publisher-ready zip files
 
 ## Pipeline
 
-Three sequential steps in `src/latex_jats/convert.py`:
+Three sequential steps in `src/jatsmith/convert.py`:
 
 1. **`latexmlc`** (`run_latexmlc`) — converts `.tex` to LaTeXML intermediate XML (`ltx:` namespace) using custom bindings from `src/latexml/`.
 2. **`latexmlpost`** — applies LaTeXML's post-processors (bibliography scan, CrossRef citation linking) and the JATS XSLT to produce raw JATS XML.
@@ -95,7 +95,7 @@ The guide is the source of truth when deciding what JATS shapes to emit. A few c
 
 ```
 src/
-  latex_jats/
+  jatsmith/
     convert.py        main pipeline: convert() function and all fixup functions
     runner.py         incremental build runner for examples (run-examples CLI)
     prepare_source.py validates and compiles LaTeX (prepare-source CLI)
@@ -196,13 +196,13 @@ git tag v0.2.0
 git push origin v0.2.0
 ```
 
-CI builds and pushes Docker images (`ccsamsterdam/latex-jats-api`, `ccsamsterdam/latex-jats-caddy`) on `v*` tags.
+CI builds and pushes Docker images (`ccsamsterdam/jatsmith-api`, `ccsamsterdam/jatsmith-caddy`) on `v*` tags.
 
 ## Syncing the CCR extension bundle
 
-The prepare step warns authors when their vendored CCR Quarto extension — `ccr.cls`, `ccrtemplate.tex`, partials, `_extension.yml`, etc. — drifts from the canonical copy. Everything in that directory is publishing-toolchain infrastructure, not author content; customizations belong in the document, not the extension. The canonical bundle lives at `src/latex_jats/ccr_canonical_extension/` and is shipped inside the Python package so the web UI's "Use most recent ccr.cls" toggle can install it into a workspace (via `install_canonical_ccr_extension`).
+The prepare step warns authors when their vendored CCR Quarto extension — `ccr.cls`, `ccrtemplate.tex`, partials, `_extension.yml`, etc. — drifts from the canonical copy. Everything in that directory is publishing-toolchain infrastructure, not author content; customizations belong in the document, not the extension. The canonical bundle lives at `src/jatsmith/ccr_canonical_extension/` and is shipped inside the Python package so the web UI's "Use most recent ccr.cls" toggle can install it into a workspace (via `install_canonical_ccr_extension`).
 
-`src/latex_jats/ccr_cls.py` derives its pins at import time:
+`src/jatsmith/ccr_cls.py` derives its pins at import time:
 
 - `EXPECTED_CCR_CLS_VERSION` — the `% Version X.XX` comment in `ccr.cls`.
 - `EXPECTED_CCR_CLS_SHA256` — hash of `ccr.cls` alone (after CRLF→LF normalization).
@@ -211,8 +211,8 @@ The prepare step warns authors when their vendored CCR Quarto extension — `ccr
 When upstream releases a new version, refresh the canonical bundle from [ccr-journal/ccr-quarto](https://github.com/ccr-journal/ccr-quarto):
 
 ```sh
-rm -rf src/latex_jats/ccr_canonical_extension
-cp -r ~/path/to/ccr-quarto/_extensions/ccr src/latex_jats/ccr_canonical_extension
+rm -rf src/jatsmith/ccr_canonical_extension
+cp -r ~/path/to/ccr-quarto/_extensions/ccr src/jatsmith/ccr_canonical_extension
 ```
 
 The `% Version X.XX` comment and `\ProvidesClass[...vX.XX]` tag inside `ccr.cls` are the source of truth for the class version. Run `uv run pytest tests/test_ccr_cls.py` — `test_canonical_providesclass_matches_version_comment` fails if those two tags disagree, and `test_canonical_bundle_has_expected_files` fails if anyone accidentally drops a partial or the class file from the bundle.

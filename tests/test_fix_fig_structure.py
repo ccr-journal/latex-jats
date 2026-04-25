@@ -1,7 +1,7 @@
 import logging
 import xml.etree.ElementTree as ET
 
-from latex_jats.convert import fix_fig_structure
+from jatsmith.convert import fix_fig_structure
 
 MINIMAL_DOC = """\
 <article>

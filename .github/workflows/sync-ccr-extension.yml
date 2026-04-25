@@ -1,6 +1,6 @@
 name: Sync CCR Quarto extension
 
-# Keep src/latex_jats/ccr_canonical_extension/ in lockstep with the upstream
+# Keep src/jatsmith/ccr_canonical_extension/ in lockstep with the upstream
 # Quarto extension. Runs daily and on manual dispatch; opens a PR rather than
 # committing to main so CI (tests + integration) gates any behavior change,
 # and so a human sees the diff for files CI doesn't exercise (notably ccr.lua).
@@ -28,7 +28,7 @@ jobs:
     env:
       CCR_QUARTO_REPO: https://github.com/ccr-journal/ccr-quarto
       CCR_CLS_URL: https://raw.githubusercontent.com/ccr-journal/ccr-latex/main/ccr.cls
-      LOCAL_PATH: src/latex_jats/ccr_canonical_extension
+      LOCAL_PATH: src/jatsmith/ccr_canonical_extension
       SYNC_BRANCH: sync/ccr-extension
     steps:
       - name: Checkout
@@ -88,7 +88,7 @@ jobs:
               --base main \
               --head "$SYNC_BRANCH" \
               --title "Sync CCR Quarto extension from upstream" \
-              --body "Automated sync of \`src/latex_jats/ccr_canonical_extension/\` from [ccr-journal/ccr-quarto](https://github.com/ccr-journal/ccr-quarto) (with \`ccr.cls\` pulled directly from [ccr-journal/ccr-latex](https://github.com/ccr-journal/ccr-latex)).
+              --body "Automated sync of \`src/jatsmith/ccr_canonical_extension/\` from [ccr-journal/ccr-quarto](https://github.com/ccr-journal/ccr-quarto) (with \`ccr.cls\` pulled directly from [ccr-journal/ccr-latex](https://github.com/ccr-journal/ccr-latex)).
 
           **Before merging:**
           - Let CI run — integration tests exercise \`ccr.cls\` macros like \`\\\\acknowledgements\` and will fail if a regression slips through.

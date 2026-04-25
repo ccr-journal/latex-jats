@@ -20,7 +20,7 @@ import re
 
 from sqlmodel import select
 
-from latex_jats.convert import (
+from jatsmith.convert import (
     compare_metadata,
     convert,
     create_publisher_zip,
@@ -28,8 +28,8 @@ from latex_jats.convert import (
     preprocess_for_latexml,
     validate_jats,
 )
-from latex_jats.prepare_source import compile_latex, prepare_workspace
-from latex_jats.quarto import (
+from jatsmith.prepare_source import compile_latex, prepare_workspace
+from jatsmith.quarto import (
     convert_quarto,
     find_qmd,
     get_doi_suffix_from_qmd,
@@ -132,7 +132,7 @@ def inject_ojs_metadata(tex_file: Path, manuscript) -> None:
         insert_block = "\n% Injected from OJS metadata\n" + "\n".join(injected) + "\n"
         text = preamble + insert_block + r"\begin{document}" + rest
         tex_file.write_text(text, encoding="utf-8")
-        pipeline_logger = logging.getLogger("latex_jats")
+        pipeline_logger = logging.getLogger("jatsmith")
         pipeline_logger.info("Injected missing metadata from OJS: %s",
                              ", ".join(injected))
 
@@ -161,11 +161,11 @@ def inject_ojs_metadata_qmd(qmd_file: Path, manuscript) -> None:
 
 
 class _LogCollector(logging.Handler):
-    """Collects log records from the ``latex_jats`` logger hierarchy.
+    """Collects log records from the ``jatsmith`` logger hierarchy.
 
     When multiple pipelines run concurrently (FastAPI BackgroundTasks run in
     a shared thread pool), every collector is attached to the same
-    ``latex_jats`` logger and would otherwise receive every pipeline's
+    ``jatsmith`` logger and would otherwise receive every pipeline's
     records.  We capture the thread that created the collector and ignore
     records emitted from other threads — each pipeline's work (including the
     subprocess captures that route back through logging) happens in a single
@@ -532,9 +532,9 @@ def _run_quarto_pipeline(
         shutil.copy2(rendered_pdf, pdf_path)
         lastpage = _pdf_page_count(pdf_path)
     except Exception as exc:
-        # Log through latex_jats so the collector picks it up and the step
+        # Log through jatsmith so the collector picks it up and the step
         # is marked as "warnings" rather than "ok".
-        logging.getLogger("latex_jats").warning(
+        logging.getLogger("jatsmith").warning(
             "Quarto PDF compilation failed (continuing without PDF): %s", exc
         )
     _finish_step(engine, doi_suffix, "compile", collector.drain(),
@@ -619,7 +619,7 @@ def run_pipeline(
     LaTeX (.tex) and delegates to the appropriate pipeline.
     """
     collector = _LogCollector()
-    pipeline_logger = logging.getLogger("latex_jats")
+    pipeline_logger = logging.getLogger("jatsmith")
     pipeline_logger.addHandler(collector)
     # Ensure the logger passes INFO+ records to our handler even if the root
     # logger is configured at a higher level (e.g. WARNING in test/production).

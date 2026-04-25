@@ -5,7 +5,7 @@ import pytest
 
 import shutil
 
-from latex_jats.convert import (
+from jatsmith.convert import (
     collapse_affiliations,
     fix_footnotes,
     fix_supplementary_material,

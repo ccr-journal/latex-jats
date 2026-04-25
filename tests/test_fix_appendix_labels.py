@@ -1,6 +1,6 @@
 import xml.etree.ElementTree as ET
 
-from latex_jats.convert import fix_appendix_labels
+from jatsmith.convert import fix_appendix_labels
 
 MINIMAL_DOC = """\
 <article>

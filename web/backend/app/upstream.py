@@ -27,7 +27,7 @@ from cryptography.fernet import Fernet, InvalidToken
 
 from .config import get_config
 
-logger = logging.getLogger("latex_jats.web.upstream")
+logger = logging.getLogger("jatsmith.web.upstream")
 
 
 # ── Schemes ────────────────────────────────────────────────────────────────────

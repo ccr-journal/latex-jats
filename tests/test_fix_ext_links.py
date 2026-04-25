@@ -1,6 +1,6 @@
 import xml.etree.ElementTree as ET
 
-from latex_jats.convert import fix_ext_links
+from jatsmith.convert import fix_ext_links
 
 XLINK = "http://www.w3.org/1999/xlink"
 

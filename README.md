@@ -8,7 +8,7 @@ This is a tool to convert CCR journal articles in _latex_ format into _JATS XML_
 It can be used as a CLI tool (see below) or as a web service where editors and authors can upload LaTeX source, run the conversion, and preview/download results. The quickest way to get the web service running:
 
 ```sh
-wget -q https://github.com/ccr-journal/latex-jats/releases/latest/download/{docker-compose.yml,.env}
+wget -q https://github.com/ccr-journal/jatsmith/releases/latest/download/{docker-compose.yml,.env}
 # edit .env — set EDITOR_CREDENTIALS and OJS_* credentials
 docker compose up -d
 ```
@@ -18,7 +18,7 @@ See the [Web Service](#web-service) section for details, and [deploy/.env.exampl
 
 ### Processing pipeline
 
-Running `latex-jats` automatically performs three steps:
+Running `jatsmith` automatically performs three steps:
 
 1. **`latexmlc`** — processes the `.tex` file using the custom bindings in `src/latexml/` and produces LaTeXML intermediate XML (the `ltx:` namespace). The `biblatex.sty.ltxml` binding loads the `.bbl` file and builds author-year citation labels.
 2. **`latexmlpost`** — runs LaTeXML's post-processors on the intermediate XML: scans the document, builds the bibliography, and runs CrossRef to resolve in-text citations to their bibliography entries (filling in `idref` attributes).
@@ -27,7 +27,7 @@ Running `latex-jats` automatically performs three steps:
 Optionally, the JATS output can be converted to HTML for checking proofs. This uses the NLM/JATS XSLT stylesheets and can be run separately with `latexmlpost --format=html`.
 
 ### Repository structure
-- `src/latex_jats/` | Python package: main converter (`convert.py`) and bibliography cleaner (`fixbib.py`)
+- `src/jatsmith/` | Python package: main converter (`convert.py`) and bibliography cleaner (`fixbib.py`)
 - `src/latexml/` | LaTeXML bindings: `ccr.cls.ltxml` and `biblatex.sty.ltxml`
 - `src/lua/` | Pandoc Lua filter for metadata extraction (`ccr_latex.lua`)
 - `src/css/` | Stylesheets for LaTeXML HTML preview output
@@ -61,10 +61,10 @@ uv sync
 
 ```sh
 # output goes automatically to <article>/output/main.xml
-uv run latex-jats examples/CCR2023.1.004.KATH/latex/main.tex
+uv run jatsmith examples/CCR2023.1.004.KATH/latex/main.tex
 
 # or specify an output path explicitly
-uv run latex-jats examples/CCR2023.1.004.KATH/latex/main.tex path/to/output.xml
+uv run jatsmith examples/CCR2023.1.004.KATH/latex/main.tex path/to/output.xml
 ```
 
 The output is automatically validated against the [JATS Publishing 1.2 RelaxNG schema](https://jats.nlm.nih.gov/publishing/1.2/rng.html) (MathML3 variant) using `jing`. You can also validate online with [J4R Validator](https://j4r.nlm.nih.gov/) or [PubMed Central Validator](https://pmc.ncbi.nlm.nih.gov/tools/stylechecker/).
@@ -99,7 +99,7 @@ Swagger UI is available at http://localhost:8000/docs.
 Download the latest release files and fill in your credentials:
 
 ```sh
-wget -q https://github.com/ccr-journal/latex-jats/releases/latest/download/{docker-compose.yml,.env}
+wget -q https://github.com/ccr-journal/jatsmith/releases/latest/download/{docker-compose.yml,.env}
 # edit .env — set EDITOR_CREDENTIALS and OJS_* credentials
 docker compose up -d
 ```
@@ -142,14 +142,14 @@ TAG=2026-04
 
 docker buildx build \
   --platform linux/amd64 \
-  --tag ccsamsterdam/latex-jats-base:$TAG \
-  --tag ccsamsterdam/latex-jats-base:latest \
+  --tag ccsamsterdam/jatsmith-base:$TAG \
+  --tag ccsamsterdam/jatsmith-base:latest \
   --push \
   -f web/backend/Dockerfile.base \
   web/backend/
 ```
 
-Then bump the `FROM ccsamsterdam/latex-jats-base:...` line in `web/backend/Dockerfile`, commit, and tag a new app release.
+Then update the `FROM` line in `web/backend/Dockerfile` to point at the new tag (`ccsamsterdam/jatsmith-base:$TAG`), commit, and tag a new app release. The current Dockerfile still references the legacy `ccsamsterdam/latex-jats-base:2026-04f` image — that pin will be replaced by the next base rebuild under the new name.
 
 ## Unit and Integration Tests
 

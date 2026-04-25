@@ -137,7 +137,7 @@ def test_log_capture(
     mock_doi, mock_prepare, mock_compile, mock_preprocess,
     mock_convert, mock_zip, engine, storage,
 ):
-    """Pipeline log messages from the latex_jats logger should be captured in job_log."""
+    """Pipeline log messages from the jatsmith logger should be captured in job_log."""
     import logging
 
     doi = _create_manuscript(engine)
@@ -148,7 +148,7 @@ def test_log_capture(
 
     # Make prepare_workspace emit a log message
     def fake_prepare(*args, **kwargs):
-        logging.getLogger("latex_jats.prepare_source").info("Preparing workspace...")
+        logging.getLogger("jatsmith.prepare_source").info("Preparing workspace...")
         return workspace_dir / "main.tex"
 
     mock_prepare.side_effect = fake_prepare

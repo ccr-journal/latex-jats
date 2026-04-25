@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from latex_jats.convert import _warn_stray_text_after_includegraphics
+from jatsmith.convert import _warn_stray_text_after_includegraphics
 
 
 def test_trailing_period_triggers_warning(tmp_path, caplog):

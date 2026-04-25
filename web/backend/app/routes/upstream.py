@@ -29,7 +29,7 @@ from ..deps import (
 from ..models import CurrentUser, ManuscriptRead, ManuscriptStatus
 from ..storage import Storage
 
-logger = logging.getLogger("latex_jats.web.upstream")
+logger = logging.getLogger("jatsmith.web.upstream")
 
 router = APIRouter(prefix="/api/manuscripts", tags=["upstream"])
 
