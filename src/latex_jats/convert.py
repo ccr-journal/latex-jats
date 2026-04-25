@@ -219,6 +219,7 @@ def warn_source_issues(tex_path):
     _warn_bare_greater_than(tex_path)
     _warn_title_in_table(tex_path)
     _warn_stray_text_after_includegraphics(tex_path)
+    _warn_text_in_figure(tex_path)
     _warn_transliteration_packages(tex_path)
     _warn_bare_ampersand_in_metadata(tex_path)
     _warn_input_in_tabular(tex_path)
@@ -981,6 +982,128 @@ def _warn_stray_text_after_includegraphics(tex_path):
                     r'remove the trailing punctuation.',
                     fpath.name, lineno, m.group(1),
                 )
+
+
+# Text-formatting macros that should never appear at the top level of a
+# figure body. They produce a stray <p> in the JATS output, which is invalid
+# inside <fig-group> when the figure also has subfloats.
+_FIGURE_TOP_LEVEL_TEXT_MACROS = frozenset({
+    "textbf", "textit", "textrm", "textsc", "texttt", "textsf",
+    "textsl", "textmd", "textnormal", "emph", "underline",
+    "section", "subsection", "subsubsection", "paragraph",
+})
+
+
+def _warn_text_in_figure(tex_path):
+    r"""Warn about bare text or text-formatting macros at the top level of figure environments.
+
+    A LaTeX figure body should contain only structural macros (\centering,
+    \includegraphics, \subfloat, \caption, \label, \makebox, ...) and layout
+    whitespace. Bare \textbf{...} runs (typically used as sub-headings between
+    groups of subfloats) or plain text become a stray <p> inside the resulting
+    <fig-group>, which the JATS schema does not allow inside a fig-group.
+
+    Walks each figure body tracking brace and bracket depth so we only flag
+    content at the figure's top level — text inside a \caption{...} or
+    \subfloat[...]{...} argument is fine.
+    """
+    tex_dir = tex_path.parent
+    files = [tex_path]
+    try:
+        main_text = tex_path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        main_text = tex_path.read_text(encoding="latin-1")
+    for m in re.finditer(r'\\(?:input|include)\{([^}]+)\}', main_text):
+        child = tex_dir / m.group(1)
+        if not child.suffix:
+            child = child.with_suffix('.tex')
+        if child.exists() and child not in files:
+            files.append(child)
+
+    env_re = re.compile(
+        r'\\begin\{figure\*?\}\s*(?:\[[^\]]*\])?(.*?)\\end\{figure\*?\}',
+        re.DOTALL,
+    )
+    macro_re = re.compile(r'\\([A-Za-z@]+)')
+
+    for fpath in files:
+        try:
+            text = fpath.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            text = fpath.read_text(encoding="latin-1")
+        for env in env_re.finditer(text):
+            body = env.group(1)
+            body_start = env.start(1)
+            line_offset = text[:body_start].count('\n')
+            depth = 0
+            bracket_depth = 0
+            i = 0
+            rel_line = 0
+            n = len(body)
+            while i < n:
+                c = body[i]
+                if c == '\n':
+                    rel_line += 1
+                    i += 1
+                elif c == '%':
+                    while i < n and body[i] != '\n':
+                        i += 1
+                elif c == '$':
+                    i += 1
+                    while i < n and body[i] != '$':
+                        if body[i] == '\n':
+                            rel_line += 1
+                        i += 1
+                    if i < n:
+                        i += 1
+                elif c == '{':
+                    depth += 1
+                    i += 1
+                elif c == '}':
+                    depth = max(0, depth - 1)
+                    i += 1
+                elif c == '[' and depth == 0:
+                    bracket_depth += 1
+                    i += 1
+                elif c == ']' and depth == 0:
+                    bracket_depth = max(0, bracket_depth - 1)
+                    i += 1
+                elif c == '\\':
+                    m = macro_re.match(body, i)
+                    if m:
+                        macro = m.group(1)
+                        if (depth == 0 and bracket_depth == 0
+                                and macro in _FIGURE_TOP_LEVEL_TEXT_MACROS):
+                            line_no = line_offset + rel_line + 1
+                            logger.warning(
+                                r'\%s at top level of figure (%s:%d): bare '
+                                r'formatted text inside a figure produces '
+                                r'invalid JATS (a stray <p> inside '
+                                r'<fig-group>). Move it into \caption{} '
+                                r'or \subfloat[]{}, or split the figure.',
+                                macro, fpath.name, line_no,
+                            )
+                        i = m.end()
+                    else:
+                        i += min(2, n - i)
+                elif depth == 0 and bracket_depth == 0 and c.isalpha():
+                    start = i
+                    while (i < n and body[i] != '\n'
+                           and (body[i].isalpha()
+                                or body[i] in " 0123456789.,?!'-:;()")):
+                        i += 1
+                    snippet = body[start:i].strip()
+                    if len(snippet) >= 4:
+                        line_no = line_offset + rel_line + 1
+                        logger.warning(
+                            'Bare text in figure (%s:%d): %r — text inside '
+                            'a figure body produces invalid JATS (a stray '
+                            '<p> inside <fig-group>). Move it into '
+                            r'\caption{} or \subfloat[]{}.',
+                            fpath.name, line_no, snippet[:60],
+                        )
+                else:
+                    i += 1
 
 
 def fix_appendix_labels(jats_file):
