@@ -3,7 +3,7 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "latex-jats"
+name = "jatsmith"
 version = "0.7.3"
 description = "Convert CCR journal LaTeX manuscripts to JATS XML"
 requires-python = ">=3.10"
@@ -13,7 +13,7 @@ dependencies = ["lxml", "pyyaml", "Pillow"]
 where = ["src"]
 
 [tool.setuptools.package-data]
-latex_jats = ["ccr_canonical_extension/**/*"]
+jatsmith = ["ccr_canonical_extension/**/*"]
 
 [project.optional-dependencies]
 test = ["pytest", "httpx", "respx", "aiosmtpd"]
@@ -34,12 +34,12 @@ pythonpath = ["."]
 markers = ["integration: requires latexmlc installed (deselect with -m 'not integration')"]
 
 [project.scripts]
-latex-jats = "latex_jats.convert:main"
-fixbib = "latex_jats.fixbib:main"
-fix-input = "latex_jats.fix_input:main"
-prepare-source = "latex_jats.prepare_source:main"
-run-examples = "latex_jats.runner:main"
-check-zip = "latex_jats.check_zip:main"
+jatsmith = "jatsmith.convert:main"
+fixbib = "jatsmith.fixbib:main"
+fix-input = "jatsmith.fix_input:main"
+prepare-source = "jatsmith.prepare_source:main"
+run-examples = "jatsmith.runner:main"
+check-zip = "jatsmith.check_zip:main"
 
 [tool.basedpyright]
 typeCheckingMode = "basic"

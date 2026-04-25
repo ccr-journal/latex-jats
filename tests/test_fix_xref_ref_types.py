@@ -1,6 +1,6 @@
 import xml.etree.ElementTree as ET
 
-from latex_jats.convert import fix_xref_ref_types
+from jatsmith.convert import fix_xref_ref_types
 
 
 def _make_doc(body, back=""):

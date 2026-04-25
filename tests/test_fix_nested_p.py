@@ -1,6 +1,6 @@
 import xml.etree.ElementTree as ET
 
-from latex_jats.convert import fix_nested_p
+from jatsmith.convert import fix_nested_p
 
 MINIMAL_DOC = """\
 <article>

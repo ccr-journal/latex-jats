@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from latex_jats.convert import fix_metadata
+from jatsmith.convert import fix_metadata
 
 
 def _write_xml(tmp_path, content):

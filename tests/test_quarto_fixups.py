@@ -1,7 +1,7 @@
 """Unit tests for the Quarto post-processing fixups."""
 import xml.etree.ElementTree as ET
 
-from latex_jats.quarto import (
+from jatsmith.quarto import (
     add_fig_table_labels,
     drop_empty_refs_section,
     fix_corresp_xref,

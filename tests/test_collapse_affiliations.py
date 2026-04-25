@@ -2,7 +2,7 @@
 
 import xml.etree.ElementTree as ET
 
-from latex_jats.convert import collapse_affiliations
+from jatsmith.convert import collapse_affiliations
 
 
 def _write_xml(tmp_path, content):

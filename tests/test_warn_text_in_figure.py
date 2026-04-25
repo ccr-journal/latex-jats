@@ -1,4 +1,4 @@
-from latex_jats.convert import _warn_text_in_figure
+from jatsmith.convert import _warn_text_in_figure
 
 
 FIG_OPEN = "\\begin{figure}[ht!]\n"

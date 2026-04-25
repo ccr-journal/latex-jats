@@ -1,6 +1,6 @@
 import logging
 
-from latex_jats.convert import warn_section_acknowledgements
+from jatsmith.convert import warn_section_acknowledgements
 
 MINIMAL_DOC = """\
 <article>

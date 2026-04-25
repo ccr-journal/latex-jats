@@ -16,7 +16,7 @@ from ..config import get_config
 from ..deps import get_current_role, get_current_user, get_session
 from ..models import AccessToken, CurrentUser, CurrentUserWithRole
 
-logger = logging.getLogger("latex_jats.web.auth")
+logger = logging.getLogger("jatsmith.web.auth")
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 

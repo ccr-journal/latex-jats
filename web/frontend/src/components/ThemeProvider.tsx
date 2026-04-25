@@ -9,7 +9,7 @@ type ThemeContextValue = {
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
-const STORAGE_KEY = "latex-jats-theme";
+const STORAGE_KEY = "jatsmith-theme";
 
 function applyTheme(theme: Theme) {
   const root = document.documentElement;

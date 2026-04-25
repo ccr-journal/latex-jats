@@ -33,7 +33,7 @@ from .storage import Storage
 _PROJECT_ROOT = Path(__file__).parents[3]
 _STORAGE_ROOT = Path(os.environ.get("STORAGE_DIR", _PROJECT_ROOT / "storage"))
 _DATABASE_URL = os.environ.get(
-    "DATABASE_URL", f"sqlite:///{_STORAGE_ROOT / 'latex_jats.db'}"
+    "DATABASE_URL", f"sqlite:///{_STORAGE_ROOT / 'jatsmith.db'}"
 )
 
 
@@ -60,7 +60,7 @@ def _init_db_schema(engine) -> None:
     revision the schema matches. Operator should stamp the correct revision
     then restart.
     """
-    log = logging.getLogger("latex_jats.web")
+    log = logging.getLogger("jatsmith.web")
     insp = inspect(engine)
     tables = set(insp.get_table_names())
 
@@ -84,7 +84,7 @@ def _reset_orphaned_jobs(engine) -> None:
     ``/process`` endpoint refuses to restart while status is in that set.
     Flip them to ``failed`` so the editor can retry.
     """
-    log = logging.getLogger("latex_jats.web")
+    log = logging.getLogger("jatsmith.web")
     stuck_statuses = (ManuscriptStatus.queued, ManuscriptStatus.processing)
     with Session(engine) as session:
         orphans = session.exec(
@@ -119,9 +119,26 @@ def _reset_orphaned_jobs(engine) -> None:
         )
 
 
+def _migrate_legacy_db_filename() -> None:
+    """Rename storage/latex_jats.db → storage/jatsmith.db on first startup
+    after the project rename. Only fires when DATABASE_URL is unset (default
+    sqlite path) and the new file does not exist yet.
+    """
+    if "DATABASE_URL" in os.environ:
+        return
+    new = _STORAGE_ROOT / "jatsmith.db"
+    old = _STORAGE_ROOT / "latex_jats.db"
+    if old.exists() and not new.exists():
+        old.rename(new)
+        logging.getLogger("jatsmith.web").info(
+            "Renamed legacy database file %s → %s", old.name, new.name
+        )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     _STORAGE_ROOT.mkdir(parents=True, exist_ok=True)
+    _migrate_legacy_db_filename()
 
     engine = create_engine(
         _DATABASE_URL,
@@ -135,7 +152,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="LaTeX-JATS Web Service", lifespan=lifespan)
+app = FastAPI(title="JATSmith Web Service", lifespan=lifespan)
 
 _CORS_ORIGINS = os.environ.get(
     "CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"
@@ -150,9 +167,9 @@ if _CORS_ORIGINS:
 
 @app.get("/api/version")
 def get_version() -> dict[str, str]:
-    from latex_jats.ccr_cls import EXPECTED_CCR_CLS_VERSION
+    from jatsmith.ccr_cls import EXPECTED_CCR_CLS_VERSION
     return {
-        "version": pkg_version("latex-jats"),
+        "version": pkg_version("jatsmith"),
         "ccr_cls_version": EXPECTED_CCR_CLS_VERSION,
     }
 

@@ -1,6 +1,6 @@
 import xml.etree.ElementTree as ET
 
-from latex_jats.convert import fix_footnotes
+from jatsmith.convert import fix_footnotes
 
 
 def _make_doc(body_content, back_content=""):

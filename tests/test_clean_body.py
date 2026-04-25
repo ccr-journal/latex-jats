@@ -1,6 +1,6 @@
 import xml.etree.ElementTree as ET
 
-from latex_jats.convert import clean_body
+from jatsmith.convert import clean_body
 
 
 def _make_doc(body_content, back_content=""):

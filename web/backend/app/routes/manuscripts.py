@@ -33,7 +33,7 @@ from ..models import (
 )
 from ..storage import Storage
 
-logger = logging.getLogger("latex_jats.web.manuscripts")
+logger = logging.getLogger("jatsmith.web.manuscripts")
 
 router = APIRouter(prefix="/api/manuscripts", tags=["manuscripts"])
 
@@ -578,7 +578,7 @@ def _rerun_check_step(
     """Re-run metadata comparison and update the check pipeline step."""
     import logging as _logging
 
-    from latex_jats.convert import compare_metadata
+    from jatsmith.convert import compare_metadata
     from ..worker import classify_step_status
 
     convert_dir = storage.convert_output_dir(doi_suffix)
@@ -601,7 +601,7 @@ def _rerun_check_step(
     handler = _logging.Handler()
     handler.setFormatter(_logging.Formatter("%(levelname)s: %(message)s"))
     handler.emit = lambda record: log_buffer.append(handler.format(record))  # type: ignore[assignment]
-    meta_logger = _logging.getLogger("latex_jats")
+    meta_logger = _logging.getLogger("jatsmith")
     meta_logger.addHandler(handler)
     try:
         compare_metadata(

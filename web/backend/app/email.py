@@ -18,7 +18,7 @@ import markdown as md
 
 from .config import AuthConfig, get_config
 
-logger = logging.getLogger("latex_jats.web.email")
+logger = logging.getLogger("jatsmith.web.email")
 
 
 DEFAULT_TEMPLATE = """\

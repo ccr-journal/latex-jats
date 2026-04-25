@@ -8,7 +8,7 @@ from typing import Optional
 
 import pytest
 
-from latex_jats.convert import compare_metadata
+from jatsmith.convert import compare_metadata
 
 
 # ── Lightweight stand-ins for the DB models ──────────────────────────────────

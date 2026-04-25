@@ -3,7 +3,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from latex_jats.convert import _flatten_raster_alpha
+from jatsmith.convert import _flatten_raster_alpha
 
 XLINK = "http://www.w3.org/1999/xlink"
 

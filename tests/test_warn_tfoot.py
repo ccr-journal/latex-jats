@@ -1,7 +1,7 @@
 import logging
 import xml.etree.ElementTree as ET
 
-from latex_jats.convert import warn_tfoot_notes
+from jatsmith.convert import warn_tfoot_notes
 
 MINIMAL_DOC = """\
 <article>

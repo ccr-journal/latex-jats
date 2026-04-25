@@ -2465,9 +2465,9 @@ def compare_metadata(jats_file, manuscript, authors, output_json=None):
     """
     import json
 
-    # Use the parent 'latex_jats' logger directly so warnings are guaranteed
+    # Use the parent 'jatsmith' logger directly so warnings are guaranteed
     # to reach the pipeline's _LogCollector (which is attached to that logger).
-    meta_logger = logging.getLogger("latex_jats")
+    meta_logger = logging.getLogger("jatsmith")
 
     tree = ET.parse(str(jats_file))
     root = tree.getroot()
@@ -3304,7 +3304,7 @@ def main():
 
     # Dispatch on extension: .qmd → quarto pipeline
     if input_path.suffix.lower() == ".qmd":
-        from latex_jats.quarto import convert_quarto, get_doi_suffix_from_qmd
+        from jatsmith.quarto import convert_quarto, get_doi_suffix_from_qmd
         if args.output:
             output_path = Path(args.output)
         else:

@@ -21,9 +21,9 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
-from latex_jats.convert import convert, create_publisher_zip, get_doi_suffix, preprocess_for_latexml, validate_jats
-from latex_jats.prepare_source import compile_latex, prepare_workspace
-from latex_jats.quarto import (
+from jatsmith.convert import convert, create_publisher_zip, get_doi_suffix, preprocess_for_latexml, validate_jats
+from jatsmith.prepare_source import compile_latex, prepare_workspace
+from jatsmith.quarto import (
     convert_quarto,
     find_qmd,
     get_doi_suffix_from_qmd,

@@ -36,8 +36,8 @@ jobs:
           context: web/frontend
           push: true
           tags: |
-            ccsamsterdam/latex-jats-caddy:${{ steps.version.outputs.version }}
-            ccsamsterdam/latex-jats-caddy:latest
+            ccsamsterdam/jatsmith-caddy:${{ steps.version.outputs.version }}
+            ccsamsterdam/jatsmith-caddy:latest
           cache-from: type=gha,scope=caddy
           cache-to: type=gha,scope=caddy,mode=max
 
@@ -48,8 +48,8 @@ jobs:
           file: web/backend/Dockerfile
           push: true
           tags: |
-            ccsamsterdam/latex-jats-api:${{ steps.version.outputs.version }}
-            ccsamsterdam/latex-jats-api:latest
+            ccsamsterdam/jatsmith-api:${{ steps.version.outputs.version }}
+            ccsamsterdam/jatsmith-api:latest
           cache-from: type=gha,scope=api
           cache-to: type=gha,scope=api,mode=max
 

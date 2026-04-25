@@ -21,11 +21,11 @@ import sys
 import unicodedata
 from pathlib import Path
 
-from latex_jats.ccr_cls import (
+from jatsmith.ccr_cls import (
     install_canonical_ccr_cls as _install_canonical_ccr_cls,
     warn_if_outdated as _warn_if_ccr_cls_outdated,
 )
-from latex_jats.fix_input import _collect_tex_files, fix_file
+from jatsmith.fix_input import _collect_tex_files, fix_file
 
 logger = logging.getLogger(__name__)
 
@@ -209,7 +209,7 @@ def prepare_workspace(source_dir: Path, workspace_dir: Path,
 
     Returns the path to main.tex in the workspace.
     """
-    from latex_jats.convert import warn_source_issues
+    from jatsmith.convert import warn_source_issues
 
     if workspace_dir.exists():
         shutil.rmtree(workspace_dir)

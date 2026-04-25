@@ -1,4 +1,4 @@
-from latex_jats.fix_input import (
+from jatsmith.fix_input import (
     fix_bare_angle_brackets,
     fix_bib_dotless_i_accent,
     fix_stray_after_includegraphics,

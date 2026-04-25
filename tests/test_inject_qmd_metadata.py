@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
 
-from latex_jats.quarto import parse_qmd_frontmatter, upsert_qmd_frontmatter_keys
+from jatsmith.quarto import parse_qmd_frontmatter, upsert_qmd_frontmatter_keys
 from web.backend.app.worker import inject_ojs_metadata_qmd
 
 

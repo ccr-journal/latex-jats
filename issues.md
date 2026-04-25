@@ -37,8 +37,8 @@ https://www.aup-online.com/content/journals/10.5117/CCR2026.1.2.ELDA
 - RQ! misses from “RQ1: How effectively …”This seems a problem in our XML, probably related to using labels from a bulleted list → Note: this is fixed by turning into a <def-list>, which is correct JATS, but we haven’t used it yet. Should test here (or with WEDE/MULL – or perhaps URMA but would need to alter the XML there as well since they used something like <ul><b>... instead
 - Table 2 is extremely ugly due to one column being very wide, the rest too small. Looks fine in full screen. Not sure why, our XML doesn’t specify anything. Perhaps related to next problem: --> (Fix: yes, probably caused by alttext bug)
 - Table 2 contains Error parsing MathML: error on line 1 at column 67: Unescaped '<' not allowed in attributes values. XML contains alttext="&lt;4" and <mml:mo mathsize="90%">&lt;</mml:mo>, maybe it needs to be escaped twice in either place.  Table C1 has same MathML errors, seemingly same cause → Solved by stripping all alttext
-- Appendices are included in the full text, not in separate “Supplementen” link --> https://github.com/ccr-journal/latex-jats/issues/3
-- Figures within table in Appendix A are not shown --> https://github.com/ccr-journal/latex-jats/issues/4
+- Appendices are included in the full text, not in separate “Supplementen” link --> https://github.com/ccr-journal/jatsmith/issues/3
+- Figures within table in Appendix A are not shown --> https://github.com/ccr-journal/jatsmith/issues/4
 
 
 

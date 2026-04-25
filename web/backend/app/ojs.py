@@ -19,7 +19,7 @@ import httpx
 
 from .config import AuthConfig, get_config
 
-logger = logging.getLogger("latex_jats.web.ojs")
+logger = logging.getLogger("jatsmith.web.ojs")
 
 _STAGE_COPYEDITING = 4
 _STAGE_PRODUCTION = 5

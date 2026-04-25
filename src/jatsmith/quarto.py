@@ -18,11 +18,11 @@ import subprocess
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-from latex_jats.ccr_cls import (
+from jatsmith.ccr_cls import (
     install_canonical_ccr_extension as _install_canonical_ccr_extension,
     warn_if_outdated as _warn_if_ccr_cls_outdated,
 )
-from latex_jats.convert import (
+from jatsmith.convert import (
     _build_mixed_citation,
     _convert_pdf_figures,
     apply_article_meta,
@@ -851,7 +851,7 @@ def convert_quarto(input_qmd: Path, output_xml: Path, html: bool = False,
 
     The caller is responsible for having already prepared the workspace
     (i.e. ``input_qmd.parent`` should be a writable copy of the source dir),
-    matching the contract of :func:`latex_jats.convert.convert`.
+    matching the contract of :func:`jatsmith.convert.convert`.
     """
     output_xml.parent.mkdir(parents=True, exist_ok=True)
     log_dir = output_xml.parent / "logs"

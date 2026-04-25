@@ -3,7 +3,7 @@ import xml.etree.ElementTree as ET
 
 import pytest
 
-from latex_jats.convert import fix_graphic_in_td, fix_pdf_graphic_refs
+from jatsmith.convert import fix_graphic_in_td, fix_pdf_graphic_refs
 
 XLINK = "http://www.w3.org/1999/xlink"
 
@@ -108,7 +108,7 @@ def test_warning_logged_per_rewrite(xml_file, caplog: pytest.LogCaptureFixture):
         '</td>'
     ))
     path = xml_file(xml)
-    with caplog.at_level(logging.WARNING, logger="latex_jats.convert"):
+    with caplog.at_level(logging.WARNING, logger="jatsmith.convert"):
         fix_graphic_in_td(path)
 
     warnings = [r for r in caplog.records if r.levelno == logging.WARNING]

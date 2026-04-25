@@ -3,7 +3,7 @@
 # section of README.md. Bump the date tag when refreshing system packages.
 FROM ccsamsterdam/latex-jats-base:2026-04f
 
-# Set up application — copy full project (backend imports src/latex_jats)
+# Set up application — copy full project (backend imports src/jatsmith)
 WORKDIR /app
 COPY pyproject.toml ./
 COPY src/ src/

@@ -1,6 +1,6 @@
 import xml.etree.ElementTree as ET
 
-from latex_jats.convert import strip_mathml_alttext
+from jatsmith.convert import strip_mathml_alttext
 
 MML = "http://www.w3.org/1998/Math/MathML"
 

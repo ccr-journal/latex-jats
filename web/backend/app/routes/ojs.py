@@ -19,7 +19,7 @@ from ..models import (
     ManuscriptRead,
 )
 
-logger = logging.getLogger("latex_jats.web.ojs_routes")
+logger = logging.getLogger("jatsmith.web.ojs_routes")
 
 router = APIRouter(prefix="/api/ojs", tags=["ojs"])
 

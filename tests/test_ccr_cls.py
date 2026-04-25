@@ -1,4 +1,4 @@
-"""Tests for src/latex_jats/ccr_cls.py."""
+"""Tests for src/jatsmith/ccr_cls.py."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from latex_jats.ccr_cls import (
+from jatsmith.ccr_cls import (
     CANONICAL_CCR_CLS_PATH,
     CANONICAL_EXTENSION_DIR,
     EXPECTED_CCR_CLS_SHA256,
@@ -108,7 +108,7 @@ def test_parse_version_missing_returns_none(tmp_path: Path):
 
 def test_old_version_emits_upgrade_warning(tmp_path: Path, caplog: pytest.LogCaptureFixture):
     _make_cls(tmp_path / "ccr.cls", "0.02")
-    with caplog.at_level(logging.WARNING, logger="latex_jats.ccr_cls"):
+    with caplog.at_level(logging.WARNING, logger="jatsmith.ccr_cls"):
         warn_if_outdated(tmp_path)
     warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
     assert len(warnings) == 1
@@ -122,7 +122,7 @@ def test_old_version_in_quarto_extension_layout(tmp_path: Path, caplog: pytest.L
     ext_dir = tmp_path / "_extensions" / "ccr-journal" / "ccr"
     ext_dir.mkdir(parents=True)
     _make_cls(ext_dir / "ccr.cls", "0.04")
-    with caplog.at_level(logging.WARNING, logger="latex_jats.ccr_cls"):
+    with caplog.at_level(logging.WARNING, logger="jatsmith.ccr_cls"):
         warn_if_outdated(tmp_path)
     warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
     # Two warnings: the cls version and the bundle drift (bare extension dir).
@@ -135,7 +135,7 @@ def test_old_version_in_quarto_extension_layout(tmp_path: Path, caplog: pytest.L
 def test_canonical_content_no_warning(tmp_path: Path, caplog: pytest.LogCaptureFixture):
     dest = tmp_path / "ccr.cls"
     dest.write_bytes(CANONICAL_FIXTURE.read_bytes())
-    with caplog.at_level(logging.WARNING, logger="latex_jats.ccr_cls"):
+    with caplog.at_level(logging.WARNING, logger="jatsmith.ccr_cls"):
         warn_if_outdated(tmp_path)
     assert [r for r in caplog.records if r.levelno == logging.WARNING] == []
 
@@ -146,7 +146,7 @@ def test_edited_canonical_emits_soft_warning(tmp_path: Path, caplog: pytest.LogC
         CANONICAL_FIXTURE.read_text(encoding="utf-8") + "\n% an author edit\n",
         encoding="utf-8",
     )
-    with caplog.at_level(logging.WARNING, logger="latex_jats.ccr_cls"):
+    with caplog.at_level(logging.WARNING, logger="jatsmith.ccr_cls"):
         warn_if_outdated(tmp_path)
     warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
     assert len(warnings) == 1
@@ -159,7 +159,7 @@ def test_canonical_crlf_no_warning(tmp_path: Path, caplog: pytest.LogCaptureFixt
     dest = tmp_path / "ccr.cls"
     text = CANONICAL_FIXTURE.read_text(encoding="utf-8")
     dest.write_bytes(text.replace("\n", "\r\n").encode("utf-8"))
-    with caplog.at_level(logging.WARNING, logger="latex_jats.ccr_cls"):
+    with caplog.at_level(logging.WARNING, logger="jatsmith.ccr_cls"):
         warn_if_outdated(tmp_path)
     assert [r for r in caplog.records if r.levelno == logging.WARNING] == []
 
@@ -169,14 +169,14 @@ def test_newer_version_no_warning(tmp_path: Path, caplog: pytest.LogCaptureFixtu
     don't bother them with a warning."""
     future = _bump(EXPECTED_CCR_CLS_VERSION)
     _make_cls(tmp_path / "ccr.cls", future)
-    with caplog.at_level(logging.WARNING, logger="latex_jats.ccr_cls"):
+    with caplog.at_level(logging.WARNING, logger="jatsmith.ccr_cls"):
         warn_if_outdated(tmp_path)
     assert [r for r in caplog.records if r.levelno == logging.WARNING] == []
 
 
 def test_missing_version_comment_info_only(tmp_path: Path, caplog: pytest.LogCaptureFixture):
     _make_cls(tmp_path / "ccr.cls", version=None)
-    with caplog.at_level(logging.INFO, logger="latex_jats.ccr_cls"):
+    with caplog.at_level(logging.INFO, logger="jatsmith.ccr_cls"):
         warn_if_outdated(tmp_path)
     assert [r for r in caplog.records if r.levelno == logging.WARNING] == []
     infos = [r for r in caplog.records if r.levelno == logging.INFO]
@@ -184,7 +184,7 @@ def test_missing_version_comment_info_only(tmp_path: Path, caplog: pytest.LogCap
 
 
 def test_no_ccr_cls_silent(tmp_path: Path, caplog: pytest.LogCaptureFixture):
-    with caplog.at_level(logging.INFO, logger="latex_jats.ccr_cls"):
+    with caplog.at_level(logging.INFO, logger="jatsmith.ccr_cls"):
         warn_if_outdated(tmp_path)
     assert caplog.records == []
 
@@ -202,7 +202,7 @@ def _bump(version: str) -> str:
 def test_install_overwrites_flat_layout(tmp_path: Path, caplog: pytest.LogCaptureFixture):
     _make_cls(tmp_path / "ccr.cls", "0.02", extra="% custom edit\n")
     install_canonical_ccr_cls(tmp_path)
-    with caplog.at_level(logging.WARNING, logger="latex_jats.ccr_cls"):
+    with caplog.at_level(logging.WARNING, logger="jatsmith.ccr_cls"):
         warn_if_outdated(tmp_path)
     assert [r for r in caplog.records if r.levelno == logging.WARNING] == []
 
@@ -293,7 +293,7 @@ def _install_clean_extension(workspace: Path) -> Path:
 
 def test_clean_bundle_no_drift_warning(tmp_path: Path, caplog: pytest.LogCaptureFixture):
     _install_clean_extension(tmp_path)
-    with caplog.at_level(logging.WARNING, logger="latex_jats.ccr_cls"):
+    with caplog.at_level(logging.WARNING, logger="jatsmith.ccr_cls"):
         warn_if_outdated(tmp_path)
     assert [r for r in caplog.records if r.levelno == logging.WARNING] == []
 
@@ -301,7 +301,7 @@ def test_clean_bundle_no_drift_warning(tmp_path: Path, caplog: pytest.LogCapture
 def test_edited_bundle_file_triggers_drift_warning(tmp_path: Path, caplog: pytest.LogCaptureFixture):
     ext = _install_clean_extension(tmp_path)
     (ext / "partials" / "before-body.tex").write_text("% hand-edited\n", encoding="utf-8")
-    with caplog.at_level(logging.WARNING, logger="latex_jats.ccr_cls"):
+    with caplog.at_level(logging.WARNING, logger="jatsmith.ccr_cls"):
         warn_if_outdated(tmp_path)
     warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
     assert any("extension" in w.getMessage() for w in warnings), \
