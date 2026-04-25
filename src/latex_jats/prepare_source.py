@@ -191,7 +191,8 @@ def _patch_ccr_cls(workspace_dir: Path, engine: str = "pdflatex"):
 
 def prepare_workspace(source_dir: Path, workspace_dir: Path,
                       fix_problems: bool = False,
-                      use_canonical_ccr_cls: bool = False) -> Path:
+                      use_canonical_ccr_cls: bool = False,
+                      main_file: str | None = None) -> Path:
     """Create a workspace copy of the source and apply fixes + warnings.
 
     Copies the source tree into workspace_dir, optionally applies fix_input
@@ -201,6 +202,11 @@ def prepare_workspace(source_dir: Path, workspace_dir: Path,
     installed into the workspace before the version check, so the outdated-class
     warning is suppressed.
 
+    If ``main_file`` is provided and is not already ``main.tex``, the named
+    file in the workspace is renamed to ``main.tex`` so the rest of the
+    pipeline can use the hardcoded name. The rename is workspace-only — the
+    original ``source_dir`` is never touched.
+
     Returns the path to main.tex in the workspace.
     """
     from latex_jats.convert import warn_source_issues
@@ -209,6 +215,18 @@ def prepare_workspace(source_dir: Path, workspace_dir: Path,
         shutil.rmtree(workspace_dir)
     shutil.copytree(source_dir, workspace_dir)
     main_tex = workspace_dir / "main.tex"
+
+    if main_file and main_file != "main.tex":
+        chosen = workspace_dir / main_file
+        if not chosen.is_file():
+            raise FileNotFoundError(
+                f"Configured main_file '{main_file}' not found in source directory"
+            )
+        if main_tex.exists():
+            # Rare: both paper.tex and main.tex exist. The explicit choice wins.
+            logger.info("Overwriting workspace main.tex with the configured main_file %s", main_file)
+            main_tex.unlink()
+        chosen.rename(main_tex)
 
     if use_canonical_ccr_cls:
         _install_canonical_ccr_cls(workspace_dir)

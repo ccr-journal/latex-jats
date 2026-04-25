@@ -78,6 +78,7 @@ def create_manuscript(
 class ManuscriptUpdate(SQLModel):
     fix_source: bool | None = None
     use_canonical_ccr_cls: bool | None = None
+    main_file: str | None = None       # None leaves unchanged; "" clears
 
 
 @router.patch("/{doi_suffix}", response_model=ManuscriptRead)
@@ -93,6 +94,8 @@ def update_manuscript(
         ms.fix_source = body.fix_source
     if body.use_canonical_ccr_cls is not None:
         ms.use_canonical_ccr_cls = body.use_canonical_ccr_cls
+    if body.main_file is not None:
+        ms.main_file = body.main_file or None
     session.add(ms)
     session.commit()
     session.refresh(ms)

@@ -13,8 +13,9 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { PipelineProgress } from "@/components/PipelineProgress";
 import { MetadataCard } from "@/components/MetadataCard";
 import { UploadZone } from "@/components/UploadZone";
+import { LinkUpstreamDialog } from "@/components/LinkUpstreamDialog";
 import { useAuth } from "@/auth/AuthContext";
-import { getManuscript, getStatus, getVersion, uploadFiles, startProcessing, updateManuscript, reimportOjsMetadata, approveManuscript, withdrawApproval, deleteManuscript, archiveManuscript, unarchiveManuscript, downloadUrl, outputUrl, presign, getAuthorToken, regenerateAuthorToken, getInviteTemplate, inviteAuthors, type Recipient } from "@/api/client";
+import { getManuscript, getStatus, getVersion, uploadFiles, startProcessing, updateManuscript, reimportOjsMetadata, approveManuscript, withdrawApproval, deleteManuscript, archiveManuscript, unarchiveManuscript, downloadUrl, outputUrl, presign, getAuthorToken, regenerateAuthorToken, getInviteTemplate, inviteAuthors, syncUpstream, unlinkUpstream, type Recipient } from "@/api/client";
 import { ApiError } from "@/api/client";
 import type { Manuscript, PipelineStep } from "@/api/types";
 
@@ -25,6 +26,20 @@ const PENDING_STEPS: PipelineStep[] = [
   { name: "check",    status: "pending", logs: [], started_at: null, completed_at: null },
   { name: "validate", status: "pending", logs: [], started_at: null, completed_at: null },
 ];
+
+function isExternalUpstream(ms: Manuscript): boolean {
+  return !!ms.upstream_url && !ms.upstream_url.startsWith("file://");
+}
+
+function formatUpstreamHost(url: string | null): string {
+  if (!url) return "";
+  try {
+    const parsed = new URL(url);
+    return `${parsed.hostname}${parsed.pathname}`;
+  } catch {
+    return url;
+  }
+}
 
 function formatAuthors(authors: { name: string | null }[]): string {
   const names = authors.map((a) => a.name ?? "Unknown");
@@ -66,6 +81,9 @@ export function ManuscriptPage() {
   const [archiving, setArchiving] = useState(false);
   const [archiveError, setArchiveError] = useState<string | null>(null);
   const [ccrClsVersion, setCcrClsVersion] = useState<string | null>(null);
+  const [linkUpstreamOpen, setLinkUpstreamOpen] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [upstreamError, setUpstreamError] = useState<string | null>(null);
 
   // Initial fetch
   useEffect(() => {
@@ -110,7 +128,9 @@ export function ManuscriptPage() {
   const isArchived = manuscript.status === "archived";
   const hasOutput = isReady || isApproved;
   const hasBeenUploaded = manuscript.uploaded_at !== null;
-  const canProcess = hasBeenUploaded && !isProcessing && !isApproved;
+  // Disable convert during a sync so the editor can't kick off a pipeline run
+  // against a half-fetched source_dir.
+  const canProcess = hasBeenUploaded && !isProcessing && !isApproved && !syncing;
   const pipelineSteps = manuscript.pipeline_steps ?? PENDING_STEPS;
   const checkStep = pipelineSteps.find((s) => s.name === "check");
   const checkStepDone = checkStep != null && ["ok", "warnings", "errors"].includes(checkStep.status);
@@ -202,6 +222,30 @@ export function ManuscriptPage() {
       setArchiveError(err instanceof ApiError ? err.message : "Failed to unarchive");
     } finally {
       setArchiving(false);
+    }
+  };
+
+  const handleSync = async () => {
+    setSyncing(true);
+    setUpstreamError(null);
+    try {
+      const updated = await syncUpstream(doiSuffix);
+      setManuscript(updated);
+    } catch (err) {
+      setUpstreamError(err instanceof ApiError ? err.message : "Sync failed");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleUnlink = async () => {
+    if (!window.confirm("Unlink the git / Overleaf source? The currently synced files will be deleted — you'll need to re-link or upload again before running the conversion.")) return;
+    setUpstreamError(null);
+    try {
+      const updated = await unlinkUpstream(doiSuffix);
+      setManuscript(updated);
+    } catch (err) {
+      setUpstreamError(err instanceof ApiError ? err.message : "Failed to unlink");
     }
   };
 
@@ -397,18 +441,89 @@ export function ManuscriptPage() {
         <CardHeader>
           <div className="flex items-center justify-between gap-4">
             <CardTitle className="text-base">Source</CardTitle>
-            <Button
-              variant={hasBeenUploaded ? "outline" : "default"}
-              onClick={() => setUploadDialogOpen(true)}
-              disabled={isProcessing || isApproved}
-              title={isApproved ? "Manuscript has been approved — upload is locked" : isProcessing ? "Wait for the current conversion to finish" : undefined}
-            >
-              {hasBeenUploaded ? "Upload new version" : "Upload source"}
-            </Button>
+            <div className="flex items-center gap-2">
+              {isExternalUpstream(manuscript) ? (
+                <>
+                  <Button
+                    onClick={handleSync}
+                    disabled={isProcessing || isApproved || syncing}
+                    title={isApproved ? "Manuscript has been approved — sync is locked" : undefined}
+                  >
+                    {syncing ? "Syncing…" : "Sync now"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setLinkUpstreamOpen(true)}
+                    disabled={isProcessing || isApproved}
+                  >
+                    Edit link
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleUnlink}
+                    disabled={isProcessing || isApproved}
+                  >
+                    Unlink
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    variant={hasBeenUploaded ? "outline" : "default"}
+                    onClick={() => setUploadDialogOpen(true)}
+                    disabled={isProcessing || isApproved}
+                    title={isApproved ? "Manuscript has been approved — upload is locked" : isProcessing ? "Wait for the current conversion to finish" : undefined}
+                  >
+                    {hasBeenUploaded ? "Upload new version" : "Upload source"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setLinkUpstreamOpen(true)}
+                    disabled={isProcessing || isApproved}
+                  >
+                    Link git / overleaf
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {hasBeenUploaded ? (
+          {upstreamError && (
+            <p className="text-sm text-red-600">{upstreamError}</p>
+          )}
+          {isExternalUpstream(manuscript) ? (
+            <div className="text-sm space-y-1">
+              <p>
+                <span className="text-muted-foreground">Linked to</span>{" "}
+                <a
+                  href={manuscript.upstream_url ?? "#"}
+                  target="_blank"
+                  rel="noopener"
+                  className="font-medium hover:underline"
+                >
+                  {formatUpstreamHost(manuscript.upstream_url)}
+                </a>
+                {manuscript.upstream_ref && (
+                  <span className="text-muted-foreground"> · {manuscript.upstream_ref}</span>
+                )}
+                {manuscript.upstream_subpath && (
+                  <span className="text-muted-foreground"> · {manuscript.upstream_subpath}</span>
+                )}
+              </p>
+              {manuscript.last_synced_at ? (
+                <p className="text-muted-foreground">
+                  Last synced {formatDate(manuscript.last_synced_at)}
+                  {manuscript.last_synced_sha
+                    ? ` at ${manuscript.last_synced_sha.slice(0, 7)}`
+                    : ""}
+                  .
+                </p>
+              ) : (
+                <p className="text-muted-foreground">Not synced yet — click Sync now to fetch.</p>
+              )}
+            </div>
+          ) : hasBeenUploaded ? (
             <p className="text-sm text-muted-foreground">
               {manuscript.upload_file_count != null
                 ? `${manuscript.upload_file_count} file${manuscript.upload_file_count === 1 ? "" : "s"} uploaded`
@@ -467,6 +582,19 @@ export function ManuscriptPage() {
           <UploadZone onUpload={handleUpload} />
         </DialogContent>
       </Dialog>
+
+      <LinkUpstreamDialog
+        doiSuffix={doiSuffix}
+        current={manuscript}
+        open={linkUpstreamOpen}
+        onOpenChange={setLinkUpstreamOpen}
+        onLinked={(linked) => {
+          setManuscript(linked);
+          // The link wipes source_dir; auto-sync so the user lands in a
+          // usable state. Errors surface via upstreamError on the Source card.
+          void handleSync();
+        }}
+      />
 
       <Dialog open={deleteDialogOpen} onOpenChange={(open) => { if (!deleting) setDeleteDialogOpen(open); }}>
         <DialogContent className="sm:max-w-md">

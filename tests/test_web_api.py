@@ -10,6 +10,7 @@ No real filesystem storage or network calls are made.
 import io
 import json
 import zipfile
+from datetime import datetime
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
@@ -1672,3 +1673,285 @@ def test_reset_orphaned_jobs_noop_when_no_stuck_manuscripts(engine):
     assert b.status == ManuscriptStatus.draft
     assert a.job_log == ""
     assert b.job_log == ""
+
+
+# ── Upstream source linkage (Issue #7) ───────────────────────────────────────
+
+
+def _set_storage_key(monkeypatch):
+    """Install a deterministic STORAGE_SECRET_KEY for the duration of a test."""
+    from cryptography.fernet import Fernet
+    from web.backend.app import upstream as upstream_module
+
+    key = Fernet.generate_key().decode()
+    cfg = AuthConfig(
+        editor_credentials=TEST_CFG.editor_credentials,
+        frontend_url=TEST_CFG.frontend_url,
+        ojs_base_url=TEST_CFG.ojs_base_url,
+        ojs_journal_path=TEST_CFG.ojs_journal_path,
+        ojs_admin_token=TEST_CFG.ojs_admin_token,
+        ojs_doi_prefix=TEST_CFG.ojs_doi_prefix,
+        session_token_ttl_days=TEST_CFG.session_token_ttl_days,
+        storage_secret_key=key,
+    )
+    set_for_tests(cfg)
+    upstream_module.reset_fernet_for_tests()
+
+
+@patch("web.backend.app.routes.upload.run_pipeline")
+def test_upload_sets_file_upstream_url(mock_pipeline, client, test_storage):
+    """After a normal upload, upstream_url should be a file:// URL to source_dir."""
+    doi = _create(client)
+    r = client.post(
+        f"/api/manuscripts/{doi}/upload",
+        files=[("files", ("main.tex", b"x", "text/plain"))],
+    )
+    assert r.status_code == 201
+    data = r.json()
+    expected = test_storage.source_dir(doi).resolve().as_uri()
+    assert data["upstream_url"] == expected
+    assert data["upstream_has_token"] is False
+
+
+def test_put_upstream_links_remote(client, monkeypatch):
+    _set_storage_key(monkeypatch)
+    doi = _create(client)
+    r = client.put(
+        f"/api/manuscripts/{doi}/upstream",
+        json={
+            "url": "https://github.com/user/repo.git",
+            "token": "secret-pat",
+            "ref": "main",
+            "subpath": "paper",
+            "main_file": "paper.tex",
+        },
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert data["upstream_url"] == "https://github.com/user/repo.git"
+    assert data["upstream_ref"] == "main"
+    assert data["upstream_subpath"] == "paper"
+    assert data["main_file"] == "paper.tex"
+    assert data["upstream_has_token"] is True
+    # The raw token must never be serialized back to the client.
+    assert "upstream_token_encrypted" not in data
+    assert "secret-pat" not in r.text
+
+
+@patch("web.backend.app.routes.upload.run_pipeline")
+def test_put_upstream_wipes_prior_uploaded_source(mock_pipeline, client, monkeypatch, test_storage):
+    """Linking after an upload must wipe the old files + reset to draft.
+
+    Otherwise pressing 'Re-run conversion' between linking and the first
+    sync would convert the previous upload — silently the wrong source.
+    """
+    _set_storage_key(monkeypatch)
+    doi = _create(client)
+    # Upload first
+    r = client.post(
+        f"/api/manuscripts/{doi}/upload",
+        files=[("files", ("main.tex", b"old upload content", "text/plain"))],
+    )
+    assert r.status_code == 201
+    source_dir = test_storage.source_dir(doi)
+    assert (source_dir / "main.tex").exists()
+
+    # Link an external upstream (without syncing).
+    r = client.put(
+        f"/api/manuscripts/{doi}/upstream",
+        json={"url": "https://github.com/user/repo.git"},
+    )
+    assert r.status_code == 200
+    data = r.json()
+    # Manuscript should be back to "no source yet".
+    assert data["status"] == "draft"
+    assert data["uploaded_at"] is None
+    assert data["uploaded_by"] is None
+    # And the previously-uploaded files must be gone from disk.
+    assert not source_dir.exists() or not (source_dir / "main.tex").exists()
+
+
+def test_put_upstream_while_processing_rejected(client, monkeypatch):
+    _set_storage_key(monkeypatch)
+    doi = _create(client)
+    with Session(deps._engine) as session:  # type: ignore[arg-type]
+        ms = session.get(Manuscript, doi)
+        ms.status = ManuscriptStatus.processing
+        session.add(ms)
+        session.commit()
+    r = client.put(
+        f"/api/manuscripts/{doi}/upstream",
+        json={"url": "https://github.com/user/repo.git"},
+    )
+    assert r.status_code == 409
+
+
+def test_put_upstream_rejects_bad_scheme(client, monkeypatch):
+    _set_storage_key(monkeypatch)
+    doi = _create(client)
+    r = client.put(
+        f"/api/manuscripts/{doi}/upstream",
+        json={"url": "file:///local/path"},
+    )
+    assert r.status_code == 400
+    r = client.put(
+        f"/api/manuscripts/{doi}/upstream",
+        json={"url": "ftp://example.com/repo"},
+    )
+    assert r.status_code == 400
+
+
+def test_put_upstream_requires_auth(anon_client):
+    r = anon_client.put(
+        "/api/manuscripts/X/upstream",
+        json={"url": "https://github.com/a/b.git"},
+    )
+    assert r.status_code == 401
+
+
+def test_delete_upstream_wipes_synced_source(client, monkeypatch, test_storage):
+    """Unlinking an external upstream must wipe the synced files + reset state."""
+    _set_storage_key(monkeypatch)
+    doi = _create(client)
+    client.put(
+        f"/api/manuscripts/{doi}/upstream",
+        json={"url": "https://github.com/user/repo.git", "token": "t"},
+    )
+    # Simulate a completed sync: files in source_dir + uploaded state.
+    source_dir = test_storage.source_dir(doi)
+    source_dir.mkdir(parents=True, exist_ok=True)
+    (source_dir / "main.tex").write_text("from upstream")
+
+    with Session(deps._engine) as session:  # type: ignore[arg-type]
+        ms = session.get(Manuscript, doi)
+        ms.status = ManuscriptStatus.uploaded
+        ms.uploaded_at = datetime.utcnow()
+        ms.uploaded_by = "upstream"
+        session.add(ms)
+        session.commit()
+
+    r = client.delete(f"/api/manuscripts/{doi}/upstream")
+    assert r.status_code == 200
+    data = r.json()
+    # All external-upstream fields cleared; back to draft with no source.
+    assert data["upstream_url"] is None
+    assert data["upstream_has_token"] is False
+    assert data["upstream_ref"] is None
+    assert data["uploaded_at"] is None
+    assert data["uploaded_by"] is None
+    assert data["status"] == "draft"
+    # And the synced files are gone from disk.
+    assert not source_dir.exists() or not (source_dir / "main.tex").exists()
+
+
+def test_delete_upstream_while_processing_rejected(client, monkeypatch, test_storage):
+    _set_storage_key(monkeypatch)
+    doi = _create(client)
+    client.put(
+        f"/api/manuscripts/{doi}/upstream",
+        json={"url": "https://github.com/user/repo.git"},
+    )
+    with Session(deps._engine) as session:  # type: ignore[arg-type]
+        ms = session.get(Manuscript, doi)
+        ms.status = ManuscriptStatus.processing
+        session.add(ms)
+        session.commit()
+    r = client.delete(f"/api/manuscripts/{doi}/upstream")
+    assert r.status_code == 409
+
+
+@patch("web.backend.app.routes.upstream.upstream_module.fetch_upstream")
+def test_sync_upstream_lands_in_uploaded(mock_fetch, client, monkeypatch):
+    """Sync must leave the manuscript in 'uploaded' so the author can review
+    options and press Start conversion — not auto-queue the pipeline."""
+    _set_storage_key(monkeypatch)
+    mock_fetch.return_value = "cafebabe"
+    doi = _create(client)
+    client.put(
+        f"/api/manuscripts/{doi}/upstream",
+        json={"url": "https://github.com/user/repo.git"},
+    )
+
+    r = client.post(f"/api/manuscripts/{doi}/upstream/sync")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["status"] == "uploaded"
+    assert data["last_synced_sha"] == "cafebabe"
+    assert data["uploaded_by"] == "upstream"
+    assert data["pipeline_steps"] is None
+    mock_fetch.assert_called_once()
+
+
+@patch("web.backend.app.routes.upstream.upstream_module.fetch_upstream")
+def test_sync_surfaces_git_failure(mock_fetch, client, monkeypatch):
+    from web.backend.app.upstream import UpstreamError
+
+    _set_storage_key(monkeypatch)
+    mock_fetch.side_effect = UpstreamError("repository not found")
+    doi = _create(client)
+    client.put(
+        f"/api/manuscripts/{doi}/upstream",
+        json={"url": "https://github.com/user/nope.git"},
+    )
+
+    r = client.post(f"/api/manuscripts/{doi}/upstream/sync")
+    assert r.status_code == 502
+    assert "repository not found" in r.json()["detail"]
+
+
+def test_sync_rejected_without_upstream(client, monkeypatch):
+    _set_storage_key(monkeypatch)
+    doi = _create(client)
+    r = client.post(f"/api/manuscripts/{doi}/upstream/sync")
+    assert r.status_code == 400
+
+
+@patch("web.backend.app.routes.upload.run_pipeline")
+def test_sync_rejected_for_uploaded_source(mock_pipeline, client, monkeypatch):
+    _set_storage_key(monkeypatch)
+    doi = _create(client)
+    client.post(
+        f"/api/manuscripts/{doi}/upload",
+        files=[("files", ("main.tex", b"x", "text/plain"))],
+    )
+    # Upload set upstream_url to file://… — sync must refuse.
+    r = client.post(f"/api/manuscripts/{doi}/upstream/sync")
+    assert r.status_code == 400
+    assert "uploaded directly" in r.json()["detail"]
+
+
+def test_upload_clears_external_upstream_fields(client, monkeypatch, test_storage):
+    """Uploading after a remote had been linked clears token/ref/subpath."""
+    _set_storage_key(monkeypatch)
+    doi = _create(client)
+    client.put(
+        f"/api/manuscripts/{doi}/upstream",
+        json={
+            "url": "https://github.com/user/repo.git",
+            "token": "secret",
+            "ref": "main",
+        },
+    )
+    with patch("web.backend.app.routes.upload.run_pipeline"):
+        r = client.post(
+            f"/api/manuscripts/{doi}/upload",
+            files=[("files", ("main.tex", b"x", "text/plain"))],
+        )
+    assert r.status_code == 201
+    data = r.json()
+    assert data["upstream_url"] == test_storage.source_dir(doi).resolve().as_uri()
+    assert data["upstream_has_token"] is False
+    assert data["upstream_ref"] is None
+
+
+def test_patch_main_file(client):
+    doi = _create(client)
+    r = client.patch(
+        f"/api/manuscripts/{doi}",
+        json={"main_file": "paper.tex"},
+    )
+    assert r.status_code == 200
+    assert r.json()["main_file"] == "paper.tex"
+    # Empty string clears.
+    r = client.patch(f"/api/manuscripts/{doi}", json={"main_file": ""})
+    assert r.json()["main_file"] is None

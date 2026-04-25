@@ -330,8 +330,19 @@ def _skip_remaining_steps(engine: Engine, doi_suffix: str, step_names: list[str]
         _update_step(engine, doi_suffix, name, status=StepStatus.skipped)
 
 
-def _is_quarto_source(source_dir: Path) -> bool:
-    """Return True if the source directory contains .qmd files but no main.tex."""
+def _is_quarto_source(source_dir: Path, main_file: str | None = None) -> bool:
+    """Return True if the source directory should be processed as Quarto.
+
+    If ``main_file`` is set, its extension decides: ``.qmd`` → Quarto,
+    ``.tex`` → LaTeX. Otherwise fall back to the historical heuristic: Quarto
+    if there is no ``main.tex`` but at least one ``.qmd`` file.
+    """
+    if main_file:
+        lower = main_file.lower()
+        if lower.endswith(".qmd"):
+            return True
+        if lower.endswith(".tex"):
+            return False
     return not (source_dir / "main.tex").exists() and bool(list(source_dir.glob("*.qmd")))
 
 
@@ -358,6 +369,7 @@ def _run_latex_pipeline(
     doi_suffix: str, engine: Engine, storage: Storage, collector: _LogCollector,
     step_tracker: list[str], *, fix: bool = False,
     use_canonical_ccr_cls: bool = False,
+    main_file: str | None = None,
 ) -> None:
     """LaTeX-specific pipeline: prepare → compile → convert → check → validate."""
     source_dir = storage.source_dir(doi_suffix)
@@ -369,6 +381,7 @@ def _run_latex_pipeline(
         source_dir, workspace_dir,
         fix_problems=fix,
         use_canonical_ccr_cls=use_canonical_ccr_cls,
+        main_file=main_file,
     )
 
     # Inject missing journal metadata from OJS before compilation
@@ -475,6 +488,7 @@ def _run_latex_pipeline(
 def _run_quarto_pipeline(
     doi_suffix: str, engine: Engine, storage: Storage, collector: _LogCollector,
     step_tracker: list[str], *, use_canonical_ccr_cls: bool = False,
+    main_file: str | None = None,
 ) -> None:
     """Quarto-specific pipeline: prepare → compile (PDF) → convert → check → validate."""
     source_dir = storage.source_dir(doi_suffix)
@@ -487,9 +501,16 @@ def _run_quarto_pipeline(
         use_canonical_ccr_cls=use_canonical_ccr_cls,
     )
 
-    workspace_qmd = find_qmd(workspace_dir)
-    if workspace_qmd is None:
-        raise FileNotFoundError(f"No .qmd file found in {workspace_dir}")
+    if main_file:
+        workspace_qmd = workspace_dir / main_file
+        if not workspace_qmd.is_file():
+            raise FileNotFoundError(
+                f"Configured main_file '{main_file}' not found in {workspace_dir}"
+            )
+    else:
+        workspace_qmd = find_qmd(workspace_dir)
+        if workspace_qmd is None:
+            raise FileNotFoundError(f"No .qmd file found in {workspace_dir}")
 
     # Inject missing journal metadata from OJS before compilation
     with Session(engine) as session:
@@ -624,7 +645,15 @@ def run_pipeline(
         source_dir = storage.source_dir(doi_suffix)
         storage.ensure_dirs(doi_suffix)
 
-        is_quarto = _is_quarto_source(source_dir)
+        # Read main_file once off the row so we don't need the manuscript ref
+        # threaded through every sub-pipeline.
+        main_file: str | None = None
+        with Session(engine) as session:
+            ms = session.get(Manuscript, doi_suffix)
+            if ms is not None:
+                main_file = ms.main_file
+
+        is_quarto = _is_quarto_source(source_dir, main_file)
 
         # ── Step 1: prepare ──────────────────────────────────────────────
         _start_step(engine, doi_suffix, "prepare")
@@ -633,11 +662,13 @@ def run_pipeline(
             _run_quarto_pipeline(
                 doi_suffix, engine, storage, collector, step_tracker,
                 use_canonical_ccr_cls=use_canonical_ccr_cls,
+                main_file=main_file,
             )
         else:
             _run_latex_pipeline(
                 doi_suffix, engine, storage, collector, step_tracker,
                 fix=fix, use_canonical_ccr_cls=use_canonical_ccr_cls,
+                main_file=main_file,
             )
 
     except Exception:

@@ -117,7 +117,11 @@ export function getManuscript(doiSuffix: string): Promise<Manuscript> {
 
 export function updateManuscript(
   doiSuffix: string,
-  data: { fix_source?: boolean; use_canonical_ccr_cls?: boolean },
+  data: {
+    fix_source?: boolean;
+    use_canonical_ccr_cls?: boolean;
+    main_file?: string;
+  },
 ): Promise<Manuscript> {
   return apiFetch(`/api/manuscripts/${doiSuffix}`, {
     method: "PATCH",
@@ -196,6 +200,40 @@ export function outputUrl(doiSuffix: string, path: string, token?: string): stri
 export async function presign(doiSuffix: string): Promise<string> {
   const data = await apiFetch<{ token: string }>(`/api/manuscripts/${doiSuffix}/presign`);
   return data.token;
+}
+
+// ── Upstream source (Issue #7) ───────────────────────────────────────────────
+
+export interface UpstreamLinkInput {
+  url: string;
+  token?: string;      // omit to leave existing token untouched
+  clear_token?: boolean; // set true to drop the stored token
+  ref?: string;
+  subpath?: string;
+  main_file?: string;
+}
+
+export function linkUpstream(
+  doiSuffix: string,
+  input: UpstreamLinkInput,
+): Promise<Manuscript> {
+  return apiFetch(`/api/manuscripts/${doiSuffix}/upstream`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+export function unlinkUpstream(doiSuffix: string): Promise<Manuscript> {
+  return apiFetch(`/api/manuscripts/${doiSuffix}/upstream`, {
+    method: "DELETE",
+  });
+}
+
+export function syncUpstream(doiSuffix: string): Promise<Manuscript> {
+  return apiFetch(`/api/manuscripts/${doiSuffix}/upstream/sync`, {
+    method: "POST",
+  });
 }
 
 // ── Author tokens ────────────────────────────────────────────────────────────

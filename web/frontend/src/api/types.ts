@@ -57,6 +57,15 @@ export interface Manuscript {
   job_started_at: string | null;
   job_completed_at: string | null;
   pipeline_steps: PipelineStep[] | null;
+  // Upstream source linkage (Issue #7).
+  // file:// URLs indicate an uploaded source; http(s)/git URLs are syncable.
+  upstream_url: string | null;
+  upstream_ref: string | null;
+  upstream_subpath: string | null;
+  upstream_has_token: boolean;
+  main_file: string | null;
+  last_synced_at: string | null;
+  last_synced_sha: string | null;
 }
 
 export interface ManuscriptCreate {

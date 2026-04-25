@@ -143,6 +143,9 @@ def manuscript_to_read(
         )
         for a in authors
     ]
+    # Never expose the encrypted token — only whether one is stored.
+    data["upstream_has_token"] = ms.upstream_token_encrypted is not None
+    data.pop("upstream_token_encrypted", None)
     if storage is None:
         storage = _storage
     if storage is not None:

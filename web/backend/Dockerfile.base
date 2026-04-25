@@ -23,6 +23,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     r-cran-knitr r-cran-rmarkdown r-cran-kableextra \
     # Quarto dependencies
     curl gdebi-core \
+    # Upstream-source sync (Issue #7: link manuscripts to a git/Overleaf repo)
+    git \
     && rm -rf /var/lib/apt/lists/*
 
 # Quarto (for .qmd article conversion)

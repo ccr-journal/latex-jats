@@ -20,6 +20,9 @@ class AuthConfig:
     ojs_admin_token: str
     ojs_doi_prefix: str
     session_token_ttl_days: int
+    # Fernet key (base64-urlsafe, 32 bytes) for encrypting upstream git tokens
+    # at rest. Empty in dev triggers an ephemeral key + loud warning.
+    storage_secret_key: str = ""
     # SMTP (optional — enables "Invite authors" email)
     smtp_host: str = ""
     smtp_port: int = 587
@@ -107,6 +110,7 @@ def _load() -> AuthConfig:
         ojs_admin_token=ojs_admin_token,
         ojs_doi_prefix=opt("OJS_DOI_PREFIX", "10.5117/"),
         session_token_ttl_days=int(opt("SESSION_TOKEN_TTL_DAYS", "30")),
+        storage_secret_key=opt("STORAGE_SECRET_KEY", ""),
         smtp_host=opt("SMTP_HOST", ""),
         smtp_port=int(opt("SMTP_PORT", "587")),
         smtp_user=opt("SMTP_USER", ""),

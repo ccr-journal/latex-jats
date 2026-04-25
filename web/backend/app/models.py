@@ -60,11 +60,20 @@ class Manuscript(SQLModel, table=True):
     fix_source: bool = True
     use_canonical_ccr_cls: bool = True
     uploaded_at: Optional[datetime] = None
-    uploaded_by: Optional[str] = None  # "editor" | "author"
+    uploaded_by: Optional[str] = None  # "editor" | "author" | "upstream"
     job_log: str = ""
     job_started_at: Optional[datetime] = None
     job_completed_at: Optional[datetime] = None
     pipeline_steps: Optional[list] = Field(default=None, sa_column=Column(JSON, nullable=True))
+    # Upstream source linkage (Issue #7). file:// URLs point at source_dir for
+    # uploads; https:// / git@ URLs are external and syncable.
+    upstream_url: Optional[str] = None
+    upstream_token_encrypted: Optional[bytes] = None
+    upstream_ref: Optional[str] = None       # branch/tag/commit; None = remote HEAD
+    upstream_subpath: Optional[str] = None   # subdir inside the repo
+    main_file: Optional[str] = None          # entrypoint; None = auto-detect
+    last_synced_at: Optional[datetime] = None
+    last_synced_sha: Optional[str] = None
 
 
 class ManuscriptAuthor(SQLModel, table=True):
@@ -160,3 +169,12 @@ class ManuscriptRead(SQLModel):
     job_started_at: Optional[datetime]
     job_completed_at: Optional[datetime]
     pipeline_steps: Optional[list[PipelineStepRead]] = None
+    # Upstream source (Issue #7). Token field is intentionally not exposed;
+    # the client only sees whether one is stored.
+    upstream_url: Optional[str] = None
+    upstream_ref: Optional[str] = None
+    upstream_subpath: Optional[str] = None
+    upstream_has_token: bool = False
+    main_file: Optional[str] = None
+    last_synced_at: Optional[datetime] = None
+    last_synced_sha: Optional[str] = None

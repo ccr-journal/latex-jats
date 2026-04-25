@@ -130,6 +130,15 @@ async def upload_source(
     ms.job_started_at = None
     ms.job_completed_at = None
     ms.pipeline_steps = None  # cleared so the previous run's results don't linger
+    # Unify the "source" field: uploaded sources get a file:// URL pointing at
+    # source_dir. All external upstream fields are cleared — this upload
+    # supersedes whatever remote had been linked before.
+    ms.upstream_url = source_dir.resolve().as_uri()
+    ms.upstream_token_encrypted = None
+    ms.upstream_ref = None
+    ms.upstream_subpath = None
+    ms.last_synced_at = None
+    ms.last_synced_sha = None
     session.add(ms)
     session.commit()
     session.refresh(ms)
