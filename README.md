@@ -149,7 +149,7 @@ docker buildx build \
   web/backend/
 ```
 
-Then update the `FROM` line in `web/backend/Dockerfile` to point at the new tag (`ccsamsterdam/jatsmith-base:$TAG`), commit, and tag a new app release. The current Dockerfile still references the legacy `ccsamsterdam/latex-jats-base:2026-04f` image — that pin will be replaced by the next base rebuild under the new name.
+Then update the `FROM` line in `web/backend/Dockerfile` to point at the new tag (`ccsamsterdam/jatsmith-base:$TAG`), commit, and tag a new app release.
 
 ## Unit and Integration Tests
 
