@@ -11,6 +11,46 @@ import {
 } from "@/components/ui/table";
 import { getMetadataComparison, syncOjsField } from "@/api/client";
 import type { MetadataComparison } from "@/api/types";
+import { InfoButton } from "@/components/InfoButton";
+
+export function MetadataDiscrepanciesInfo() {
+  return (
+    <InfoButton title="Metadata Discrepancies">
+      <p>
+        Each manuscript has metadata in two places: the LaTeX source you
+        uploaded (<code>{"\\title"}</code>, <code>{"\\subtitle"}</code>,
+        <code>{"\\abstract"}</code>, <code>{"\\keywords"}</code>, authors, DOI,
+        volume, issue, year, first page) and the journal management system
+        (OJS), where the editor accepted your submission. The published article
+        needs both to agree &mdash; the PDF and JATS XML are built from your
+        source, while OJS provides the canonical metadata for the journal
+        website and citation indices. This card lists fields where the two
+        disagree.
+      </p>
+      <p>What to do per field:</p>
+      <ul className="list-disc pl-5 space-y-1">
+        <li>
+          <strong>Title, subtitle, abstract, keywords</strong> &mdash; if your
+          source is the version you want, click <em>Push to OJS</em> to copy it
+          over. Otherwise, edit your source to match OJS and re-upload.
+        </li>
+        <li>
+          <strong>DOI, volume, issue, year, first page</strong> &mdash; the
+          editor controls these in OJS. Either remove them from your source
+          (the OJS values are then injected automatically) or update your
+          source to match what OJS shows.
+        </li>
+        <li>
+          <strong>Authors</strong> &mdash; ask the editor to update the author
+          list in OJS, or adjust your source if your list is wrong.
+        </li>
+      </ul>
+      <p>
+        If you make changes, re-run the conversion to refresh this comparison.
+      </p>
+    </InfoButton>
+  );
+}
 
 const UPDATABLE_FIELDS = new Set(["title", "subtitle", "abstract", "keywords"]);
 
@@ -83,7 +123,10 @@ export function MetadataCard({ doiSuffix, readOnly, refreshKey, onSync }: Metada
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Metadata Discrepancies</CardTitle>
+        <CardTitle className="text-base flex items-center gap-2">
+          Metadata Discrepancies
+          <MetadataDiscrepanciesInfo />
+        </CardTitle>
       </CardHeader>
       <CardContent>
         {mismatches.length === 0 ? (

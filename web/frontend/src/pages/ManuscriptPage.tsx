@@ -11,9 +11,10 @@ import {
 import { Label } from "@/components/ui/label";
 import { StatusBadge } from "@/components/StatusBadge";
 import { PipelineProgress } from "@/components/PipelineProgress";
-import { MetadataCard } from "@/components/MetadataCard";
+import { MetadataCard, MetadataDiscrepanciesInfo } from "@/components/MetadataCard";
 import { UploadZone } from "@/components/UploadZone";
 import { LinkUpstreamDialog } from "@/components/LinkUpstreamDialog";
+import { InfoButton } from "@/components/InfoButton";
 import { useAuth } from "@/auth/AuthContext";
 import { getManuscript, getStatus, getVersion, uploadFiles, startProcessing, updateManuscript, reimportOjsMetadata, approveManuscript, withdrawApproval, deleteManuscript, archiveManuscript, unarchiveManuscript, downloadUrl, presign, getAuthorToken, regenerateAuthorToken, getInviteTemplate, inviteAuthors, syncUpstream, unlinkUpstream, type Recipient } from "@/api/client";
 import { ApiError } from "@/api/client";
@@ -548,6 +549,45 @@ export function ManuscriptPage() {
             <Label htmlFor="fix-source" className="text-sm font-normal cursor-pointer">
               Apply source fixes before compiling
             </Label>
+            <InfoButton title="Apply source fixes before compiling">
+              <p>
+                Auto-corrects a small set of common LaTeX issues in your uploaded
+                source before it is compiled. The fixes are applied to a working
+                copy &mdash; your original upload is never modified.
+              </p>
+              <p>What it fixes:</p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li>
+                  Bare <code>&lt;</code> and <code>&gt;</code> in text mode
+                  (wraps them in <code>$ $</code> so pdfLaTeX accepts them).
+                </li>
+                <li>
+                  Stray punctuation directly after <code>{"\\includegraphics{...}"}</code>.
+                </li>
+                <li>
+                  A handful of Unicode characters that pdfLaTeX rejects (smart
+                  quotes, dashes, etc.).
+                </li>
+                <li>
+                  <code>minted</code> rewritten to <code>listings</code> (we
+                  can&rsquo;t run shell-escape for security).
+                </li>
+                <li>
+                  <code>{"\\title{}"}</code> inside a table rewritten to{" "}
+                  <code>{"\\caption{}"}</code>.
+                </li>
+                <li>
+                  Bare <code>&amp;</code> in author/affiliation macros, plus
+                  unescaped <code>&amp;</code> and decomposed Unicode in your
+                  <code>.bib</code> file.
+                </li>
+              </ul>
+              <p>
+                Leave this on for a quick first conversion. For the final
+                submitted version, please apply the equivalent corrections to
+                your source so the PDF you ship matches what is converted.
+              </p>
+            </InfoButton>
           </div>
           <div className="flex items-center gap-2">
             <input
@@ -561,6 +601,30 @@ export function ManuscriptPage() {
             <Label htmlFor="use-canonical-ccr-cls" className="text-sm font-normal cursor-pointer">
               Use most recent ccr.cls file{ccrClsVersion ? ` (v${ccrClsVersion})` : ""}
             </Label>
+            <InfoButton title="Use most recent ccr.cls file">
+              <p>
+                Replaces the CCR Quarto extension bundle in your upload
+                (<code>_extensions/ccr/</code> &mdash; <code>ccr.cls</code>,
+                <code>ccrtemplate.tex</code>, partials, etc.) with the canonical
+                copy shipped with this tool
+                {ccrClsVersion ? ` (currently v${ccrClsVersion})` : ""}.
+                Only the working copy is touched; your original upload is
+                preserved.
+              </p>
+              <p>
+                Turn this on when your manuscript was prepared against an older
+                version of the CCR class and the conversion is failing or
+                producing the wrong output. The bundle is publishing-toolchain
+                infrastructure, not author content &mdash; any local
+                customizations belong in your <code>.tex</code> file, not in the
+                extension.
+              </p>
+              <p>
+                Leave this off if you have intentionally pinned an older
+                version, or if you have made local changes to the bundle that
+                you need to keep.
+              </p>
+            </InfoButton>
           </div>
           {canProcess && (
             <Button onClick={handleStartProcessing}>
@@ -675,7 +739,10 @@ export function ManuscriptPage() {
         ) : (
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Metadata Discrepancies</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2">
+                Metadata Discrepancies
+                <MetadataDiscrepanciesInfo />
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
@@ -689,28 +756,48 @@ export function ManuscriptPage() {
       {/* Output — always visible */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">View proofs</CardTitle>
+          <CardTitle className="text-base flex items-center gap-2">
+            View proofs
+            <InfoButton title="View proofs">
+              <p>
+                Once the conversion completes, you can preview the outputs that
+                will be submitted to the publisher. Please check that the
+                rendered article matches the original PDF before approving for
+                publication &mdash; especially figures, tables, citations and
+                the reference list.
+              </p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li>
+                  <strong>View HTML</strong> &mdash; an in-browser preview of
+                  the converted article, the closest approximation of what
+                  readers will see on the AUP website.
+                </li>
+                <li>
+                  <strong>View PDF</strong> &mdash; the PDF compiled from your
+                  source, useful as a reference to compare the HTML against.
+                </li>
+                <li>
+                  <strong>View XML</strong> &mdash; the JATS XML that will be
+                  submitted to the publisher. Mainly useful for technical
+                  checks.
+                </li>
+              </ul>
+              <p>
+                If something looks wrong, fix it in your source, re-upload, and
+                re-run the conversion.
+              </p>
+            </InfoButton>
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {hasOutput ? (
             <div className="space-y-3">
               <div className="flex gap-3">
-                <Button
-                  onClick={async () => {
-                    const token = await presign(doiSuffix);
-                    const a = document.createElement("a");
-                    a.href = downloadUrl(doiSuffix, token);
-                    a.download = "";
-                    a.click();
-                  }}
-                >
-                  Download ZIP
-                </Button>
                 <Link
                   to={`/manuscripts/${doiSuffix}/preview`}
                   className={buttonVariants({ variant: "outline" })}
                 >
-                  View HTML Proof
+                  View HTML
                 </Link>
                 <Link
                   to={`/manuscripts/${doiSuffix}/xml`}
@@ -725,6 +812,21 @@ export function ManuscriptPage() {
                   View PDF
                 </Link>
               </div>
+              {isEditor && (
+                <div className="flex gap-3">
+                  <Button
+                    onClick={async () => {
+                      const token = await presign(doiSuffix);
+                      const a = document.createElement("a");
+                      a.href = downloadUrl(doiSuffix, token);
+                      a.download = "";
+                      a.click();
+                    }}
+                  >
+                    Download ZIP
+                  </Button>
+                </div>
+              )}
               {isReady && (
                 <Button onClick={() => setApproveDialogOpen(true)}>
                   Approve for publication
