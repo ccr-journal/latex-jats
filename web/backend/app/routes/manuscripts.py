@@ -4,6 +4,7 @@ import json
 import logging
 import secrets
 import shutil
+from datetime import datetime
 from pathlib import Path
 from typing import Literal
 
@@ -102,19 +103,32 @@ def update_manuscript(
     return manuscript_to_read(ms, session)
 
 
+class ApproveRequest(SQLModel):
+    approved_by: str
+    confirmation_accepted: bool
+
+
 @router.post("/{doi_suffix}/approve", response_model=ManuscriptRead)
 def approve_manuscript(
     doi_suffix: str,
+    body: ApproveRequest,
     user: CurrentUser = Depends(get_current_user),
     role: Literal["editor", "author"] = Depends(get_current_role),
     session: Session = Depends(get_session),
 ):
+    name = body.approved_by.strip()
+    if not name:
+        raise HTTPException(400, detail="Name is required to approve")
+    if not body.confirmation_accepted:
+        raise HTTPException(400, detail="Camera-ready confirmation must be accepted")
     ms = load_manuscript_for_user(doi_suffix, session, user, role)
     if ms.status != ManuscriptStatus.ready:
         raise HTTPException(
             400, detail=f"Only manuscripts with status 'ready' can be approved (current: {ms.status.value})"
         )
     ms.status = ManuscriptStatus.approved
+    ms.approved_at = datetime.utcnow()
+    ms.approved_by = name
     session.add(ms)
     session.commit()
     session.refresh(ms)
@@ -147,6 +161,8 @@ async def withdraw_approval(
                 409, detail="Cannot withdraw approval: the submission has already moved to production in OJS"
             )
     ms.status = ManuscriptStatus.ready
+    ms.approved_at = None
+    ms.approved_by = None
     session.add(ms)
     session.commit()
     session.refresh(ms)
@@ -218,10 +234,6 @@ def delete_manuscript(
     ms = session.get(Manuscript, doi_suffix)
     if ms is None:
         raise HTTPException(404, detail=f"Manuscript '{doi_suffix}' not found")
-    if ms.status == ManuscriptStatus.approved:
-        raise HTTPException(
-            409, detail="Cannot delete an approved manuscript. Withdraw approval first."
-        )
 
     for author in session.exec(
         select(ManuscriptAuthor).where(ManuscriptAuthor.manuscript_id == doi_suffix)

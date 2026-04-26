@@ -811,6 +811,9 @@ def test_author_token_not_found(client):
 # ── Approval ─────────────────────────────────────────────────────────────────
 
 
+_APPROVE_BODY = {"approved_by": "Jane Author", "confirmation_accepted": True}
+
+
 def test_approve_manuscript(client, engine):
     client.post("/api/manuscripts", json={"doi_suffix": "CCR2025.1.1.APPR"})
     with Session(engine) as session:
@@ -818,16 +821,68 @@ def test_approve_manuscript(client, engine):
         ms.status = "ready"
         session.add(ms)
         session.commit()
-    r = client.post("/api/manuscripts/CCR2025.1.1.APPR/approve")
+    r = client.post("/api/manuscripts/CCR2025.1.1.APPR/approve", json=_APPROVE_BODY)
     assert r.status_code == 200
     assert r.json()["status"] == "approved"
 
 
 def test_approve_requires_ready_status(client):
     client.post("/api/manuscripts", json={"doi_suffix": "CCR2025.1.1.APPR2"})
-    r = client.post("/api/manuscripts/CCR2025.1.1.APPR2/approve")
+    r = client.post("/api/manuscripts/CCR2025.1.1.APPR2/approve", json=_APPROVE_BODY)
     assert r.status_code == 400
     assert "ready" in r.json()["detail"]
+
+
+def test_approve_requires_name(client, engine):
+    client.post("/api/manuscripts", json={"doi_suffix": "CCR2025.1.1.APPRNAME"})
+    with Session(engine) as session:
+        ms = session.get(Manuscript, "CCR2025.1.1.APPRNAME")
+        ms.status = "ready"
+        session.add(ms)
+        session.commit()
+    r = client.post(
+        "/api/manuscripts/CCR2025.1.1.APPRNAME/approve",
+        json={"approved_by": "   ", "confirmation_accepted": True},
+    )
+    assert r.status_code == 400
+    assert "name" in r.json()["detail"].lower()
+
+
+def test_approve_requires_confirmation(client, engine):
+    client.post("/api/manuscripts", json={"doi_suffix": "CCR2025.1.1.APPRCONF"})
+    with Session(engine) as session:
+        ms = session.get(Manuscript, "CCR2025.1.1.APPRCONF")
+        ms.status = "ready"
+        session.add(ms)
+        session.commit()
+    r = client.post(
+        "/api/manuscripts/CCR2025.1.1.APPRCONF/approve",
+        json={"approved_by": "Jane Author", "confirmation_accepted": False},
+    )
+    assert r.status_code == 400
+    assert "confirmation" in r.json()["detail"].lower()
+
+
+def test_approve_persists_audit_fields(client, engine):
+    doi = "CCR2025.1.1.APPRAUDIT"
+    client.post("/api/manuscripts", json={"doi_suffix": doi})
+    with Session(engine) as session:
+        ms = session.get(Manuscript, doi)
+        ms.status = "ready"
+        session.add(ms)
+        session.commit()
+    r = client.post(
+        f"/api/manuscripts/{doi}/approve",
+        json={"approved_by": "  Jane Author  ", "confirmation_accepted": True},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["approved_by"] == "Jane Author"  # whitespace stripped
+    assert body["approved_at"] is not None
+    with Session(engine) as session:
+        ms = session.get(Manuscript, doi)
+        assert ms.approved_by == "Jane Author"
+        assert ms.approved_at is not None
 
 
 def test_token_author_can_approve(client, engine):
@@ -843,7 +898,7 @@ def test_token_author_can_approve(client, engine):
 
     tc = TestClient(app, raise_server_exceptions=False)
     tc.headers.update({"Authorization": "Bearer author-approve-tok"})
-    r = tc.post(f"/api/manuscripts/{doi}/approve")
+    r = tc.post(f"/api/manuscripts/{doi}/approve", json=_APPROVE_BODY)
     assert r.status_code == 200
     assert r.json()["status"] == "approved"
 
@@ -861,7 +916,7 @@ def test_approve_denied_for_wrong_manuscript(client, engine):
 
     tc = TestClient(app, raise_server_exceptions=False)
     tc.headers.update({"Authorization": "Bearer author-appr-wrong"})
-    r = tc.post("/api/manuscripts/CCR.APPR.B/approve")
+    r = tc.post("/api/manuscripts/CCR.APPR.B/approve", json=_APPROVE_BODY)
     assert r.status_code == 404
 
 
@@ -875,6 +930,23 @@ def test_withdraw_approval(client, engine):
     r = client.post("/api/manuscripts/CCR2025.1.1.WD1/withdraw-approval")
     assert r.status_code == 200
     assert r.json()["status"] == "ready"
+
+
+def test_withdraw_clears_audit_fields(client, engine):
+    doi = "CCR2025.1.1.WDAUDIT"
+    client.post("/api/manuscripts", json={"doi_suffix": doi})
+    with Session(engine) as session:
+        ms = session.get(Manuscript, doi)
+        ms.status = "ready"
+        session.add(ms)
+        session.commit()
+    client.post(f"/api/manuscripts/{doi}/approve", json=_APPROVE_BODY)
+    r = client.post(f"/api/manuscripts/{doi}/withdraw-approval")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["status"] == "ready"
+    assert body["approved_at"] is None
+    assert body["approved_by"] is None
 
 
 def test_withdraw_requires_approved_status(client):
@@ -971,7 +1043,8 @@ def test_delete_manuscript_not_found(client):
     assert r.status_code == 404
 
 
-def test_delete_manuscript_blocked_when_approved(client, engine):
+def test_delete_manuscript_allowed_when_approved(client, engine):
+    """Editors can delete approved manuscripts; the confirm dialog is the safety rail."""
     doi = _create(client, "CCR2025.1.1.DEL2")
     with Session(engine) as session:
         ms = session.get(Manuscript, doi)
@@ -980,10 +1053,9 @@ def test_delete_manuscript_blocked_when_approved(client, engine):
         session.commit()
 
     r = client.delete(f"/api/manuscripts/{doi}")
-    assert r.status_code == 409
-    assert "approved" in r.json()["detail"].lower()
+    assert r.status_code == 204
     with Session(engine) as session:
-        assert session.get(Manuscript, doi) is not None
+        assert session.get(Manuscript, doi) is None
 
 
 def test_delete_manuscript_requires_editor(author_client):

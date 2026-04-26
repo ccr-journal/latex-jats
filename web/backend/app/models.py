@@ -74,6 +74,10 @@ class Manuscript(SQLModel, table=True):
     main_file: Optional[str] = None          # entrypoint; None = auto-detect
     last_synced_at: Optional[datetime] = None
     last_synced_sha: Optional[str] = None
+    # Approval audit (Issue #9). Set when an author confirms camera-ready;
+    # cleared on withdraw-approval.
+    approved_at: Optional[datetime] = None
+    approved_by: Optional[str] = None
 
 
 class ManuscriptAuthor(SQLModel, table=True):
@@ -178,3 +182,5 @@ class ManuscriptRead(SQLModel):
     main_file: Optional[str] = None
     last_synced_at: Optional[datetime] = None
     last_synced_sha: Optional[str] = None
+    approved_at: Optional[datetime] = None
+    approved_by: Optional[str] = None

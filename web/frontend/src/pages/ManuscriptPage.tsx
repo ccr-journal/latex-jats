@@ -8,7 +8,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { StatusBadge } from "@/components/StatusBadge";
 import { PipelineProgress } from "@/components/PipelineProgress";
 import { MetadataCard, MetadataDiscrepanciesInfo } from "@/components/MetadataCard";
@@ -74,6 +76,8 @@ export function ManuscriptPage() {
   const [metadataRefreshKey, setMetadataRefreshKey] = useState(0);
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
   const [approving, setApproving] = useState(false);
+  const [approverName, setApproverName] = useState("");
+  const [confirmationAccepted, setConfirmationAccepted] = useState(false);
   const [withdrawing, setWithdrawing] = useState(false);
   const [withdrawError, setWithdrawError] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -170,9 +174,11 @@ export function ManuscriptPage() {
   const handleApprove = async () => {
     setApproving(true);
     try {
-      const updated = await approveManuscript(doiSuffix);
+      const updated = await approveManuscript(doiSuffix, approverName.trim(), confirmationAccepted);
       setManuscript(updated);
       setApproveDialogOpen(false);
+      setApproverName("");
+      setConfirmationAccepted(false);
     } finally {
       setApproving(false);
     }
@@ -315,14 +321,8 @@ export function ManuscriptPage() {
                 <Button
                   variant="destructive"
                   size="sm"
-                  disabled={isApproved || isProcessing}
-                  title={
-                    isApproved
-                      ? "Withdraw approval before deleting"
-                      : isProcessing
-                        ? "Wait for the current conversion to finish"
-                        : undefined
-                  }
+                  disabled={isProcessing}
+                  title={isProcessing ? "Wait for the current conversion to finish" : undefined}
                   onClick={() => {
                     setDeleteError(null);
                     setDeleteDialogOpen(true);
@@ -685,7 +685,16 @@ export function ManuscriptPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
+      <Dialog
+        open={approveDialogOpen}
+        onOpenChange={(open) => {
+          setApproveDialogOpen(open);
+          if (!open) {
+            setApproverName("");
+            setConfirmationAccepted(false);
+          }
+        }}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Approve for publication</DialogTitle>
@@ -696,17 +705,42 @@ export function ManuscriptPage() {
                 This manuscript has pipeline warnings. Please review them before approving.
               </p>
             )}
-            <p className="text-muted-foreground">
-              After publication, the PDF and HTML proof will be locked and can no longer be changed.
-              To make further changes, you will need to withdraw approval, upload a new version and re-run the conversion.
-            </p>
-            <p>Are you sure you want to approve this manuscript for publication?</p>
+            <div className="space-y-1.5">
+              <Label htmlFor="approver-name">Your name</Label>
+              <Input
+                id="approver-name"
+                value={approverName}
+                onChange={(e) => setApproverName(e.target.value)}
+                placeholder="Full name"
+                autoComplete="name"
+                disabled={approving}
+              />
+            </div>
+            <label className="flex items-start gap-2 cursor-pointer">
+              <Checkbox
+                checked={confirmationAccepted}
+                onCheckedChange={(checked) => setConfirmationAccepted(checked === true)}
+                disabled={approving}
+                className="mt-0.5"
+              />
+              <span className="text-muted-foreground">
+                I confirm that this manuscript is camera-ready and that I am
+                responsible for its final form and content. I confirm that the
+                manuscript has been read and approved by all co-authors, as
+                appropriate. I understand that no further changes can be made
+                after this approval, including typographical or stylistic
+                corrections.
+              </span>
+            </label>
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => setApproveDialogOpen(false)} disabled={approving}>
               Cancel
             </Button>
-            <Button onClick={handleApprove} disabled={approving}>
+            <Button
+              onClick={handleApprove}
+              disabled={approving || !approverName.trim() || !confirmationAccepted}
+            >
               {approving ? "Approving\u2026" : "Approve"}
             </Button>
           </div>
@@ -753,7 +787,21 @@ export function ManuscriptPage() {
         )
       ) : null}
 
-      {/* Output — always visible */}
+      {/* Approval confirmation — visible to everyone once approved */}
+      {isApproved && (
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-sm text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-950 rounded p-3">
+              Manuscript has been approved for publication
+              {manuscript.approved_by ? <> by <strong>{manuscript.approved_by}</strong></> : null}
+              {manuscript.approved_at ? <> on {formatDate(manuscript.approved_at)}</> : null}.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Output — hidden from authors once approved */}
+      {(isEditor || !isApproved) && (
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
@@ -833,11 +881,6 @@ export function ManuscriptPage() {
                 </Button>
               )}
               {isApproved && (
-                <p className="text-sm text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-950 rounded p-3">
-                  Thanks for checking and approving the proofs. We will now proceed to publish the article. You will be notified when the article is published.
-                </p>
-              )}
-              {isApproved && (
                 <div className="flex items-center gap-3">
                   <Button variant="outline" size="sm" onClick={handleWithdrawApproval} disabled={withdrawing}>
                     {withdrawing ? "Withdrawing\u2026" : "Withdraw approval"}
@@ -855,6 +898,7 @@ export function ManuscriptPage() {
           )}
         </CardContent>
       </Card>
+      )}
     </div>
   );
 }

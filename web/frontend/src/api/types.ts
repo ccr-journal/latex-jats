@@ -66,6 +66,10 @@ export interface Manuscript {
   main_file: string | null;
   last_synced_at: string | null;
   last_synced_sha: string | null;
+  // Approval audit (Issue #9). Set when an author confirms camera-ready;
+  // cleared on withdraw-approval.
+  approved_at: string | null;
+  approved_by: string | null;
 }
 
 export interface ManuscriptCreate {

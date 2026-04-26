@@ -129,9 +129,18 @@ export function updateManuscript(
   });
 }
 
-export function approveManuscript(doiSuffix: string): Promise<Manuscript> {
+export function approveManuscript(
+  doiSuffix: string,
+  approvedBy: string,
+  confirmationAccepted: boolean,
+): Promise<Manuscript> {
   return apiFetch(`/api/manuscripts/${doiSuffix}/approve`, {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      approved_by: approvedBy,
+      confirmation_accepted: confirmationAccepted,
+    }),
   });
 }
 
