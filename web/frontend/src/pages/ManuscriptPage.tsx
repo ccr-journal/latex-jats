@@ -18,7 +18,7 @@ import { UploadZone } from "@/components/UploadZone";
 import { LinkUpstreamDialog } from "@/components/LinkUpstreamDialog";
 import { InfoButton } from "@/components/InfoButton";
 import { useAuth } from "@/auth/AuthContext";
-import { getManuscript, getStatus, getVersion, uploadFiles, startProcessing, updateManuscript, reimportOjsMetadata, approveManuscript, withdrawApproval, deleteManuscript, archiveManuscript, unarchiveManuscript, downloadUrl, presign, getAuthorToken, regenerateAuthorToken, getInviteTemplate, inviteAuthors, syncUpstream, unlinkUpstream, type Recipient } from "@/api/client";
+import { getManuscript, getStatus, getVersion, uploadFiles, startProcessing, updateManuscript, reimportOjsMetadata, approveManuscript, withdrawApproval, deleteManuscript, archiveManuscript, unarchiveManuscript, downloadUrl, downloadSourceUrl, presign, getAuthorToken, regenerateAuthorToken, getInviteTemplate, inviteAuthors, syncUpstream, unlinkUpstream, type Recipient } from "@/api/client";
 import { ApiError } from "@/api/client";
 import type { Manuscript, PipelineStep } from "@/api/types";
 
@@ -871,7 +871,19 @@ export function ManuscriptPage() {
                       a.click();
                     }}
                   >
-                    Download ZIP
+                    Download publisher zip
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={async () => {
+                      const token = await presign(doiSuffix);
+                      const a = document.createElement("a");
+                      a.href = downloadSourceUrl(doiSuffix, token);
+                      a.download = "";
+                      a.click();
+                    }}
+                  >
+                    Download source archive
                   </Button>
                 </div>
               )}

@@ -434,7 +434,7 @@ wheels = [
 
 [[package]]
 name = "jatsmith"
-version = "0.7.5"
+version = "0.8.1"
 source = { editable = "." }
 dependencies = [
     { name = "lxml" },

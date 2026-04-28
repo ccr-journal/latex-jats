@@ -5,6 +5,7 @@ prepare → compile → convert → validate pipeline and updates the Manuscript
 with status transitions and captured log output.
 """
 
+import json
 import logging
 import shutil
 import subprocess
@@ -362,6 +363,155 @@ def _pdf_page_count(pdf_path) -> int | None:
     return None
 
 
+# ── Run manifest ─────────────────────────────────────────────────────────────
+
+
+def _capture_version_first_line(cmd: list[str], timeout: float = 5.0) -> str | None:
+    """Return the first stdout/stderr line of ``cmd`` or None if the call fails.
+
+    Used to fingerprint TeX/biber/latexmlc/quarto/pandoc versions for the
+    run manifest. A missing tool returns None rather than raising — the
+    manifest's purpose is best-effort reproducibility data, not a
+    correctness gate.
+    """
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+        return None
+    out = (result.stdout or result.stderr or "").strip()
+    if not out:
+        return None
+    return out.splitlines()[0].strip()
+
+
+def _get_jatsmith_version() -> str | None:
+    try:
+        from importlib.metadata import version
+        return version("jatsmith")
+    except Exception:
+        return None
+
+
+def _capture_tool_versions(
+    *, is_quarto: bool, source_dir: Path, main_file: str | None,
+) -> dict[str, str | None]:
+    """Snapshot the versions of external tools the pipeline invoked."""
+    from jatsmith.prepare_source import _detect_tex_engine
+
+    versions: dict[str, str | None] = {}
+
+    if is_quarto:
+        versions["quarto"] = _capture_version_first_line(["quarto", "--version"])
+        versions["pandoc"] = _capture_version_first_line(["pandoc", "--version"])
+        versions["biber"] = _capture_version_first_line(["biber", "--version"])
+        return versions
+
+    tex_engine: str | None = None
+    main_tex = source_dir / (main_file or "main.tex")
+    if main_tex.is_file():
+        try:
+            tex_engine = _detect_tex_engine(main_tex)
+        except Exception:
+            tex_engine = None
+    versions["tex_engine"] = tex_engine
+    versions["tex_version"] = (
+        _capture_version_first_line([tex_engine, "--version"]) if tex_engine else None
+    )
+    versions["biber"] = _capture_version_first_line(["biber", "--version"])
+    versions["latexmlc"] = _capture_version_first_line(["latexmlc", "--VERSION"])
+    return versions
+
+
+def _extract_step_log(step: dict) -> str | None:
+    """Return the curated 'pipeline' log for a step, header stripped.
+
+    Each step stores multiple log tabs (the curated pipeline log and one
+    entry per raw process log file). The pipeline entry is the high-signal
+    one — it's the WARNING/ERROR lines collected from the ``jatsmith``
+    logger during that step. Raw process logs are skipped to keep the
+    manifest small.
+    """
+    for entry in step.get("logs") or []:
+        if entry.get("name") != "pipeline":
+            continue
+        content = (entry.get("content") or "").replace(_PIPELINE_LOG_HEADER, "", 1).strip()
+        if not content or content == "(no warnings or errors)":
+            return None
+        return content
+    return None
+
+
+def _write_manifest(
+    engine: Engine, storage: Storage, doi_suffix: str,
+    *, is_quarto: bool, fix: bool, use_canonical_ccr_cls: bool,
+) -> None:
+    """Write manifest.json next to source/ describing the run.
+
+    Bundled into the source-archive zip so a future reconversion (different
+    publisher, post-bug-fix re-run) knows which jatsmith version, tool
+    versions, and prepare-config produced the corresponding output.
+    """
+    with Session(engine) as session:
+        ms = session.get(Manuscript, doi_suffix)
+        if ms is None:
+            return
+        snapshot = {
+            "doi_suffix": ms.doi_suffix,
+            "doi": ms.doi,
+            "title": ms.title,
+            "main_file": ms.main_file,
+            "status": ms.status.value if hasattr(ms.status, "value") else str(ms.status),
+            "job_started_at": ms.job_started_at,
+            "job_completed_at": ms.job_completed_at,
+            "pipeline_steps": ms.pipeline_steps or [],
+        }
+
+    def _iso(dt):
+        return dt.isoformat() + "Z" if dt is not None else None
+
+    source_dir = storage.source_dir(doi_suffix)
+    tool_versions = _capture_tool_versions(
+        is_quarto=is_quarto, source_dir=source_dir,
+        main_file=snapshot["main_file"],
+    )
+
+    manifest = {
+        "jatsmith_version": _get_jatsmith_version(),
+        "doi_suffix": snapshot["doi_suffix"],
+        "doi": snapshot["doi"],
+        "title": snapshot["title"],
+        "main_file": snapshot["main_file"],
+        "pipeline": "quarto" if is_quarto else "latex",
+        "pipeline_config": {
+            "fix": fix,
+            "use_canonical_ccr_cls": use_canonical_ccr_cls,
+        },
+        "tool_versions": tool_versions,
+        "run": {
+            "started_at": _iso(snapshot["job_started_at"]),
+            "completed_at": _iso(snapshot["job_completed_at"]),
+            "final_status": snapshot["status"],
+        },
+        "pipeline_steps": [
+            {
+                "name": s.get("name"),
+                "status": s.get("status"),
+                "started_at": s.get("started_at"),
+                "completed_at": s.get("completed_at"),
+                "log": _extract_step_log(s),
+            }
+            for s in snapshot["pipeline_steps"]
+        ],
+    }
+
+    path = storage.manifest_path(doi_suffix)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(manifest, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+
 # ── Main pipeline ────────────────────────────────────────────────────────────
 
 
@@ -631,6 +781,10 @@ def run_pipeline(
     # for error handling in the outer except block.
     step_tracker = ["prepare"]
 
+    # Hoisted so the finally block (manifest write) can see them even if the
+    # try block raises before they're assigned.
+    is_quarto: bool | None = None
+
     try:
         # ── Transition to processing ─────────────────────────────────────
         _update_manuscript(
@@ -703,3 +857,16 @@ def run_pipeline(
     finally:
         pipeline_logger.removeHandler(collector)
         pipeline_logger.setLevel(prev_level)
+
+        # Always write a manifest if the pipeline got far enough to detect
+        # which kind it was — useful for failure forensics, not just success.
+        if is_quarto is not None:
+            try:
+                _write_manifest(
+                    engine, storage, doi_suffix,
+                    is_quarto=is_quarto,
+                    fix=fix,
+                    use_canonical_ccr_cls=use_canonical_ccr_cls,
+                )
+            except Exception:
+                logger.exception("Failed to write manifest for %s", doi_suffix)

@@ -35,6 +35,10 @@ class Storage:
         zips = list(d.glob("*.zip")) if d.exists() else []
         return zips[0] if zips else None
 
+    def manifest_path(self, doi_suffix: str) -> Path:
+        """Path to the per-run manifest.json (sibling of source/ and output/)."""
+        return self.manuscript_dir(doi_suffix) / "manifest.json"
+
     def ensure_dirs(self, doi_suffix: str) -> None:
         """Create all subdirectories for a manuscript."""
         for d in [

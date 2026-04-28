@@ -435,6 +435,102 @@ def test_download_not_found(client):
     assert r.status_code == 404
 
 
+def test_download_source_zips_author_upload(client, test_storage):
+    doi = _create(client)
+    source = test_storage.source_dir(doi)
+    source.mkdir(parents=True, exist_ok=True)
+    # Author-supplied files
+    (source / "main.tex").write_text("\\documentclass{ccr}\n", encoding="utf-8")
+    (source / "refs.bib").write_text("@article{x,}\n", encoding="utf-8")
+    (source / "main.bbl").write_text("\\begin{thebibliography}\n", encoding="utf-8")
+    (source / "figures").mkdir()
+    (source / "figures" / "fig1.png").write_bytes(b"\x89PNG fake")
+    # Worker-injected file (compile result copied back) — must be excluded
+    (source / "main.pdf").write_bytes(b"%PDF-1.4 fake")
+    # Manifest written by the worker at end-of-run — must be included at zip root
+    test_storage.manifest_path(doi).write_text(
+        json.dumps({"jatsmith_version": "0.0.0-test", "doi_suffix": doi}),
+        encoding="utf-8",
+    )
+
+    r = client.get(f"/api/manuscripts/{doi}/download/source")
+    assert r.status_code == 200
+    assert r.headers["content-type"] == "application/zip"
+    assert f"{doi}_source.zip" in r.headers["content-disposition"]
+
+    with zipfile.ZipFile(io.BytesIO(r.content)) as zf:
+        names = set(zf.namelist())
+        manifest = json.loads(zf.read("manifest.json"))
+    # Author files kept
+    assert "main.tex" in names
+    assert "refs.bib" in names
+    assert "main.bbl" in names
+    assert "figures/fig1.png" in names
+    # Manifest at zip root
+    assert "manifest.json" in names
+    assert manifest["doi_suffix"] == doi
+    # Worker-injected artifact dropped
+    assert "main.pdf" not in names
+
+
+def test_download_source_works_without_manifest(client, test_storage):
+    """Older manuscripts that pre-date the manifest writer should still download."""
+    doi = _create(client)
+    source = test_storage.source_dir(doi)
+    source.mkdir(parents=True, exist_ok=True)
+    (source / "main.tex").write_text("hi", encoding="utf-8")
+
+    r = client.get(f"/api/manuscripts/{doi}/download/source")
+    assert r.status_code == 200
+    with zipfile.ZipFile(io.BytesIO(r.content)) as zf:
+        names = set(zf.namelist())
+    assert "main.tex" in names
+    assert "manifest.json" not in names
+
+
+def test_download_source_not_ready(client):
+    doi = _create(client)
+    r = client.get(f"/api/manuscripts/{doi}/download/source")
+    assert r.status_code == 404
+
+
+def test_download_source_not_found(client):
+    r = client.get("/api/manuscripts/DOES-NOT-EXIST/download/source")
+    assert r.status_code == 404
+
+
+def test_download_source_with_presign_token(client, test_storage):
+    doi = _create(client)
+    source = test_storage.source_dir(doi)
+    source.mkdir(parents=True, exist_ok=True)
+    (source / "main.tex").write_text("hello", encoding="utf-8")
+
+    token = client.get(f"/api/manuscripts/{doi}/presign").json()["token"]
+
+    r = client.get(
+        f"/api/manuscripts/{doi}/download/source",
+        params={"token": token},
+        headers={"Authorization": ""},
+    )
+    assert r.status_code == 200
+    with zipfile.ZipFile(io.BytesIO(r.content)) as zf:
+        assert "main.tex" in zf.namelist()
+
+
+def test_download_source_with_invalid_presign_token(client, test_storage):
+    doi = _create(client)
+    source = test_storage.source_dir(doi)
+    source.mkdir(parents=True, exist_ok=True)
+    (source / "main.tex").write_text("hello", encoding="utf-8")
+
+    r = client.get(
+        f"/api/manuscripts/{doi}/download/source",
+        params={"token": "invalid-token"},
+        headers={"Authorization": ""},
+    )
+    assert r.status_code == 401
+
+
 # ── Output file serving ──────────────────────────────────────────────────────
 
 

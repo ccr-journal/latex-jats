@@ -200,6 +200,11 @@ export function downloadUrl(doiSuffix: string, token?: string): string {
   return token ? `${url}?token=${encodeURIComponent(token)}` : url;
 }
 
+export function downloadSourceUrl(doiSuffix: string, token?: string): string {
+  const url = `${BASE}/api/manuscripts/${doiSuffix}/download/source`;
+  return token ? `${url}?token=${encodeURIComponent(token)}` : url;
+}
+
 export function outputUrl(doiSuffix: string, path: string, token?: string): string {
   const url = `${BASE}/api/manuscripts/${doiSuffix}/output/${path}`;
   return token ? `${url}?token=${encodeURIComponent(token)}` : url;
