@@ -214,6 +214,140 @@ def _warn_input_in_tabular(tex_path):
                 in_tabular = False
 
 
+class _MultirowParseError(Exception):
+    pass
+
+
+def _multirow_skip_optional_arg(text, pos):
+    """If text[pos] (after whitespace) is '[', skip past the matching ']'."""
+    while pos < len(text) and text[pos] in ' \t\n':
+        pos += 1
+    if pos >= len(text) or text[pos] != '[':
+        return pos
+    depth = 1
+    pos += 1
+    while pos < len(text) and depth > 0:
+        c = text[pos]
+        if c == '\\' and pos + 1 < len(text):
+            pos += 2
+            continue
+        if c == '[':
+            depth += 1
+        elif c == ']':
+            depth -= 1
+        pos += 1
+    return pos
+
+
+def _multirow_read_required_arg(text, pos):
+    r"""Read a balanced {...} arg starting at pos. Returns (content, end_pos)."""
+    while pos < len(text) and text[pos] in ' \t\n':
+        pos += 1
+    if pos >= len(text) or text[pos] != '{':
+        raise _MultirowParseError(f"expected '{{' at offset {pos}")
+    depth = 1
+    pos += 1
+    start = pos
+    while pos < len(text):
+        c = text[pos]
+        if c == '\\' and pos + 1 < len(text):
+            pos += 2
+            continue
+        if c == '{':
+            depth += 1
+        elif c == '}':
+            depth -= 1
+            if depth == 0:
+                return text[start:pos], pos + 1
+        pos += 1
+    raise _MultirowParseError("unterminated '{'")
+
+
+def _multirow_content_has_bare_linebreak(content):
+    r"""Return True if \\ or \tabularnewline appears at brace depth 0 in content."""
+    depth = 0
+    pos = 0
+    n = len(content)
+    while pos < n:
+        c = content[pos]
+        if c == '\\':
+            if pos + 1 < n and content[pos + 1] == '\\':
+                if depth == 0:
+                    return True
+                pos += 2
+                continue
+            if content.startswith(r'\tabularnewline', pos):
+                if depth == 0:
+                    return True
+                pos += len(r'\tabularnewline')
+                continue
+            # any other escape sequence — skip the backslash + next char
+            pos += 2
+            continue
+        if c == '{':
+            depth += 1
+        elif c == '}':
+            depth -= 1
+        pos += 1
+    return False
+
+
+def _warn_linebreak_in_multirow(tex_path):
+    r"""Warn about \\ at brace depth 0 inside \multirow content.
+
+    LaTeXML wraps \multirow content in \hbox{...}, but the surrounding
+    alignment still interprets \\ as a row terminator, causing the table
+    to fail to close. Wrapping the content in \shortstack{...} scopes
+    the \\ to that sub-environment and converts to clean JATS
+    (<p>line1</p><p>line2</p> in the cell).
+    """
+    tex_dir = tex_path.parent
+    files = [tex_path]
+    try:
+        main_text = tex_path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        main_text = tex_path.read_text(encoding="latin-1")
+    for m in re.finditer(r'\\(?:input|include)\{([^}]+)\}', main_text):
+        child = tex_dir / m.group(1)
+        if not child.suffix:
+            child = child.with_suffix('.tex')
+        if child.exists() and child not in files:
+            files.append(child)
+
+    for fpath in files:
+        try:
+            text = fpath.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            text = fpath.read_text(encoding="latin-1")
+        # Strip line comments (% not preceded by \) without disturbing line
+        # numbering: replace the comment text with spaces of the same length.
+        cleaned = re.sub(
+            r'(?<!\\)%[^\n]*',
+            lambda m: ' ' * len(m.group(0)),
+            text,
+        )
+        for m in re.finditer(r'\\multirow\b\*?', cleaned):
+            lineno = cleaned.count('\n', 0, m.start()) + 1
+            pos = m.end()
+            try:
+                pos = _multirow_skip_optional_arg(cleaned, pos)   # [vpos]
+                _, pos = _multirow_read_required_arg(cleaned, pos)  # {nrows}
+                pos = _multirow_skip_optional_arg(cleaned, pos)     # [bigstruts]
+                _, pos = _multirow_read_required_arg(cleaned, pos)  # {width}
+                pos = _multirow_skip_optional_arg(cleaned, pos)     # [vmove]
+                content, _ = _multirow_read_required_arg(cleaned, pos)  # {contents}
+            except _MultirowParseError:
+                continue
+            if _multirow_content_has_bare_linebreak(content):
+                logger.warning(
+                    r'\\ inside \multirow content (%s:%d): '
+                    r'LaTeXML interprets this as a tabular row terminator '
+                    r'and the table will fail to close. Wrap the content in '
+                    r'\shortstack{...} to scope the line breaks.',
+                    fpath.name, lineno,
+                )
+
+
 def warn_source_issues(tex_path):
     """Run all source-quality warnings on a .tex file and its \\input targets."""
     _warn_bare_greater_than(tex_path)
@@ -223,6 +357,7 @@ def warn_source_issues(tex_path):
     _warn_transliteration_packages(tex_path)
     _warn_bare_ampersand_in_metadata(tex_path)
     _warn_input_in_tabular(tex_path)
+    _warn_linebreak_in_multirow(tex_path)
 
 
 LATEXML_DIR = Path(__file__).parent.parent / "latexml"
