@@ -53,6 +53,7 @@ Three sequential steps in `src/jatsmith/convert.py`:
 2. **`latexmlpost`** — applies LaTeXML's post-processors (bibliography scan, CrossRef citation linking) and the JATS XSLT to produce raw JATS XML.
 3. **Python post-processing** — a chain of fixup functions run on the JATS XML in order:
    - `sanitize_ids` — cleans up XML IDs for JATS compliance
+   - `dedupe_ref_lists` — drops orphan `<ref-list>` elements when biber emitted multiple `\datalist` blocks. With `biblatex[sortcites=true]` (which `ccr.cls` uses), biber 2.19+ writes one `\datalist` per registered list (one for the bibliography, one for citation-group sorting); LaTeXML emits each as a separate `<ltx:bibliography>` and `MakeBibliography` produces duplicate `<ref-list>`. The dedupe keeps the list whose IDs are referenced by body `<xref rid>` and drops the rest. biber ≤ 2.17 collapsed the lists into one and didn't trigger this.
    - `fix_citation_ref_types` — adds `ref-type="bibr"` to in-text citation xrefs
    - `fix_metadata` — injects journal-meta (CCR constants) and article-meta (DOI, volume, issue, fpage, pub-date) from the LaTeX preamble; also trims whitespace from `<kwd>` elements
    - `collapse_affiliations` — deduplicates identical `<aff>` elements emitted by LaTeXML (one per author) and rewrites them as id-linked siblings of `<contrib>` inside `<contrib-group>` (Edify "Style 2"). Each `<contrib>` gets a `<xref ref-type="aff" rid="affN"/>`; unique `<aff id="affN">` elements are appended to `<contrib-group>` in first-occurrence order.

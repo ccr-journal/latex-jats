@@ -2083,6 +2083,86 @@ def sanitize_ids(jats_file):
     tree.write(jats_file, encoding="unicode")
 
 
+def dedupe_ref_lists(jats_file):
+    """Drop orphan <ref-list> elements when biber emitted multiple datalists.
+
+    biber 2.19+ honors every <bcf:datalist> registered in the .bcf and writes
+    one \\datalist block per entry in the .bbl. With ``biblatex[sortcites=true]``
+    (which ccr.cls uses) that's two: one for the bibliography ordering, one
+    for citation-group sorting. LaTeXML processes each \\datalist as a
+    separate <ltx:bibliography>, and latexmlpost's MakeBibliography then emits
+    one <ref-list> per bibliography. Body <xref rid> values are wired by
+    LaTeXML's CrossRef pass to one of the lists; the other is orphan.
+
+    biber ≤ 2.17 collapses the datalists into one in the .bbl, so this only
+    triggers on newer biber. See xml_guide.md §3.2 — Edify allows exactly one
+    <ref-list> in <back>.
+
+    Strategy: keep the <ref-list> that body <xref rid> values reference; drop
+    the rest. If references are split across lists (shouldn't happen but
+    handle it), keep the most-referenced. If nothing is referenced, keep the
+    first and warn.
+    """
+    ET.register_namespace("xlink", "http://www.w3.org/1999/xlink")
+    tree = ET.parse(jats_file)
+    root = tree.getroot()
+
+    back = root.find("back")
+    if back is None:
+        return
+    ref_lists = back.findall("ref-list")
+    if len(ref_lists) <= 1:
+        return
+
+    # rids referenced from outside <back>.
+    body = root.find("body")
+    referenced = set()
+    if body is not None:
+        for xref in body.iter("xref"):
+            rid = xref.get("rid")
+            if rid:
+                referenced.add(rid)
+    front = root.find("front")
+    if front is not None:
+        for xref in front.iter("xref"):
+            rid = xref.get("rid")
+            if rid:
+                referenced.add(rid)
+
+    counts = [
+        (rl, sum(1 for ref in rl.findall("ref") if ref.get("id") in referenced))
+        for rl in ref_lists
+    ]
+    max_count = max(c for _, c in counts)
+
+    if max_count == 0:
+        winner = ref_lists[0]
+        logger.warning(
+            "Multiple <ref-list> elements in <back> but no <xref> in body/front "
+            "references any of them — keeping the first and dropping %d "
+            "duplicate(s). Likely biber emitted multiple \\datalist blocks.",
+            len(ref_lists) - 1,
+        )
+    else:
+        winner = next(rl for rl, c in counts if c == max_count)
+        dropped = [rl for rl in ref_lists if rl is not winner]
+        for rl in dropped:
+            ids = [r.get("id") for r in rl.findall("ref") if r.get("id")]
+            prefix = ids[0].rsplit(".", 1)[0] if ids else "?"
+            logger.info(
+                "Dropping orphan <ref-list> with %d entries (id prefix %r); "
+                "biber 2.19+ emits an extra \\datalist for biblatex's "
+                "sortcites option.",
+                len(ids), prefix,
+            )
+
+    for rl in ref_lists:
+        if rl is not winner:
+            back.remove(rl)
+
+    tree.write(jats_file, encoding="unicode")
+
+
 def fix_citation_ref_types(jats_file):
     """Add ref-type="bibr" to xref elements that point to bibliography ref entries.
 
@@ -3319,6 +3399,7 @@ def convert(input_path: Path, output_path: Path, html: bool = False, lastpage=No
     # step 2: JATS XML post processing
     logger.info("Step 2: Post-processing JATS XML...")
     sanitize_ids(str(output_path))
+    dedupe_ref_lists(str(output_path))
     fix_citation_ref_types(str(output_path))
     fix_metadata(str(output_path), str(input_path), lastpage=lastpage)
     collapse_affiliations(str(output_path))
