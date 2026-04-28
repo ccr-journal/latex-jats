@@ -1678,13 +1678,24 @@ def parse_bbl(bbl_path):
     Each dict has: key, type, authors (list of dicts with family, given, prefix,
     is_collab), and field/list values (title, journaltitle, booktitle, year,
     volume, number, pages, edition, doi, url, publisher, location, ...).
+
+    Deduplicates by cite key: biber 2.19+ writes one ``\\datalist`` block per
+    ``<bcf:datalist>`` entry registered in the .bcf, so with biblatex's
+    ``sortcites=true`` (which ccr.cls uses) the same entries appear twice —
+    once for the bibliography ordering, once for citation-group sorting. We
+    keep the first occurrence; ``dedupe_ref_lists`` already handles the
+    JATS-side mirror of this.
     """
     content = Path(bbl_path).read_text(encoding='utf-8')
     entries = []
+    seen_keys = set()
     for entry_m in re.finditer(
             r'\\entry\{([^}]+)\}\{([^}]+)\}\{[^}]*\}(.*?)\\endentry',
             content, re.DOTALL):
         key, entry_type, body = entry_m.group(1), entry_m.group(2), entry_m.group(3)
+        if key in seen_keys:
+            continue
+        seen_keys.add(key)
         entry = {'key': key, 'type': entry_type, 'authors': []}
 
         # Parse \name{author/editor}{count}{}{...} blocks

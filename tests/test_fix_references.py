@@ -114,6 +114,35 @@ def test_parse_bbl_url_via_verb(tmp_path):
     assert entries[0].get('url') == 'https://example.com/resource'
 
 
+def test_parse_bbl_dedupes_duplicate_keys(tmp_path):
+    """biber 2.19+ writes one \\datalist per registered list. With sortcites=true
+    that's two, each containing the same entries. parse_bbl should dedupe by key.
+    """
+    one_entry = _bbl_article_raw(key='smith2020', family='Smith', year='2020').splitlines()
+    # Strip the outer refsection/datalist wrapper from the helper output;
+    # _bbl_article_raw includes them. Extract just the \entry...\endentry block.
+    entry_block_start = next(i for i, ln in enumerate(one_entry) if r'\entry{' in ln)
+    entry_block_end = next(i for i, ln in enumerate(one_entry) if r'\endentry' in ln)
+    entry = '\n'.join(one_entry[entry_block_start:entry_block_end + 1])
+
+    # Build a .bbl with two datalists, both containing the same entry.
+    two_lists = (
+        r'\refsection{0}' + '\n'
+        r'  \datalist[entry]{nyt/apasortcite//global/global}' + '\n'
+        + entry + '\n'
+        r'  \enddatalist' + '\n'
+        r'  \datalist[entry]{nyt/global//global/global}' + '\n'
+        + entry + '\n'
+        r'  \enddatalist' + '\n'
+        r'\endrefsection' + '\n'
+    )
+    bbl = tmp_path / 'test.bbl'
+    bbl.write_text(two_lists, encoding='utf-8')
+    entries = parse_bbl(bbl)
+    assert len(entries) == 1
+    assert entries[0]['key'] == 'smith2020'
+
+
 def test_parse_bbl_publisher_via_list(tmp_path):
     bbl_text = _bbl("""\
     \\entry{smith2020b}{book}{}
