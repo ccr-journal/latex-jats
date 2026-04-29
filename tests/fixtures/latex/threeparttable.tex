@@ -1,0 +1,42 @@
+\documentclass{ccr}
+\usepackage{threeparttable}
+
+\title{Test Article}
+\authorsnames{Jane Doe}
+\authorsaffiliations{{University of Amsterdam}}
+\abstract{A test abstract.}
+\keywords{test}
+\volume{1}
+\pubnumber{1}
+\pubyear{2025}
+\firstpage{1}
+\doi{10.0000/test-threeparttable}
+
+\addbibresource{bibliography.bib}
+
+\begin{document}
+\maketitle
+
+\section{Results}
+
+\begin{table}[h]
+\centering
+\caption{A table with threeparttable notes}
+\begin{threeparttable}
+\begin{tabular}{ll}
+\hline
+A & B\tnote{*} \\
+\hline
+1 & 2 \\
+\hline
+\end{tabular}
+\begin{tablenotes}[flushleft]
+\footnotesize
+\item[*] An explanatory note.
+\end{tablenotes}
+\end{threeparttable}
+\end{table}
+
+\printbibliography
+
+\end{document}

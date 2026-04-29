@@ -1,0 +1,21 @@
+# -*- mode: Perl -*-
+# Minimal LaTeXML binding for the threeparttable package.
+#
+# threeparttable provides a wrapper environment for tables with header,
+# body, and footnotes.  For JATS we treat {threeparttable} as a transparent
+# wrapper, drop {tablenotes}, and suppress \tnote markers.
+package LaTeXML::Package::Pool;
+use strict;
+use warnings;
+use LaTeXML::Package;
+
+# {threeparttable}[<pos>] — pass content through.
+DefEnvironment('{threeparttable}[]', '#body');
+
+# {tablenotes}[<options>] — drop note content.
+DefEnvironment('{tablenotes}[]', '');
+
+# \tnote{<label>} — superscript note marker; suppress.
+DefMacro('\tnote {}', '');
+
+1;

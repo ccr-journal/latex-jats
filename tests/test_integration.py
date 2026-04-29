@@ -249,6 +249,25 @@ def test_adjustbox_table_structure(tmp_path):
 
 
 @pytest.mark.integration
+def test_threeparttable_passthrough(tmp_path):
+    """threeparttable wraps a table transparently; tablenotes/\\tnote are dropped."""
+    output = tmp_path / "output.xml"
+    tex = _prepare_fixture(FIXTURES / "threeparttable.tex", tmp_path)
+    run_latexmlc(str(tex), str(output), log_dir=tmp_path)
+
+    root = ET.parse(output).getroot()
+    table_wraps = root.findall(".//table-wrap")
+    assert table_wraps, "No <table-wrap> found"
+    for tw in table_wraps:
+        assert tw.findall("table"), \
+            f"<table-wrap> {tw.get('id')} has no direct <table> child"
+
+    body_text = " ".join(root.find(".//body").itertext())
+    assert "An explanatory note" not in body_text, \
+        "tablenotes content leaked into body"
+
+
+@pytest.mark.integration
 def test_caption_shape_is_p_not_title(tmp_path):
     """Captions on <fig>/<fig-group>/<table-wrap> must wrap text in <p>, not <title>.
 
