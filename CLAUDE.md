@@ -8,16 +8,7 @@ A web service is built on top of this pipeline, where editors and authors can up
 
 ## Running the tool
 
-**Runner (recommended for examples):**
-```sh
-uv run run-examples                       # run all examples (incremental)
-uv run run-examples CCR2023.1.004.KATH    # run one example
-uv run run-examples --force               # rerun everything
-uv run run-examples --force-convert       # only force the convert step
-uv run run-examples --fix                 # apply simple source fixes before compiling
-```
-
-Output goes to `output/<article-id>/` at the project root, with `prepare/` and `convert/` subdirectories containing logs and status.json files.
+The primary workflow is the web service: editors and authors upload LaTeX sources, which land in `storage/manuscripts/<doi_suffix>/` and are processed by the background pipeline. The CLI tools below are mainly for local debugging of a single source tree.
 
 **Direct conversion (single file):**
 ```sh
@@ -98,7 +89,6 @@ The guide is the source of truth when deciding what JATS shapes to emit. A few c
 src/
   jatsmith/
     convert.py        main pipeline: convert() function and all fixup functions
-    runner.py         incremental build runner for examples (run-examples CLI)
     prepare_source.py validates and compiles LaTeX (prepare-source CLI)
     fixbib.py         standalone bibliography cleaner (fixbib CLI)
     fix_input.py      resolves \input{} commands for the converter (fix-input CLI)
@@ -138,14 +128,6 @@ tests/
   test_web_api.py              unit tests for the FastAPI backend (uses TestClient + in-memory SQLite)
   test_integration.py          integration tests (full pipeline via latexmlc)
   fixtures/latex/              minimal .tex files used by integration tests
-examples/
-  CCR2023.1.004.KATH/     each example has main.tex + source files directly in the folder
-  CCR2025.1.2.YAO/        example article
-output/                   centralized output tree (gitignored), also the Netlify deploy dir
-  <article-id>/
-    prepare/              compilation logs + status.json
-    convert/              JATS XML, HTML, PDF, images + status.json
-  index.html              generated preview index with status indicators
 web/
   backend/
     app/
@@ -171,7 +153,12 @@ deploy/
   docker-compose.build.yml  build overlay for local image builds
   .env.example              production env template (attached to releases as .env)
   update.sh                 helper script for pulling updates on VPS
-storage/                    runtime file storage (gitignored) — manuscripts/<doi_suffix>/source|output
+storage/                    runtime file storage (gitignored)
+  jatsmith.db               SQLite database (manuscripts, authors, tokens)
+  manuscripts/
+    <doi_suffix>/
+      source/               uploaded LaTeX source tree
+      output/               pipeline outputs: prepare logs, JATS XML, HTML, PDF, images, zip
 ```
 
 ## Authentication and access control
