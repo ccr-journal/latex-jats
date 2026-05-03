@@ -2,7 +2,7 @@
 
 Convert LaTeX and Quarto manuscripts to publisher-ready JATS XML, with HTML and PDF previews. Ships with a self-hosted web app for editors and authors to upload sources, run conversions, review the result, and approve. Optional [OJS](https://pkp.sfu.ca/software/ojs/) integration for journals that use it.
 
-JATSmith was first built for [Computational Communication Research (CCR)](https://computationalcommunication.org) but is designed to host other journals — see [Adapting to a different journal](#adapting-to-a-different-journal) below.
+JATSmith was developed for [Computational Communication Research (CCR)](https://computationalcommunication.org) but is designed to host other journals — see [Adapting to a different journal](#adapting-to-a-different-journal) below.
 
 ## Quick start
 
@@ -69,12 +69,17 @@ These values flow into JATS `<journal-meta>`/`<permissions>` for every conversio
 
 ### 2. Canonical class file & Quarto extension (in-app form)
 
-Two optional URL fields in the same form let JATSmith fetch and cache the journal's canonical class file & Quarto extension on app start (and re-fetch when the URLs change):
+JATSmith can download the latest (canonical) latex class file and/or quarto extension. 
+Author sources will be compared against this file and a warning will be raised if the file doesn't match.
+It's also posssible to inject the canonical files into the source tree so you can be sure the latest version is used. 
+
+To set this, enter the location for the files in the URL fields in the site config form:
 
 - **`class_file_url`** — direct URL to the LaTeX class file. GitHub `blob/...` HTML URLs and `raw.githubusercontent.com/...` URLs both work. Example: `https://github.com/ccr-journal/ccr-latex/blob/main/ccr.cls`.
 - **`quarto_extension_repo`** — `<owner>/<repo>[@<ref>]` shorthand matching `quarto add`. Example: `ccr-journal/ccr-quarto` or `ccr-journal/ccr-quarto@v0.5`.
 
-Either or both may be empty. When set, each manuscript page shows a **Use latest …** toggle: turning it on overwrites the author's vendored class/extension with the canonical copy before conversion. Drift warnings fire automatically when an author's copy is outdated or hand-edited.
+Either or both may be empty. When set, JATSmith will fetch and cache the files on app start (and re-fetch when the URLs change). 
+Each manuscript page then shows a **Use latest …** toggle: turning it on overwrites the author's vendored class/extension with the canonical copy before conversion. Drift warnings fire automatically when an author's copy is outdated or hand-edited.
 
 The fetched bundle is cached at `STORAGE_DIR/canonical/`; network failures fall back to the previous cache so a transient GitHub blip doesn't take the feature down.
 
