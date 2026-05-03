@@ -10,7 +10,7 @@ JATSmith was first built for [Computational Communication Research (CCR)](https:
 
 ```sh
 mkdir jatsmith && cd jatsmith
-wget -q https://github.com/ccr-journal/jatsmith/releases/latest/download/{docker-compose.yml,.env}
+wget -qO- https://github.com/ccr-journal/jatsmith/releases/latest/download/jatsmith-deploy.tar.gz | tar xz
 # edit .env — at minimum set EDITOR_CREDENTIALS and SITE_ADDRESS
 docker compose up -d
 ```
