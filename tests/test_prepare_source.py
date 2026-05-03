@@ -229,6 +229,36 @@ class TestPrepareWorkspaceUsesCanonicalBundle:
         # Stale content survives — we have nothing canonical to swap in.
         assert "v0.01" in (ws / "example.cls").read_text(encoding="utf-8")
 
+    def test_pdflatex_patches_apply_without_canonical_bundle(self, tmp_path: Path):
+        """Regression guard for the v1.0 generalization: pstricks comment-out
+        and \\pdfminorversion injection must run on every workspace *.cls,
+        not just the file named in the (possibly-empty) canonical bundle.
+        Otherwise integration tests with a stale ccr.cls in the source dir
+        fail at pdflatex with `pstricks.sty not found`."""
+        source = tmp_path / "src"
+        ws = tmp_path / "ws"
+        source.mkdir()
+        (source / "main.tex").write_text(
+            "\\documentclass{ccr}\n\\begin{document}\nhi\n\\end{document}\n",
+            encoding="utf-8",
+        )
+        (source / "ccr.cls").write_text(
+            "\\NeedsTeXFormat{LaTeX2e}\n"
+            "\\ProvidesClass{ccr}[2026-04-22 v0.08]\n"
+            "\\RequirePackage{pstricks}\n"
+            "\\LoadClass{article}\n",
+            encoding="utf-8",
+        )
+        ce.set_current_bundle(None)  # explicit: no canonical configured
+
+        prepare_workspace(source, ws, use_canonical_class_file=False)
+
+        patched = (ws / "ccr.cls").read_text(encoding="utf-8")
+        assert "\\pdfminorversion=7" in patched
+        assert "% \\RequirePackage{pstricks}" in patched
+        # The active line must be gone (only the commented-out version remains).
+        assert "\n\\RequirePackage{pstricks}\n" not in patched
+
 
 class TestPrepareQuartoWorkspaceUsesCanonicalBundle:
     def _seed_quarto_source_with_stale_extension(self, source: Path) -> None:

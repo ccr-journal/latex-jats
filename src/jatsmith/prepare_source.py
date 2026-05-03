@@ -167,35 +167,40 @@ def _parse_latex_log_errors(log_path: Path) -> tuple[list[str], list[str]]:
     return fatal_found, errors
 
 
-def _patch_class_file(workspace_dir: Path, class_filename: str | None,
-                      engine: str = "pdflatex"):
-    """Patch the class file in the workspace: add \\pdfminorversion=7, drop pstricks.
+def _patch_class_files(workspace_dir: Path, engine: str = "pdflatex") -> None:
+    """Patch every ``*.cls`` at the workspace root for pdflatex compatibility.
 
-    No-op when ``class_filename`` is None (no canonical bundle configured) or
-    when no copy of the file is present in the workspace.
+    Two pure-hygiene edits applied regardless of whether a canonical bundle is
+    configured:
+
+    - ``\\pdfminorversion=7`` is prepended for pdflatex (so the output PDF is
+      1.7) and stripped for xelatex/lualatex (they handle PDF version natively).
+    - ``\\RequirePackage{pstricks}`` is commented out — it's a postscript-only
+      package that breaks pdflatex builds, and most ``.cls`` files include it
+      defensively without using it.
+
+    Nested copies under ``_extensions/`` are not touched: those are read-only
+    bundles owned by the Quarto toolchain. Only the top-level ``*.cls`` file
+    that pdflatex will actually load is patched.
     """
-    if not class_filename:
-        return
-    cls = workspace_dir / class_filename
-    if not cls.exists():
-        return
-    text = cls.read_text()
-    changed = False
-    # Add \pdfminorversion=7 early so pdflatex produces PDF 1.7
-    # (xelatex/lualatex handle any PDF version natively)
-    if engine == "pdflatex" and r'\pdfminorversion' not in text:
-        text = r'\pdfminorversion=7' + '\n' + text
-        changed = True
-    elif engine != "pdflatex" and r'\pdfminorversion' in text:
-        text = re.sub(r'\\pdfminorversion\s*=\s*\d+\s*\n?', '', text)
-        changed = True
-    # pstricks is unused and can conflict with pdflatex
-    if r'\RequirePackage{pstricks}' in text:
-        text = text.replace(r'\RequirePackage{pstricks}', '% \\RequirePackage{pstricks}  % removed: unused, conflicts with pdflatex')
-        changed = True
-    if changed:
-        cls.write_text(text)
-        logger.info("Patched %s (pdfminorversion, pstricks)", class_filename)
+    for cls in sorted(workspace_dir.glob("*.cls")):
+        text = cls.read_text()
+        changed = False
+        if engine == "pdflatex" and r'\pdfminorversion' not in text:
+            text = r'\pdfminorversion=7' + '\n' + text
+            changed = True
+        elif engine != "pdflatex" and r'\pdfminorversion' in text:
+            text = re.sub(r'\\pdfminorversion\s*=\s*\d+\s*\n?', '', text)
+            changed = True
+        if r'\RequirePackage{pstricks}' in text:
+            text = text.replace(
+                r'\RequirePackage{pstricks}',
+                '% \\RequirePackage{pstricks}  % removed: unused, conflicts with pdflatex',
+            )
+            changed = True
+        if changed:
+            cls.write_text(text)
+            logger.info("Patched %s (pdfminorversion, pstricks)", cls.name)
 
 
 def prepare_workspace(source_dir: Path, workspace_dir: Path,
@@ -257,11 +262,7 @@ def prepare_workspace(source_dir: Path, workspace_dir: Path,
     warn_if_outdated(workspace_dir, bundle)
 
     engine = _detect_tex_engine(main_tex)
-    _patch_class_file(
-        workspace_dir,
-        bundle.class_filename if bundle is not None else None,
-        engine,
-    )
+    _patch_class_files(workspace_dir, engine)
 
     # Apply fixes to the workspace copy (if requested)
     if fix_problems:
