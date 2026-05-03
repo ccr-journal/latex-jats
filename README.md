@@ -6,18 +6,17 @@ JATSmith was first built for [Computational Communication Research (CCR)](https:
 
 ## Quick start
 
-### Stand up the web service (production)
+### Stand up the web service
 
 ```sh
 mkdir jatsmith && cd jatsmith
 wget -qO- https://github.com/ccr-journal/jatsmith/releases/latest/download/jatsmith-deploy.tar.gz | tar xz
-# edit .env — at minimum set EDITOR_CREDENTIALS and SITE_ADDRESS
 docker compose up -d
 ```
 
-This starts two containers (Caddy + FastAPI api) with TLS handled automatically when `SITE_ADDRESS` is a public domain. Data lives in the `app_storage` Docker volume; database migrations run on startup. See [deploy/.env.example](deploy/.env.example) for every option.
+This starts two containers (Caddy + FastAPI api). The defaults in `.env` run a working local instance at <https://localhost> — log in as `editor / devpass` and complete the **Site Config** form (journal name, ISSN, license, optional canonical class-file URL) to start uploading. Caddy serves a local-CA cert; your browser may prompt to trust it on first visit.
 
-Open the site, log in with one of the `EDITOR_CREDENTIALS` pairs, and complete the **Site Config** form on first run (journal name, ISSN, license, optional canonical class-file URL). The dashboard then accepts uploads.
+Before deploying publicly, edit `.env` to set `EDITOR_CREDENTIALS` and `SITE_ADDRESS` (TLS is then handled automatically against your domain), then `docker compose up -d --force-recreate`. See [deploy/.env.example](deploy/.env.example) for every option. Data lives in the `app_storage` Docker volume; database migrations run on startup.
 
 ### Try it locally
 
