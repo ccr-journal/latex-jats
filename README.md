@@ -2,7 +2,7 @@
 
 Convert LaTeX and Quarto manuscripts to publisher-ready JATS XML, with HTML and PDF previews. Ships with a self-hosted web app for editors and authors to upload sources, run conversions, review the result, and approve. Optional [OJS](https://pkp.sfu.ca/software/ojs/) integration for journals that use it.
 
-JATSmith was first built for [Computational Communication Research (CCR)](https://computationalcommunication.org) but is designed to host other small open journals — see [Adapting to a different journal](#adapting-to-a-different-journal) below.
+JATSmith was first built for [Computational Communication Research (CCR)](https://computationalcommunication.org) but is designed to host other journals — see [Adapting to a different journal](#adapting-to-a-different-journal) below.
 
 ## Quick start
 
