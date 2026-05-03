@@ -3,15 +3,18 @@ import { Link, Outlet } from "react-router-dom";
 import { ThemeToggle } from "./ThemeToggle";
 import { Button } from "./ui/button";
 import { useAuth } from "@/auth/AuthContext";
-import { getVersion } from "@/api/client";
+import { getSiteConfig, getVersion } from "@/api/client";
+import type { SiteConfig } from "@/api/types";
 
 export function Layout() {
   const { user, logout } = useAuth();
   const isTokenScoped = !!user?.manuscript_token_scope;
   const [version, setVersion] = useState<string | null>(null);
+  const [site, setSite] = useState<SiteConfig | null>(null);
 
   useEffect(() => {
     getVersion().then((v) => setVersion(v.version)).catch(() => {});
+    getSiteConfig().then(setSite).catch(() => {});
   }, []);
 
   const handleLogout = async () => {
@@ -26,7 +29,9 @@ export function Layout() {
       <header className="border-b bg-card">
         <div className="mx-auto flex h-14 max-w-5xl items-center gap-6 px-4">
           <Link to="/dashboard" className="flex items-center gap-2 font-semibold text-primary">
-            <span className="text-lg text-orange-600">CCR</span>
+            <span className="text-lg text-orange-600">
+              {site?.header_branding ?? ""}
+            </span>
             <span className="text-sm text-muted-foreground">JATSmith</span>
           </Link>
           {version && (

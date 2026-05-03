@@ -100,6 +100,9 @@ def _seed_site_config(engine):
                 "This is an open access article distributed under the CC BY 4.0 license"
             ),
             doi_prefix="10.0000/",
+            site_name="My Journal JATSmith",
+            site_description="My description",
+            header_branding="My Journal",
         ))
         session.commit()
 
@@ -1426,6 +1429,7 @@ def test_fetch_production_submissions_uses_stage_id(monkeypatch):
         copyright_holder="A", copyright_statement="A",
         license_type="open-access", license_url="u", license_text="t",
         doi_prefix="10.5117/",
+        site_name="J", site_description="d", header_branding="J",
     )
 
     asyncio.run(

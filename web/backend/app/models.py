@@ -127,6 +127,14 @@ class SiteConfig(SQLModel, table=True):
     license_text: str
     # DOI
     doi_prefix: str
+    # Branding (Issue #32, action point 6). Defaults live in the alembic
+    # migration (server_default for backfill) and in DEFAULT_SITE_CONFIG (the
+    # CLI fallback). They're intentionally absent here: nothing in the running
+    # code constructs SiteConfig(...) — route handlers update the existing
+    # row, tests seed every field, and migrations use raw SQL.
+    site_name: str
+    site_description: str
+    header_branding: str
     # Null until the editor confirms via the form; drives the first-login banner.
     configured_at: Optional[datetime] = None
     updated_at: datetime = Field(default_factory=datetime.utcnow)
@@ -226,6 +234,9 @@ class SiteConfigRead(SQLModel):
     license_url: str
     license_text: str
     doi_prefix: str
+    site_name: str
+    site_description: str
+    header_branding: str
     configured_at: Optional[datetime] = None
     updated_at: datetime
 
@@ -243,3 +254,6 @@ class SiteConfigUpdate(SQLModel):
     license_url: Optional[str] = None
     license_text: Optional[str] = None
     doi_prefix: Optional[str] = None
+    site_name: Optional[str] = None
+    site_description: Optional[str] = None
+    header_branding: Optional[str] = None

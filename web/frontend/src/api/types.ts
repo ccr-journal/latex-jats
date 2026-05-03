@@ -119,6 +119,9 @@ export interface SiteConfig {
   license_url: string;
   license_text: string;
   doi_prefix: string;
+  site_name: string;
+  site_description: string;
+  header_branding: string;
   configured_at: string | null;
   updated_at: string;
 }

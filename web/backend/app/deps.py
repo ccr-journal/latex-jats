@@ -47,6 +47,7 @@ _SITE_CONFIG_FIELDS = (
     "copyright_holder", "copyright_statement",
     "license_type", "license_url", "license_text",
     "doi_prefix",
+    "site_name", "site_description", "header_branding",
 )
 
 

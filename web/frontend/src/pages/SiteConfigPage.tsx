@@ -7,16 +7,19 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
-const SECTIONS: {
-  title: string;
-  fields: {
-    key: keyof SiteConfigUpdate;
-    label: string;
-    placeholder?: string;
-    description?: string;
-  }[];
-}[] = [
+type FieldDef = {
+  key: keyof SiteConfigUpdate;
+  label: string;
+  placeholder?: string;
+  description?: string;
+  multiline?: boolean;
+  // When true, the field spans the full row in a 2-column section.
+  fullWidth?: boolean;
+};
+
+const SECTIONS: { title: string; fields: FieldDef[] }[] = [
   {
     title: "Journal",
     fields: [
@@ -51,6 +54,30 @@ const SECTIONS: {
         label: "DOI prefix",
         description:
           "Used only to derive document IDs from OJS-returned DOIs (e.g. \"10.5117/\" stripped from \"10.5117/CCR2025.1.2.YAO\" → \"CCR2025.1.2.YAO\"). Not written to JATS output.",
+      },
+    ],
+  },
+  {
+    title: "Branding",
+    fields: [
+      {
+        key: "site_name",
+        label: "Site name",
+        description: "Shown as the heading on the public landing page.",
+      },
+      {
+        key: "header_branding",
+        label: "Header branding",
+        description:
+          "The journal-specific text in the top-left of every page (the \"JATSmith vX.Y.Z\" suffix is appended automatically).",
+      },
+      {
+        key: "site_description",
+        label: "Site description",
+        description:
+          "Lead paragraph on the public landing page. Markdown supported (e.g. *italic*, [link text](https://example.com)).",
+        multiline: true,
+        fullWidth: true,
       },
     ],
   },
@@ -121,14 +148,33 @@ export function SiteConfigPage() {
           </CardHeader>
           <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {section.fields.map((f) => (
-              <div key={f.key as string} className="flex flex-col gap-1.5">
+              <div
+                key={f.key as string}
+                className={`flex flex-col gap-1.5 ${
+                  f.fullWidth ? "md:col-span-2" : ""
+                }`}
+              >
                 <Label htmlFor={f.key as string}>{f.label}</Label>
-                <Input
-                  id={f.key as string}
-                  value={(config[f.key as keyof SiteConfig] as string) ?? ""}
-                  placeholder={f.placeholder}
-                  onChange={(e) => update(f.key as keyof SiteConfig, e.target.value)}
-                />
+                {f.multiline ? (
+                  <Textarea
+                    id={f.key as string}
+                    rows={4}
+                    value={(config[f.key as keyof SiteConfig] as string) ?? ""}
+                    placeholder={f.placeholder}
+                    onChange={(e) =>
+                      update(f.key as keyof SiteConfig, e.target.value)
+                    }
+                  />
+                ) : (
+                  <Input
+                    id={f.key as string}
+                    value={(config[f.key as keyof SiteConfig] as string) ?? ""}
+                    placeholder={f.placeholder}
+                    onChange={(e) =>
+                      update(f.key as keyof SiteConfig, e.target.value)
+                    }
+                  />
+                )}
                 {f.description && (
                   <p className="text-xs text-muted-foreground">{f.description}</p>
                 )}

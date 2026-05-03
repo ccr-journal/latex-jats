@@ -47,6 +47,9 @@ def _seed_site_config(engine):
                 "This is an open access article distributed under the CC BY 4.0 license"
             ),
             doi_prefix="10.0000/",
+            site_name="My Journal JATSmith",
+            site_description="My description",
+            header_branding="My Journal",
         ))
         session.commit()
 
@@ -172,25 +175,28 @@ def test_put_keeps_configured_at_stable_after_first_save(client, engine):
     assert r2.json()["journal_title"] == "Second"
 
 
-def test_default_matches_migration_seed():
-    """Regression guard: DEFAULT_SITE_CONFIG must mirror the 0012 seed.
-
-    The seed lives in a file whose name starts with a digit, so we load it
-    by path rather than via a normal import.
-    """
+def _load_migration(filename: str):
+    """Load a migration module by path (filename starts with a digit, so a
+    normal import doesn't work)."""
     import importlib.util
-
-    from jatsmith.site_config import DEFAULT_SITE_CONFIG
 
     mig_path = (
         Path(__file__).resolve().parents[1]
-        / "web/backend/alembic/versions/0012_add_site_config.py"
+        / f"web/backend/alembic/versions/{filename}"
     )
-    spec = importlib.util.spec_from_file_location("mig0012", mig_path)
+    spec = importlib.util.spec_from_file_location(filename.removesuffix(".py"), mig_path)
     mig = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mig)
+    return mig
 
-    seed = mig._DEFAULT_SEED
+
+def test_default_matches_migration_seeds():
+    """Regression guard: DEFAULT_SITE_CONFIG must mirror what the alembic
+    migrations seed/backfill, so a fresh install lands on the same defaults
+    the CLI fallback uses."""
+    from jatsmith.site_config import DEFAULT_SITE_CONFIG
+
+    seed_0012 = _load_migration("0012_add_site_config.py")._DEFAULT_SEED
     for field in (
         "journal_id", "journal_title", "issn_epub", "issn_ppub",
         "publisher_name", "publisher_loc",
@@ -198,7 +204,14 @@ def test_default_matches_migration_seed():
         "license_type", "license_url", "license_text",
         "doi_prefix",
     ):
-        assert seed[field] == getattr(DEFAULT_SITE_CONFIG, field), (
-            f"Mismatch on {field}: migration seed={seed[field]!r} vs "
-            f"DEFAULT_SITE_CONFIG={getattr(DEFAULT_SITE_CONFIG, field)!r}"
+        assert seed_0012[field] == getattr(DEFAULT_SITE_CONFIG, field), (
+            f"0012 seed[{field}]={seed_0012[field]!r} vs "
+            f"DEFAULT_SITE_CONFIG.{field}={getattr(DEFAULT_SITE_CONFIG, field)!r}"
+        )
+
+    branding_defaults = _load_migration("0014_add_siteconfig_branding.py")._DEFAULTS
+    for field in ("site_name", "site_description", "header_branding"):
+        assert branding_defaults[field] == getattr(DEFAULT_SITE_CONFIG, field), (
+            f"0014 server_default[{field}]={branding_defaults[field]!r} vs "
+            f"DEFAULT_SITE_CONFIG.{field}={getattr(DEFAULT_SITE_CONFIG, field)!r}"
         )

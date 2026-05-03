@@ -37,6 +37,11 @@ class SiteConfigData:
     license_url: str
     license_text: str
     doi_prefix: str
+    # Branding fields aren't used by the conversion pipeline (only by the web
+    # UI), but they live on this dataclass so the SiteConfig row maps 1:1.
+    site_name: str
+    site_description: str
+    header_branding: str
 
 
 DEFAULT_SITE_CONFIG = SiteConfigData(
@@ -54,6 +59,13 @@ DEFAULT_SITE_CONFIG = SiteConfigData(
         "This is an open access article distributed under the CC BY 4.0 license"
     ),
     doi_prefix="10.0000/",
+    site_name="My Journal JATSmith",
+    site_description=(
+        "Copy-editing tool for [Journal name](https://example.com). "
+        "Authors and editors can upload LaTeX and Quarto sources, convert to "
+        "JATS-XML, HTML and PDF, and check and approve the results."
+    ),
+    header_branding="My Journal",
 )
 
 
@@ -70,6 +82,9 @@ _FIELDS = (
     "license_url",
     "license_text",
     "doi_prefix",
+    "site_name",
+    "site_description",
+    "header_branding",
 )
 
 
