@@ -12,12 +12,15 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session, SQLModel, select
 
+from jatsmith.site_config import SiteConfigData
+
 from .. import email as email_module
 from .. import ojs as ojs_client
 from ..deps import (
     get_current_role,
     get_current_user,
     get_session,
+    get_site_config,
     get_storage,
     load_manuscript_for_user,
     manuscript_to_read,
@@ -449,6 +452,7 @@ async def reimport_ojs_metadata(
     _editor: str = Depends(require_editor),
     session: Session = Depends(get_session),
     storage: Storage = Depends(get_storage),
+    site_config: SiteConfigData = Depends(get_site_config),
 ):
     """Re-fetch metadata from OJS and update the local manuscript record."""
     ms = session.get(Manuscript, doi_suffix)
@@ -458,7 +462,7 @@ async def reimport_ojs_metadata(
         raise HTTPException(400, detail="Manuscript is not linked to an OJS submission")
 
     try:
-        sub = await ojs_client.fetch_submission(ms.ojs_submission_id)
+        sub = await ojs_client.fetch_submission(ms.ojs_submission_id, site_config)
     except ojs_client.OjsAdminTokenInvalid as exc:
         logger.error("OJS admin token invalid: %s", exc)
         raise HTTPException(502, detail="OJS admin token invalid")
@@ -525,6 +529,7 @@ async def sync_ojs_field(
     role: Literal["editor", "author"] = Depends(get_current_role),
     session: Session = Depends(get_session),
     storage: Storage = Depends(get_storage),
+    site_config: SiteConfigData = Depends(get_site_config),
 ):
     """Push a single metadata field from LaTeX/JATS output to OJS."""
     ms = load_manuscript_for_user(doi_suffix, session, user, role)
@@ -553,11 +558,11 @@ async def sync_ojs_field(
     try:
         if body.field == "authors":
             await ojs_client.update_publication_authors(
-                ms.ojs_submission_id, latex_value
+                ms.ojs_submission_id, latex_value, site_config
             )
         else:
             await ojs_client.update_publication_field(
-                ms.ojs_submission_id, body.field, latex_value
+                ms.ojs_submission_id, body.field, latex_value, site_config
             )
     except ojs_client.OjsAdminTokenInvalid as exc:
         logger.error("OJS admin token invalid: %s", exc)
@@ -568,7 +573,7 @@ async def sync_ojs_field(
 
     # Step 2: Re-import metadata from OJS to keep local DB in sync
     try:
-        updated_sub = await ojs_client.fetch_submission(ms.ojs_submission_id)
+        updated_sub = await ojs_client.fetch_submission(ms.ojs_submission_id, site_config)
     except (ojs_client.OjsAdminTokenInvalid, ojs_client.OjsUnavailable) as exc:
         logger.warning("Could not re-fetch submission after update: %s", exc)
         updated_sub = None

@@ -15,10 +15,12 @@ from typing import Mapping
 class AuthConfig:
     editor_credentials: Mapping[str, str]  # {username: password}
     frontend_url: str
+    # OJS — token + endpoint travel together. Without the admin token the URL
+    # and path are useless, so we keep all three in env vars rather than
+    # splitting them across env + DB.
+    ojs_admin_token: str
     ojs_base_url: str
     ojs_journal_path: str
-    ojs_admin_token: str
-    ojs_doi_prefix: str
     session_token_ttl_days: int
     # Fernet key (base64-urlsafe, 32 bytes) for encrypting upstream git tokens
     # at rest. Empty in dev triggers an ephemeral key + loud warning.
@@ -93,11 +95,14 @@ def _load() -> AuthConfig:
     else:
         site_origin = ""
 
-    # OJS fields are required only when OJS_ADMIN_TOKEN is set. Dev runs
-    # without OJS by leaving the token unset; OJS-gated endpoints then error
-    # at call time rather than blocking startup.
+    # OJS_BASE_URL and OJS_JOURNAL_PATH are required only when OJS_ADMIN_TOKEN
+    # is set. Dev runs without OJS by leaving the token unset; OJS-gated
+    # endpoints then error at call time rather than blocking startup.
     ojs_admin_token = opt("OJS_ADMIN_TOKEN", "")
     ojs_base_url = req("OJS_BASE_URL") if ojs_admin_token else opt("OJS_BASE_URL", "")
+    ojs_journal_path = (
+        req("OJS_JOURNAL_PATH") if ojs_admin_token else opt("OJS_JOURNAL_PATH", "")
+    )
 
     return AuthConfig(
         editor_credentials=_parse_editor_credentials(req("EDITOR_CREDENTIALS")),
@@ -105,10 +110,9 @@ def _load() -> AuthConfig:
             "FRONTEND_URL",
             site_origin if site_origin else "http://127.0.0.1:5173",
         ),
-        ojs_base_url=ojs_base_url,
-        ojs_journal_path=opt("OJS_JOURNAL_PATH", "ccr"),
         ojs_admin_token=ojs_admin_token,
-        ojs_doi_prefix=opt("OJS_DOI_PREFIX", "10.5117/"),
+        ojs_base_url=ojs_base_url,
+        ojs_journal_path=ojs_journal_path,
         session_token_ttl_days=int(opt("SESSION_TOKEN_TTL_DAYS", "30")),
         storage_secret_key=opt("STORAGE_SECRET_KEY", ""),
         smtp_host=opt("SMTP_HOST", ""),

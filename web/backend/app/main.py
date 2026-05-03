@@ -27,7 +27,7 @@ from .models import (  # noqa: F401 — registers metadata
     PIPELINE_STEPS,
     StepStatus,
 )
-from .routes import auth, download, manuscripts, ojs, output, status, upload, upstream
+from .routes import auth, download, manuscripts, ojs, output, site_config, status, upload, upstream
 from .storage import Storage
 
 _PROJECT_ROOT = Path(__file__).parents[3]
@@ -182,6 +182,7 @@ app.include_router(status.router)
 app.include_router(download.router)
 app.include_router(output.router)
 app.include_router(ojs.router)
+app.include_router(site_config.router)
 
 # Serve frontend in production (dist/ built by Vite)
 _FRONTEND_DIST = Path(__file__).parents[2] / "frontend" / "dist"

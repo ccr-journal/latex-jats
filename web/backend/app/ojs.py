@@ -7,7 +7,9 @@ for backlog import) with their DOI suffix and author names. Also used to
 push metadata updates (title, abstract, keywords, authors) back to OJS after
 conversion.
 
-The backend holds a journal-admin OJS API token in `OJS_ADMIN_TOKEN`.
+The backend holds a journal-admin OJS API token in `OJS_ADMIN_TOKEN`. The
+journal-identity values (base URL, journal path, DOI prefix) come from the
+``SiteConfig`` row passed in by the caller.
 """
 
 from __future__ import annotations
@@ -16,6 +18,8 @@ import logging
 from dataclasses import dataclass, field, replace
 
 import httpx
+
+from jatsmith.site_config import SiteConfigData
 
 from .config import AuthConfig, get_config
 
@@ -133,6 +137,7 @@ def _localized(value) -> str:
 
 
 async def fetch_production_submissions(
+    site_config: SiteConfigData,
     cfg: AuthConfig | None = None,
     stage_id: int = _STAGE_COPYEDITING,
 ) -> list[OjsSubmission]:
@@ -180,7 +185,7 @@ async def fetch_production_submissions(
                 items = payload.get("items") or []
                 items_max = payload.get("itemsMax") or 0
                 for item in items:
-                    parsed = _parse_submission(item, cfg.ojs_doi_prefix)
+                    parsed = _parse_submission(item, site_config.doi_prefix)
                     if parsed is not None:
                         found.append(parsed[0])
                 offset += len(items)
@@ -196,7 +201,9 @@ async def fetch_production_submissions(
 
 
 async def fetch_submission(
-    submission_id: int, cfg: AuthConfig | None = None
+    submission_id: int,
+    site_config: SiteConfigData,
+    cfg: AuthConfig | None = None,
 ) -> OjsSubmission | None:
     """Fetch a single submission with its author list populated.
 
@@ -234,7 +241,7 @@ async def fetch_submission(
                 raise OjsUnavailable(
                     f"OJS returned {resp.status_code}: {resp.text[:200]}"
                 )
-            parsed = _parse_submission(resp.json(), cfg.ojs_doi_prefix)
+            parsed = _parse_submission(resp.json(), site_config.doi_prefix)
             if parsed is None:
                 return None
             sub, publication_id = parsed
@@ -259,7 +266,8 @@ async def fetch_submission(
 
 
 async def is_submission_in_production(
-    submission_id: int, cfg: AuthConfig | None = None
+    submission_id: int,
+    cfg: AuthConfig | None = None,
 ) -> bool:
     """Check whether an OJS submission has moved to production stage (stageId 5)."""
     cfg = cfg or get_config()
@@ -440,6 +448,7 @@ async def update_publication_field(
     submission_id: int,
     field: str,
     latex_value: str | list[str],
+    site_config: SiteConfigData,
     cfg: AuthConfig | None = None,
 ) -> None:
     """Push a single metadata field from the LaTeX/JATS output to OJS.
@@ -470,7 +479,7 @@ async def update_publication_field(
                 raise OjsUnavailable(
                     f"OJS returned {resp.status_code} fetching submission: {resp.text[:200]}"
                 )
-            parsed = _parse_submission(resp.json(), cfg.ojs_doi_prefix)
+            parsed = _parse_submission(resp.json(), site_config.doi_prefix)
             if parsed is None:
                 raise OjsUnavailable(f"Could not parse submission {submission_id}")
             _, publication_id = parsed
@@ -516,6 +525,7 @@ async def update_publication_field(
 async def update_publication_authors(
     submission_id: int,
     latex_authors: list[str],
+    site_config: SiteConfigData,
     cfg: AuthConfig | None = None,
 ) -> None:
     """Update author names in an OJS publication to match LaTeX output.
@@ -547,7 +557,7 @@ async def update_publication_authors(
                 raise OjsUnavailable(
                     f"OJS returned {resp.status_code}: {resp.text[:200]}"
                 )
-            parsed = _parse_submission(resp.json(), cfg.ojs_doi_prefix)
+            parsed = _parse_submission(resp.json(), site_config.doi_prefix)
             if parsed is None:
                 raise OjsUnavailable(f"Could not parse submission {submission_id}")
             _, publication_id = parsed

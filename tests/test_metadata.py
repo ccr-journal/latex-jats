@@ -21,7 +21,8 @@ def _write_tex(tmp_path, content):
 
 
 def test_journal_meta(tmp_path):
-    """fix_metadata replaces journal-meta with the constant CCR block."""
+    """fix_metadata replaces journal-meta with the configured block; with no
+    site_config passed, falls back to DEFAULT_SITE_CONFIG (placeholder values)."""
     xml_file = _write_xml(
         tmp_path,
         """\
@@ -48,20 +49,20 @@ def test_journal_meta(tmp_path):
     jid = jm.find("journal-id")
     assert jid is not None
     assert jid.get("journal-id-type") == "publisher-id"
-    assert jid.text == "CCR"
+    assert jid.text == "MYJOURNAL"
 
     jtg = jm.find("journal-title-group")
     assert jtg is not None
-    assert jtg.findtext("journal-title") == "Computational Communication Research"
+    assert jtg.findtext("journal-title") == "My Journal Name"
 
     issns = {e.get("pub-type"): e.text for e in jm.findall("issn")}
     assert issns.get("ppub") is None
-    assert issns.get("epub") == "2665-9085"
+    assert issns.get("epub") == "1234-5678"
 
     pub = jm.find("publisher")
     assert pub is not None
-    assert pub.findtext("publisher-name") == "Amsterdam University Press"
-    assert pub.findtext("publisher-loc") == "Amsterdam"
+    assert pub.findtext("publisher-name") == "My Publisher"
+    assert pub.findtext("publisher-loc") == "City"
 
 
 def test_article_meta(tmp_path):
@@ -297,6 +298,58 @@ def test_pub_date_year_only_fallback(tmp_path):
     assert pub_date.findtext("year") == "2024"
     assert pub_date.find("day") is None
     assert pub_date.find("month") is None
+
+
+def test_journal_meta_uses_passed_site_config(tmp_path):
+    """fix_metadata builds <journal-meta> from the SiteConfigData passed in,
+    not the baked-in defaults — proves Issue #32 externalization works."""
+    from dataclasses import replace
+
+    from jatsmith.site_config import DEFAULT_SITE_CONFIG
+
+    xml_file = _write_xml(
+        tmp_path,
+        """\
+<article xmlns:xlink="http://www.w3.org/1999/xlink">
+  <front>
+    <journal-meta><journal-id>x</journal-id></journal-meta>
+    <article-meta/>
+  </front>
+</article>""",
+    )
+    tex_file = _write_tex(tmp_path, r"\pubyear{2024}" + "\n" + r"\begin{document}")
+
+    custom = replace(
+        DEFAULT_SITE_CONFIG,
+        journal_id="JNT",
+        journal_title="Journal of New Things",
+        issn_epub="1111-2222",
+        publisher_name="New Publisher",
+        publisher_loc="Springfield",
+        copyright_holder="Some Authors",
+        copyright_statement="(c) Some Authors",
+        license_url="https://example.invalid/cc",
+        license_text="Custom license text",
+    )
+
+    fix_metadata(xml_file, tex_file, site_config=custom)
+
+    root = ET.parse(xml_file).getroot()
+    jm = root.find(".//journal-meta")
+    assert jm.findtext("journal-id") == "JNT"
+    assert jm.find("journal-title-group").findtext("journal-title") == "Journal of New Things"
+    assert {e.get("pub-type"): e.text for e in jm.findall("issn")}["epub"] == "1111-2222"
+    assert jm.find("publisher").findtext("publisher-name") == "New Publisher"
+    assert jm.find("publisher").findtext("publisher-loc") == "Springfield"
+
+    perm = root.find(".//permissions")
+    assert perm.findtext("copyright-statement") == "(c) Some Authors"
+    assert perm.findtext("copyright-holder") == "Some Authors"
+    license_elem = perm.find("license")
+    assert "Custom license text" in (license_elem.find("license-p").text or "")
+    assert license_elem.find(".//ext-link").get(
+        "{http://www.w3.org/1999/xlink}href"
+    ) == "https://example.invalid/cc"
 
 
 def test_kwd_whitespace_trimmed(tmp_path):

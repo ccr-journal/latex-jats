@@ -39,6 +39,7 @@ from jatsmith.quarto import (
     upsert_qmd_frontmatter_keys,
 )
 
+from .deps import get_site_config_data
 from .models import (
     Manuscript, ManuscriptAuthor, ManuscriptStatus, PIPELINE_STEPS, StepStatus,
 )
@@ -539,6 +540,7 @@ def _run_latex_pipeline(
         ms = session.get(Manuscript, doi_suffix)
         if ms and ms.ojs_submission_id:
             inject_ojs_metadata(workspace_tex, ms)
+        site_config = get_site_config_data(session)
 
     _finish_step(engine, doi_suffix, "prepare", collector.drain())
 
@@ -572,7 +574,7 @@ def _run_latex_pipeline(
 
     # Determine article ID from the LaTeX preamble (for validation/logging only)
     try:
-        article_id = get_doi_suffix(workspace_tex)
+        article_id = get_doi_suffix(workspace_tex, site_config)
     except Exception:
         article_id = doi_suffix
     if article_id != doi_suffix:
@@ -588,7 +590,8 @@ def _run_latex_pipeline(
     if pdf_src.exists():
         lastpage = _pdf_page_count(pdf_src)
 
-    convert(workspace_tex, output_xml, html=True, lastpage=lastpage)
+    convert(workspace_tex, output_xml, html=True, lastpage=lastpage,
+            site_config=site_config)
 
     # Copy PDF to convert output for web preview
     pdf_path = source_dir / "main.pdf" if (source_dir / "main.pdf").exists() else None
@@ -667,6 +670,7 @@ def _run_quarto_pipeline(
         ms = session.get(Manuscript, doi_suffix)
         if ms and ms.ojs_submission_id:
             inject_ojs_metadata_qmd(workspace_qmd, ms)
+        site_config = get_site_config_data(session)
 
     _finish_step(engine, doi_suffix, "prepare", collector.drain())
 
@@ -707,7 +711,8 @@ def _run_quarto_pipeline(
         )
 
     output_xml = convert_output / f"{doi_suffix}.xml"
-    convert_quarto(workspace_qmd, output_xml, html=True, lastpage=lastpage)
+    convert_quarto(workspace_qmd, output_xml, html=True, lastpage=lastpage,
+                   site_config=site_config)
 
     # Copy PDF to convert output for web preview
     if pdf_path and pdf_path.exists():

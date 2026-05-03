@@ -17,10 +17,9 @@ from web.backend.app.storage import Storage
 TEST_CFG = AuthConfig(
     editor_credentials={"editor": "testpass", "alice": "alice-pw"},
     frontend_url="http://frontend",
+    ojs_admin_token="admintok",
     ojs_base_url="https://ojs",
     ojs_journal_path="ccr",
-    ojs_admin_token="admintok",
-    ojs_doi_prefix="10.5117/",
     session_token_ttl_days=30,
 )
 

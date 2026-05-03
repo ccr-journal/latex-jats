@@ -4,6 +4,8 @@ import type {
   ManuscriptCreate,
   MetadataComparison,
   OjsSubmission,
+  SiteConfig,
+  SiteConfigUpdate,
 } from "./types";
 
 const BASE = import.meta.env.VITE_API_URL ?? "";
@@ -337,6 +339,20 @@ export function syncOjsField(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ field }),
+  });
+}
+
+// ── Site config (Issue #32) ──────────────────────────────────────────────────
+
+export function getSiteConfig(): Promise<SiteConfig> {
+  return apiFetch("/api/site-config");
+}
+
+export function updateSiteConfig(data: SiteConfigUpdate): Promise<SiteConfig> {
+  return apiFetch("/api/site-config", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
   });
 }
 

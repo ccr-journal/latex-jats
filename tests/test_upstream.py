@@ -37,10 +37,9 @@ def _pin_config():
     set_for_tests(AuthConfig(
         editor_credentials={"editor": "testpass"},
         frontend_url="http://testserver",
+        ojs_admin_token="",
         ojs_base_url="https://ojs",
         ojs_journal_path="ccr",
-        ojs_admin_token="",
-        ojs_doi_prefix="10.5117/",
         session_token_ttl_days=30,
         storage_secret_key=FIXED_KEY,
     ))
@@ -98,10 +97,9 @@ def test_decrypt_with_different_key_raises():
     set_for_tests(AuthConfig(
         editor_credentials={"editor": "testpass"},
         frontend_url="http://testserver",
+        ojs_admin_token="",
         ojs_base_url="https://ojs",
         ojs_journal_path="ccr",
-        ojs_admin_token="",
-        ojs_doi_prefix="10.5117/",
         session_token_ttl_days=30,
         storage_secret_key=Fernet.generate_key().decode(),
     ))

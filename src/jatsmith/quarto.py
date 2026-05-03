@@ -35,6 +35,7 @@ from jatsmith.convert import (
     rename_graphics,
     warn_section_acknowledgements,
 )
+from jatsmith.site_config import SiteConfigData, load_site_config
 
 logger = logging.getLogger(__name__)
 
@@ -266,17 +267,21 @@ def get_doi_suffix_from_qmd(qmd_file: Path) -> str:
 
 
 def inject_metadata_from_yaml(jats_file: str, qmd_file: str,
-                              lastpage: int | None = None) -> None:
-    """Inject CCR journal-meta + article-meta built from the .qmd YAML keys."""
+                              lastpage: int | None = None,
+                              *, site_config: SiteConfigData | None = None) -> None:
+    """Inject journal-meta + article-meta built from the .qmd YAML keys."""
+    if site_config is None:
+        site_config = load_site_config()
     meta = parse_qmd_frontmatter(Path(qmd_file))
 
     ET.register_namespace("xlink", "http://www.w3.org/1999/xlink")
     tree = ET.parse(jats_file)
     root = tree.getroot()
 
-    apply_journal_meta(root)
+    apply_journal_meta(root, site_config)
     apply_article_meta(
         root,
+        site_config,
         doi=meta.get("doi"),
         volume=meta.get("volume"),
         issue=meta.get("pubnumber"),
@@ -846,13 +851,16 @@ def move_appendix_to_back(jats_file: str) -> None:
 
 
 def convert_quarto(input_qmd: Path, output_xml: Path, html: bool = False,
-                   lastpage: int | None = None) -> None:
+                   lastpage: int | None = None,
+                   site_config: SiteConfigData | None = None) -> None:
     """Convert a .qmd file to publisher-ready JATS XML.
 
     The caller is responsible for having already prepared the workspace
     (i.e. ``input_qmd.parent`` should be a writable copy of the source dir),
     matching the contract of :func:`jatsmith.convert.convert`.
     """
+    if site_config is None:
+        site_config = load_site_config()
     output_xml.parent.mkdir(parents=True, exist_ok=True)
     log_dir = output_xml.parent / "logs"
 
@@ -866,7 +874,7 @@ def convert_quarto(input_qmd: Path, output_xml: Path, html: bool = False,
     # Step 2: post-processing
     logger.info("Step 2: Post-processing JATS XML...")
     out_str = str(output_xml)
-    inject_metadata_from_yaml(out_str, str(input_qmd), lastpage=lastpage)
+    inject_metadata_from_yaml(out_str, str(input_qmd), lastpage=lastpage, site_config=site_config)
     inject_acknowledgements_from_yaml(out_str, str(input_qmd))
     warn_section_acknowledgements(out_str)
     fix_empty_history(out_str)
@@ -915,5 +923,5 @@ def convert_quarto(input_qmd: Path, output_xml: Path, html: bool = False,
     if html:
         html_path = output_xml.with_suffix(".html")
         logger.info("Step 3: Generating HTML preview...")
-        convert_to_html(out_str, str(html_path))
+        convert_to_html(out_str, str(html_path), site_config=site_config)
         logger.info("Saved HTML preview in %s", html_path)

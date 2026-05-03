@@ -10,6 +10,7 @@ import { PdfPreviewPage } from "@/pages/PdfPreviewPage";
 import { XmlPreviewPage } from "@/pages/XmlPreviewPage";
 import { LoginPage } from "@/pages/LoginPage";
 import { LandingPage } from "@/pages/LandingPage";
+import { SiteConfigPage } from "@/pages/SiteConfigPage";
 import { TokenLandingPage } from "@/pages/TokenLandingPage";
 
 export default function App() {
@@ -29,6 +30,7 @@ export default function App() {
               }
             >
               <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/site-config" element={<SiteConfigPage />} />
               <Route path="/manuscripts/:doiSuffix" element={<ManuscriptPage />} />
               <Route
                 path="/manuscripts/:doiSuffix/preview"

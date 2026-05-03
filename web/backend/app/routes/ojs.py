@@ -10,8 +10,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlmodel import Session
 
+from jatsmith.site_config import SiteConfigData
+
 from .. import ojs as ojs_client
-from ..deps import get_session, manuscript_to_read, require_editor
+from ..deps import get_session, get_site_config, manuscript_to_read, require_editor
 from ..models import (
     AuthorRead,
     Manuscript,
@@ -48,10 +50,12 @@ async def list_production_submissions(
     stage: OjsStage = Query(OjsStage.copyediting),
     _editor: str = Depends(require_editor),
     session: Session = Depends(get_session),
+    site_config: SiteConfigData = Depends(get_site_config),
 ):
     try:
         subs = await ojs_client.fetch_production_submissions(
-            stage_id=_STAGE_IDS[stage]
+            site_config,
+            stage_id=_STAGE_IDS[stage],
         )
     except ojs_client.OjsAdminTokenInvalid as exc:
         logger.error("OJS admin token invalid: %s", exc)
@@ -91,9 +95,10 @@ async def import_submission(
     submission_id: int,
     _editor: str = Depends(require_editor),
     session: Session = Depends(get_session),
+    site_config: SiteConfigData = Depends(get_site_config),
 ):
     try:
-        target = await ojs_client.fetch_submission(submission_id)
+        target = await ojs_client.fetch_submission(submission_id, site_config)
     except ojs_client.OjsAdminTokenInvalid as exc:
         raise HTTPException(502, detail=str(exc))
     except ojs_client.OjsUnavailable as exc:

@@ -10,8 +10,8 @@ import {
 } from "@/components/ui/table";
 import { StatusBadge } from "@/components/StatusBadge";
 import { CreateManuscriptDialog } from "@/components/CreateManuscriptDialog";
-import { listManuscripts } from "@/api/client";
-import type { Manuscript } from "@/api/types";
+import { getSiteConfig, listManuscripts } from "@/api/client";
+import type { Manuscript, SiteConfig } from "@/api/types";
 import { useAuth } from "@/auth/AuthContext";
 
 function formatAuthors(authors: { name: string | null }[]): string {
@@ -27,6 +27,7 @@ export function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
+  const [siteConfig, setSiteConfig] = useState<SiteConfig | null>(null);
   const navigate = useNavigate();
   const { user } = useAuth();
   const isEditor = user?.role === "editor";
@@ -44,8 +45,33 @@ export function DashboardPage() {
       .finally(() => setLoading(false));
   }, [showArchived]);
 
+  useEffect(() => {
+    if (!isEditor) return;
+    getSiteConfig().then(setSiteConfig).catch(() => {});
+  }, [isEditor]);
+
+  const showFirstRunBanner = isEditor && siteConfig !== null && siteConfig.configured_at === null;
+
   return (
     <div className="space-y-6">
+      {showFirstRunBanner && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm dark:border-amber-700 dark:bg-amber-950">
+          <p className="font-medium text-amber-900 dark:text-amber-200">
+            Confirm your journal settings to get started.
+          </p>
+          <p className="mt-1 text-amber-800 dark:text-amber-300">
+            JATSmith ships with CCR defaults. Review them before your first
+            conversion so the journal title, ISSN, publisher, and license in the
+            output match your journal.{" "}
+            <Link
+              to="/site-config"
+              className="font-medium underline underline-offset-2"
+            >
+              Open site config →
+            </Link>
+          </p>
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Manuscripts</h1>
         <div className="flex items-center gap-4">

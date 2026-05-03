@@ -574,7 +574,7 @@ def test_inject_metadata_from_yaml(tmp_path, xml_file):
     root = _parse(p)
     jm = root.find(".//journal-meta")
     assert jm is not None
-    assert jm.find("journal-id").text == "CCR"
+    assert jm.find("journal-id").text == "MYJOURNAL"
     am = root.find(".//article-meta")
     doi = am.find("article-id[@pub-id-type='doi']")
     assert doi is not None and doi.text == "10.5117/CCR2026.2.11.URMA"

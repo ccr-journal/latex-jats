@@ -105,6 +105,33 @@ class ManuscriptToken(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
+class SiteConfig(SQLModel, table=True):
+    """Singleton row (id=1) holding journal-identity config that used to live in
+    convert.py constants and OJS_* env vars. Edited via /api/site-config; seeded
+    with CCR defaults by the 0011 alembic migration so existing deployments are
+    unchanged after upgrade.
+    """
+    id: int = Field(default=1, primary_key=True)
+    # JATS <journal-meta>
+    journal_id: str
+    journal_title: str
+    issn_epub: str = ""
+    issn_ppub: str = ""
+    publisher_name: str
+    publisher_loc: str
+    # JATS <permissions>
+    copyright_holder: str
+    copyright_statement: str
+    license_type: str = "open-access"
+    license_url: str
+    license_text: str
+    # DOI
+    doi_prefix: str
+    # Null until the editor confirms via the form; drives the first-login banner.
+    configured_at: Optional[datetime] = None
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
 # ── Request / response schemas ────────────────────────────────────────────────
 
 
@@ -184,3 +211,35 @@ class ManuscriptRead(SQLModel):
     last_synced_sha: Optional[str] = None
     approved_at: Optional[datetime] = None
     approved_by: Optional[str] = None
+
+
+class SiteConfigRead(SQLModel):
+    journal_id: str
+    journal_title: str
+    issn_epub: str
+    issn_ppub: str
+    publisher_name: str
+    publisher_loc: str
+    copyright_holder: str
+    copyright_statement: str
+    license_type: str
+    license_url: str
+    license_text: str
+    doi_prefix: str
+    configured_at: Optional[datetime] = None
+    updated_at: datetime
+
+
+class SiteConfigUpdate(SQLModel):
+    journal_id: Optional[str] = None
+    journal_title: Optional[str] = None
+    issn_epub: Optional[str] = None
+    issn_ppub: Optional[str] = None
+    publisher_name: Optional[str] = None
+    publisher_loc: Optional[str] = None
+    copyright_holder: Optional[str] = None
+    copyright_statement: Optional[str] = None
+    license_type: Optional[str] = None
+    license_url: Optional[str] = None
+    license_text: Optional[str] = None
+    doi_prefix: Optional[str] = None

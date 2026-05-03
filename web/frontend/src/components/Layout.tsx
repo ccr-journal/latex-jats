@@ -33,6 +33,14 @@ export function Layout() {
             <span className="text-xs text-muted-foreground">v{version}</span>
           )}
           <div className="ml-auto flex items-center gap-3">
+            {user && !isTokenScoped && (
+              <Link
+                to="/site-config"
+                className="text-sm text-muted-foreground hover:text-foreground"
+              >
+                Site config
+              </Link>
+            )}
             {user && (
               <span className="text-sm text-muted-foreground">
                 {isTokenScoped ? "Viewing as author" : user.username}

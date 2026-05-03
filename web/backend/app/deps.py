@@ -12,6 +12,8 @@ from fastapi import Depends, Header, HTTPException
 from sqlalchemy import Engine
 from sqlmodel import Session, select
 
+from jatsmith.site_config import DEFAULT_SITE_CONFIG, SiteConfigData
+
 from .models import (
     AccessToken,
     AuthorRead,
@@ -20,6 +22,7 @@ from .models import (
     ManuscriptAuthor,
     ManuscriptRead,
     ManuscriptToken,
+    SiteConfig,
 )
 from .storage import Storage
 
@@ -36,6 +39,35 @@ def get_session() -> Generator[Session, None, None]:
 def get_storage() -> Storage:
     assert _storage is not None, "Storage not initialized"
     return _storage
+
+
+_SITE_CONFIG_FIELDS = (
+    "journal_id", "journal_title", "issn_epub", "issn_ppub",
+    "publisher_name", "publisher_loc",
+    "copyright_holder", "copyright_statement",
+    "license_type", "license_url", "license_text",
+    "doi_prefix",
+)
+
+
+def get_site_config_data(session: Session) -> SiteConfigData:
+    """Load the singleton SiteConfig row as a plain dataclass.
+
+    Returned as ``SiteConfigData`` (not the SQLModel ``SiteConfig`` row) so
+    consumers in convert.py / ojs.py don't depend on SQLAlchemy. Falls back
+    to ``DEFAULT_SITE_CONFIG`` if the row is somehow missing — production seeds it
+    via the 0012 migration, but tests that bypass alembic land here.
+    """
+    row = session.get(SiteConfig, 1)
+    if row is None:
+        return DEFAULT_SITE_CONFIG
+    return SiteConfigData(**{f: getattr(row, f) for f in _SITE_CONFIG_FIELDS})
+
+
+def get_site_config(
+    session: Session = Depends(get_session),
+) -> SiteConfigData:
+    return get_site_config_data(session)
 
 
 def _authenticate_bearer(authorization: str | None, session: Session) -> CurrentUser:

@@ -6,7 +6,11 @@ import subprocess
 import xml.etree.ElementTree as ET
 import zipfile
 from pathlib import Path
+from xml.sax.saxutils import escape as _xml_escape
+
 from lxml import etree
+
+from jatsmith.site_config import SiteConfigData, load_site_config
 
 logger = logging.getLogger(__name__)
 
@@ -390,14 +394,16 @@ def validate_jats(xml_file):
     return errors
 
 
-def convert_to_html(xml_file, html_file):
+def convert_to_html(xml_file, html_file, site_config: SiteConfigData | None = None):
     """Applies the NCBI JATS preview stylesheet to produce an HTML preview."""
+    if site_config is None:
+        site_config = load_site_config()
     transform = etree.XSLT(etree.parse(str(JATS_XSL)))
     result = transform(etree.parse(str(xml_file)))
     with open(html_file, "wb") as f:
         f.write(etree.tostring(result, pretty_print=True))
     _move_keywords_to_front(html_file)
-    _reformat_article_info_cell(html_file)
+    _reformat_article_info_cell(html_file, site_config)
     _fix_pre_code_whitespace(html_file)
     _inject_viewport_meta(html_file)
     shutil.copy2(CSS_SRC, Path(html_file).parent / "jats-preview.css")
@@ -561,9 +567,9 @@ def _to_iso_date(value: str) -> str:
     return f"{year:04d}-{month:02d}-{day:02d}"
 
 
-def _reformat_article_info_cell(html_file):
+def _reformat_article_info_cell(html_file, cfg: SiteConfigData):
     """Replace the 6-row article-info cell in the header with two compact lines:
-    'CCR {vol}.{issue} ({year}) {page} – ?' and a DOI link."""
+    '{journal_id} {vol}.{issue} ({year}) {page} – ?' and a DOI link."""
     from lxml import html as lxml_html
 
     tree = lxml_html.parse(html_file)
@@ -620,7 +626,7 @@ def _reformat_article_info_cell(html_file):
         page_range = f" {fpage}\u2013{lpage}" if fpage and lpage else f" {fpage}" if fpage else ""
         cite_line = lxml_html.fragment_fromstring(
             f'<p class="metadata-entry">'
-            f'CCR {vol}.{issue} ({year}){page_range}'
+            f'{cfg.journal_id} {vol}.{issue} ({year}){page_range}'
             f'</p>'
         )
         mg.append(cite_line)
@@ -2058,19 +2064,29 @@ def _rewrite_doi_ext_links(ref_elem):
         parent.insert(idx, pub_id)
 
 
-_JOURNAL_META_XML = """\
-<journal-meta>
-  <journal-id journal-id-type="publisher-id">CCR</journal-id>
-  <journal-title-group>
-    <journal-title>Computational Communication Research</journal-title>
-  </journal-title-group>
-  <issn pub-type="ppub"/>
-  <issn pub-type="epub">2665-9085</issn>
-  <publisher>
-    <publisher-name>Amsterdam University Press</publisher-name>
-    <publisher-loc>Amsterdam</publisher-loc>
-  </publisher>
-</journal-meta>"""
+def _build_journal_meta(cfg: SiteConfigData) -> str:
+    e = _xml_escape
+
+    def _issn(pub_type: str, value: str) -> str:
+        return (
+            f'<issn pub-type="{pub_type}">{e(value)}</issn>' if value
+            else f'<issn pub-type="{pub_type}"/>'
+        )
+
+    return (
+        '<journal-meta>'
+        f'<journal-id journal-id-type="publisher-id">{e(cfg.journal_id)}</journal-id>'
+        '<journal-title-group>'
+        f'<journal-title>{e(cfg.journal_title)}</journal-title>'
+        '</journal-title-group>'
+        f'{_issn("ppub", cfg.issn_ppub)}'
+        f'{_issn("epub", cfg.issn_epub)}'
+        '<publisher>'
+        f'<publisher-name>{e(cfg.publisher_name)}</publisher-name>'
+        f'<publisher-loc>{e(cfg.publisher_loc)}</publisher-loc>'
+        '</publisher>'
+        '</journal-meta>'
+    )
 
 
 def sanitize_ids(jats_file):
@@ -2223,13 +2239,13 @@ def fix_xref_ref_types(jats_file):
     tree.write(jats_file, encoding="unicode")
 
 
-def apply_journal_meta(root):
-    """Replace any existing <journal-meta> with the CCR constant block."""
+def apply_journal_meta(root, cfg: SiteConfigData):
+    """Replace any existing <journal-meta> with the configured block."""
     front = root.find(".//front")
     if front is None:
         return
     old_jm = front.find("journal-meta")
-    new_jm = ET.fromstring(_JOURNAL_META_XML)
+    new_jm = ET.fromstring(_build_journal_meta(cfg))
     if old_jm is not None:
         idx = list(front).index(old_jm)
         front.remove(old_jm)
@@ -2281,7 +2297,7 @@ def _make_date_elem(tag, attrs, date_str):
     return elem
 
 
-def apply_article_meta(root, *, doi=None, volume=None, issue=None,
+def apply_article_meta(root, cfg: SiteConfigData, *, doi=None, volume=None, issue=None,
                        pubyear=None, firstpage=None, lastpage=None,
                        date_received=None, date_accepted=None,
                        date_published=None):
@@ -2391,19 +2407,20 @@ def apply_article_meta(root, *, doi=None, volume=None, issue=None,
     for i, elem in enumerate(new_elems):
         am.insert(perm_idx + i, elem)
 
-    # Replace permissions with full copyright + CC BY 4.0 license block
+    # Replace permissions with full copyright + license block from cfg
     old_perm = am.find("permissions")
     copyright_year = str(pubyear) if pubyear else "unknown"
+    e = _xml_escape
     perm_xml = (
         '<permissions>'
-        '<copyright-statement>\u00a9 The authors</copyright-statement>'
+        f'<copyright-statement>{e(cfg.copyright_statement)}</copyright-statement>'
         f'<copyright-year>{copyright_year}</copyright-year>'
-        '<copyright-holder>The authors</copyright-holder>'
-        '<license license-type="open-access">'
-        '<license-p>This is an open access article distributed under the CC BY 4.0 license '
+        f'<copyright-holder>{e(cfg.copyright_holder)}</copyright-holder>'
+        f'<license license-type="{e(cfg.license_type)}">'
+        f'<license-p>{e(cfg.license_text)} '
         '<ext-link xmlns:xlink="http://www.w3.org/1999/xlink" ext-link-type="uri" '
-        'xlink:href="https://creativecommons.org/licenses/by/4.0/">'
-        'https://creativecommons.org/licenses/by/4.0/</ext-link></license-p>'
+        f'xlink:href="{e(cfg.license_url)}">'
+        f'{e(cfg.license_url)}</ext-link></license-p>'
         '</license>'
         '</permissions>'
     )
@@ -2444,14 +2461,21 @@ def apply_article_meta(root, *, doi=None, volume=None, issue=None,
             kwd.text = kwd.text.strip()
 
 
-def fix_metadata(jats_file, tex_file, lastpage=None):
-    """Replaces journal-meta with a constant CCR block and injects article metadata
-    (doi, publisher-id, volume, issue, fpage, pub-date) extracted from the LaTeX preamble."""
+def fix_metadata(jats_file, tex_file, lastpage=None, *, site_config: SiteConfigData | None = None):
+    """Replaces journal-meta with the configured block and injects article metadata
+    (doi, publisher-id, volume, issue, fpage, pub-date) extracted from the LaTeX preamble.
+
+    ``site_config`` defaults to ``load_site_config()`` (DB if available, else
+    CCR baked-in defaults).
+    """
+    if site_config is None:
+        site_config = load_site_config()
+
     ET.register_namespace("xlink", "http://www.w3.org/1999/xlink")
     tree = ET.parse(jats_file)
     root = tree.getroot()
 
-    apply_journal_meta(root)
+    apply_journal_meta(root, site_config)
 
     # Parse the LaTeX preamble for metadata fields
     preamble = Path(tex_file).read_text(encoding="utf-8").split(r"\begin{document}")[0]
@@ -2462,6 +2486,7 @@ def fix_metadata(jats_file, tex_file, lastpage=None):
 
     apply_article_meta(
         root,
+        site_config,
         doi=_get("doi"),
         volume=_get("volume"),
         issue=_get("pubnumber"),
@@ -3333,20 +3358,34 @@ def finalize_xml(jats_file):
         )
 
 
-def get_doi_suffix(input_path: Path) -> str:
-    """Extract the DOI suffix (e.g. 'CCR2023.1.004.KATH') from the LaTeX preamble."""
+def get_doi_suffix(input_path: Path, site_config: SiteConfigData | None = None) -> str:
+    """Extract the DOI suffix (e.g. 'CCR2023.1.004.KATH') from the LaTeX preamble.
+
+    Validates the DOI shape against ``{doi_prefix}{journal_id}<year>.<vol>.<issue>.<author>``
+    using ``site_config`` (or CCR defaults).
+    """
+    if site_config is None:
+        site_config = load_site_config()
     preamble = input_path.read_text(encoding="utf-8").split(r"\begin{document}")[0]
     m = re.search(r'\\doi\{([^}]*)\}', preamble)
+    expected = (
+        re.escape(site_config.doi_prefix)
+        + re.escape(site_config.journal_id)
+        + r'\d{4}\.\d+\.\d+\.\w+'
+    )
     if not m:
         logger.warning(r"No \doi{} found in LaTeX preamble; using filename as output name")
-    elif not re.fullmatch(r'10\.5117/CCR\d{4}\.\d+\.\d+\.\w+', m.group(1)):
-        logger.warning(r"Malformed \doi{%s} — expected format: 10.5117/CCR<year>.<vol>.<issue>.<author>", m.group(1))
+    elif not re.fullmatch(expected, m.group(1)):
+        logger.warning(
+            r"Malformed \doi{%s} — expected format: %s%s<year>.<vol>.<issue>.<author>",
+            m.group(1), site_config.doi_prefix, site_config.journal_id,
+        )
     return m.group(1).rsplit("/", 1)[1] if m and "/" in m.group(1) else input_path.stem
 
 
-def resolve_output_path(input_path: Path) -> Path:
+def resolve_output_path(input_path: Path, site_config: SiteConfigData | None = None) -> Path:
     """Derive the default output path from the DOI in the LaTeX preamble."""
-    return input_path.parent.parent / "output" / f"{get_doi_suffix(input_path)}.xml"
+    return input_path.parent.parent / "output" / f"{get_doi_suffix(input_path, site_config)}.xml"
 
 
 def rename_graphics(jats_file):
@@ -3392,12 +3431,16 @@ def rename_graphics(jats_file):
         logger.info("Renamed %d graphic(s) to publisher format (%s_fig1..)", fig_num, article_id)
 
 
-def convert(input_path: Path, output_path: Path, html: bool = False, lastpage=None) -> None:
+def convert(input_path: Path, output_path: Path, html: bool = False, lastpage=None,
+            site_config: SiteConfigData | None = None) -> None:
     """Convert a LaTeX file to JATS XML (and optionally HTML).
 
     The caller is responsible for providing a working copy of the source
-    (with any preprocessing/fixes already applied).
+    (with any preprocessing/fixes already applied). ``site_config`` defaults
+    to ``load_site_config()``.
     """
+    if site_config is None:
+        site_config = load_site_config()
     output_path.parent.mkdir(parents=True, exist_ok=True)
     log_dir = output_path.parent / "logs"
 
@@ -3412,7 +3455,7 @@ def convert(input_path: Path, output_path: Path, html: bool = False, lastpage=No
     sanitize_ids(str(output_path))
     dedupe_ref_lists(str(output_path))
     fix_citation_ref_types(str(output_path))
-    fix_metadata(str(output_path), str(input_path), lastpage=lastpage)
+    fix_metadata(str(output_path), str(input_path), lastpage=lastpage, site_config=site_config)
     collapse_affiliations(str(output_path))
     fix_table_in_p(str(output_path))
     fix_table_notes(str(output_path))
@@ -3472,7 +3515,7 @@ def convert(input_path: Path, output_path: Path, html: bool = False, lastpage=No
     if html:
         html_path = output_path.with_suffix(".html")
         logger.info("Step 3: Generating HTML preview...")
-        convert_to_html(str(output_path), str(html_path))
+        convert_to_html(str(output_path), str(html_path), site_config=site_config)
         logger.info(f"Saved HTML preview in {html_path}")
 
 

@@ -105,3 +105,22 @@ export interface MetadataComparison {
   ojs: string | string[];
   latex: string | string[];
 }
+
+export interface SiteConfig {
+  journal_id: string;
+  journal_title: string;
+  issn_epub: string;
+  issn_ppub: string;
+  publisher_name: string;
+  publisher_loc: string;
+  copyright_holder: string;
+  copyright_statement: string;
+  license_type: string;
+  license_url: string;
+  license_text: string;
+  doi_prefix: string;
+  configured_at: string | null;
+  updated_at: string;
+}
+
+export type SiteConfigUpdate = Partial<Omit<SiteConfig, "configured_at" | "updated_at">>;

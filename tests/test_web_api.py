@@ -12,7 +12,7 @@ import json
 import zipfile
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
+from unittest.mock import ANY, AsyncMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -42,10 +42,9 @@ MANUSCRIPT_TOKEN = "manuscript-access-token-12345"
 TEST_CFG = AuthConfig(
     editor_credentials={EDITOR_USERNAME: "testpass", AUTHOR_USERNAME: "authorpass"},
     frontend_url="http://testserver",
+    ojs_admin_token="admintok",
     ojs_base_url="https://ojs",
     ojs_journal_path="ccr",
-    ojs_admin_token="admintok",
-    ojs_doi_prefix="10.5117/",
     session_token_ttl_days=30,
 )
 
@@ -71,7 +70,38 @@ def engine():
         poolclass=StaticPool,
     )
     SQLModel.metadata.create_all(engine)
+    _seed_site_config(engine)
     return engine
+
+
+def _seed_site_config(engine):
+    """Seed the singleton SiteConfig row (mirrors the alembic 0012 migration).
+
+    Tests skip alembic and use SQLModel.metadata.create_all, so the seed has
+    to be applied explicitly here.
+    """
+    from web.backend.app.models import SiteConfig
+    with Session(engine) as session:
+        if session.get(SiteConfig, 1) is not None:
+            return
+        session.add(SiteConfig(
+            id=1,
+            journal_id="MYJOURNAL",
+            journal_title="My Journal Name",
+            issn_epub="1234-5678",
+            issn_ppub="",
+            publisher_name="My Publisher",
+            publisher_loc="City",
+            copyright_holder="The authors",
+            copyright_statement="© The authors",
+            license_type="open-access",
+            license_url="https://creativecommons.org/licenses/by/4.0/",
+            license_text=(
+                "This is an open access article distributed under the CC BY 4.0 license"
+            ),
+            doi_prefix="10.0000/",
+        ))
+        session.commit()
 
 
 @pytest.fixture
@@ -1358,6 +1388,7 @@ def test_fetch_production_submissions_uses_stage_id(monkeypatch):
     """Make sure the stage_id argument is forwarded to the OJS query string."""
     import asyncio
 
+    from jatsmith.site_config import SiteConfigData
     from web.backend.app import ojs as ojs_module
 
     ojs_module.set_production_submissions_override(None)
@@ -1388,10 +1419,17 @@ def test_fetch_production_submissions_uses_stage_id(monkeypatch):
         ojs_admin_token = "tok"
         ojs_base_url = "https://example.test"
         ojs_journal_path = "j"
-        ojs_doi_prefix = "10.5117/"
+
+    site_cfg = SiteConfigData(
+        journal_id="J", journal_title="J", issn_epub="", issn_ppub="",
+        publisher_name="P", publisher_loc="P",
+        copyright_holder="A", copyright_statement="A",
+        license_type="open-access", license_url="u", license_text="t",
+        doi_prefix="10.5117/",
+    )
 
     asyncio.run(
-        ojs_module.fetch_production_submissions(cfg=FakeCfg(), stage_id=5)
+        ojs_module.fetch_production_submissions(site_cfg, cfg=FakeCfg(), stage_id=5)
     )
     assert captured_params
     assert ("stageIds[]", "5") in captured_params[0]
@@ -1530,7 +1568,7 @@ def test_sync_ojs_field_title(mock_update, mock_fetch, client, engine, test_stor
         json={"field": "title"},
     )
     assert r.status_code == 200
-    mock_update.assert_called_once_with(42, "title", "LaTeX Title")
+    mock_update.assert_called_once_with(42, "title", "LaTeX Title", ANY)
 
     # Local DB should reflect re-imported OJS data
     with Session(engine) as session:
@@ -1552,7 +1590,7 @@ def test_sync_ojs_field_keywords(mock_update, mock_fetch, client, engine, test_s
         json={"field": "keywords"},
     )
     assert r.status_code == 200
-    mock_update.assert_called_once_with(42, "keywords", ["kw1", "kw3"])
+    mock_update.assert_called_once_with(42, "keywords", ["kw1", "kw3"], ANY)
 
     with Session(engine) as session:
         ms = session.get(Manuscript, doi)
@@ -1624,7 +1662,7 @@ def test_sync_ojs_author_can_push(mock_update, mock_fetch, author_client, engine
         json={"field": "title"},
     )
     assert r.status_code == 200
-    mock_update.assert_called_once_with(42, "title", "LaTeX Title")
+    mock_update.assert_called_once_with(42, "title", "LaTeX Title", ANY)
 
 
 def test_sync_ojs_no_ojs_link(client, engine, test_storage):
@@ -1855,10 +1893,9 @@ def _set_storage_key(monkeypatch):
     cfg = AuthConfig(
         editor_credentials=TEST_CFG.editor_credentials,
         frontend_url=TEST_CFG.frontend_url,
+        ojs_admin_token=TEST_CFG.ojs_admin_token,
         ojs_base_url=TEST_CFG.ojs_base_url,
         ojs_journal_path=TEST_CFG.ojs_journal_path,
-        ojs_admin_token=TEST_CFG.ojs_admin_token,
-        ojs_doi_prefix=TEST_CFG.ojs_doi_prefix,
         session_token_ttl_days=TEST_CFG.session_token_ttl_days,
         storage_secret_key=key,
     )
