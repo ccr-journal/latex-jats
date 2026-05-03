@@ -103,6 +103,8 @@ def _seed_site_config(engine):
             site_name="My Journal JATSmith",
             site_description="My description",
             header_branding="My Journal",
+            class_file_url="",
+            quarto_extension_repo="",
         ))
         session.commit()
 
@@ -119,9 +121,11 @@ def anon_client(tmp_path: Path, test_storage: Storage, engine):
     app.dependency_overrides[deps.get_session] = override_session
     app.dependency_overrides[deps.get_storage] = override_storage
     deps._engine = engine
+    deps._storage = test_storage
     yield TestClient(app, raise_server_exceptions=False)
     app.dependency_overrides.clear()
     deps._engine = None
+    deps._storage = None
 
 
 @pytest.fixture
@@ -231,6 +235,55 @@ def test_get_manuscript(client):
 def test_get_manuscript_not_found(client):
     r = client.get("/api/manuscripts/DOES-NOT-EXIST")
     assert r.status_code == 404
+
+
+def test_is_quarto_defaults_false_for_empty_manuscript(client):
+    """Fresh manuscript with no upload, no main_file → not Quarto.
+    (Drives the LaTeX-style ``Use latest <class>`` toggle on the frontend.)"""
+    client.post("/api/manuscripts", json={"doi_suffix": "QM.EMPTY"})
+    r = client.get("/api/manuscripts/QM.EMPTY")
+    assert r.status_code == 200
+    assert r.json()["is_quarto"] is False
+
+
+def test_is_quarto_picks_up_main_file_extension(client, test_storage):
+    client.post("/api/manuscripts", json={"doi_suffix": "QM.QMD"})
+    # Set main_file to a .qmd via PATCH — same path the editor uses.
+    r = client.patch(
+        "/api/manuscripts/QM.QMD",
+        json={"main_file": "paper.qmd"},
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["is_quarto"] is True
+
+    # Switching to .tex flips it back.
+    r = client.patch("/api/manuscripts/QM.QMD", json={"main_file": "paper.tex"})
+    assert r.json()["is_quarto"] is False
+
+
+def test_is_quarto_falls_back_to_source_dir(client, test_storage):
+    """When main_file is unset, source-dir contents decide: a .qmd with no
+    main.tex → Quarto."""
+    doi = "QM.SOURCEDIR"
+    client.post("/api/manuscripts", json={"doi_suffix": doi})
+    src = test_storage.source_dir(doi)
+    src.mkdir(parents=True, exist_ok=True)
+    (src / "paper.qmd").write_text("---\n---\n")
+    r = client.get(f"/api/manuscripts/{doi}")
+    assert r.json()["is_quarto"] is True
+
+
+def test_is_quarto_main_tex_wins_over_qmd(client, test_storage):
+    """If both main.tex and a .qmd are present and no main_file is set, the
+    LaTeX entry-point wins (matches worker._is_quarto_source)."""
+    doi = "QM.BOTH"
+    client.post("/api/manuscripts", json={"doi_suffix": doi})
+    src = test_storage.source_dir(doi)
+    src.mkdir(parents=True, exist_ok=True)
+    (src / "main.tex").write_text("\\documentclass{article}")
+    (src / "scratch.qmd").write_text("---\n---\n")
+    r = client.get(f"/api/manuscripts/{doi}")
+    assert r.json()["is_quarto"] is False
 
 
 # ── Upload ────────────────────────────────────────────────────────────────────
@@ -1430,6 +1483,7 @@ def test_fetch_production_submissions_uses_stage_id(monkeypatch):
         license_type="open-access", license_url="u", license_text="t",
         doi_prefix="10.5117/",
         site_name="J", site_description="d", header_branding="J",
+        class_file_url="", quarto_extension_repo="",
     )
 
     asyncio.run(

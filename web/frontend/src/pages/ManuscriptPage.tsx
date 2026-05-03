@@ -85,7 +85,10 @@ export function ManuscriptPage() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [archiving, setArchiving] = useState(false);
   const [archiveError, setArchiveError] = useState<string | null>(null);
-  const [ccrClsVersion, setCcrClsVersion] = useState<string | null>(null);
+  const [classFileVersion, setClassFileVersion] = useState<string | null>(null);
+  const [classFilename, setClassFilename] = useState<string | null>(null);
+  const [quartoExtensionRepo, setQuartoExtensionRepo] = useState<string | null>(null);
+  const [quartoExtensionVersion, setQuartoExtensionVersion] = useState<string | null>(null);
   const [linkUpstreamOpen, setLinkUpstreamOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [upstreamError, setUpstreamError] = useState<string | null>(null);
@@ -100,7 +103,12 @@ export function ManuscriptPage() {
   }, [doiSuffix]);
 
   useEffect(() => {
-    getVersion().then((v) => setCcrClsVersion(v.ccr_cls_version)).catch(() => {});
+    getVersion().then((v) => {
+      setClassFileVersion(v.class_file_version);
+      setClassFilename(v.class_filename);
+      setQuartoExtensionRepo(v.quarto_extension_repo);
+      setQuartoExtensionVersion(v.quarto_extension_version);
+    }).catch(() => {});
   }, []);
 
   // Status polling when queued or processing
@@ -154,7 +162,7 @@ export function ManuscriptPage() {
   };
 
   const handleUseCanonicalToggle = async (checked: boolean) => {
-    const updated = await updateManuscript(doiSuffix, { use_canonical_ccr_cls: checked });
+    const updated = await updateManuscript(doiSuffix, { use_canonical_class_file: checked });
     setManuscript(updated);
   };
 
@@ -201,7 +209,7 @@ export function ManuscriptPage() {
     const updated = await startProcessing(
       doiSuffix,
       manuscript.fix_source,
-      manuscript.use_canonical_ccr_cls,
+      manuscript.use_canonical_class_file,
     );
     setManuscript(updated);
   };
@@ -589,43 +597,64 @@ export function ManuscriptPage() {
               </p>
             </InfoButton>
           </div>
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="use-canonical-ccr-cls"
-              checked={manuscript.use_canonical_ccr_cls}
-              onChange={(e) => handleUseCanonicalToggle(e.target.checked)}
-              disabled={isProcessing || isApproved}
-              className="h-4 w-4 rounded border-input accent-primary"
-            />
-            <Label htmlFor="use-canonical-ccr-cls" className="text-sm font-normal cursor-pointer">
-              Use most recent ccr.cls file{ccrClsVersion ? ` (v${ccrClsVersion})` : ""}
-            </Label>
-            <InfoButton title="Use most recent ccr.cls file">
-              <p>
-                Replaces the CCR Quarto extension bundle in your upload
-                (<code>_extensions/ccr/</code> &mdash; <code>ccr.cls</code>,
-                <code>ccrtemplate.tex</code>, partials, etc.) with the canonical
-                copy shipped with this tool
-                {ccrClsVersion ? ` (currently v${ccrClsVersion})` : ""}.
-                Only the working copy is touched; your original upload is
-                preserved.
-              </p>
-              <p>
-                Turn this on when your manuscript was prepared against an older
-                version of the CCR class and the conversion is failing or
-                producing the wrong output. The bundle is publishing-toolchain
-                infrastructure, not author content &mdash; any local
-                customizations belong in your <code>.tex</code> file, not in the
-                extension.
-              </p>
-              <p>
-                Leave this off if you have intentionally pinned an older
-                version, or if you have made local changes to the bundle that
-                you need to keep.
-              </p>
-            </InfoButton>
-          </div>
+          {(() => {
+            const showQuarto = manuscript.is_quarto && quartoExtensionRepo;
+            const showClass = !manuscript.is_quarto && classFilename;
+            if (!showQuarto && !showClass) return null;
+            const label = showQuarto ? (
+              <>
+                Use latest Quarto extension <code>{quartoExtensionRepo}</code>
+                {quartoExtensionVersion ? ` [v${quartoExtensionVersion}]` : ""}
+              </>
+            ) : (
+              <>
+                Use latest <code>{classFilename}</code>
+                {classFileVersion ? ` [${classFileVersion}]` : ""}
+              </>
+            );
+            const infoTitle = showQuarto
+              ? `Use latest Quarto extension ${quartoExtensionRepo}`
+              : `Use latest ${classFilename}`;
+            return (
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="use-canonical-class-file"
+                  checked={manuscript.use_canonical_class_file}
+                  onChange={(e) => handleUseCanonicalToggle(e.target.checked)}
+                  disabled={isProcessing || isApproved}
+                  className="h-4 w-4 rounded border-input accent-primary"
+                />
+                <Label htmlFor="use-canonical-class-file" className="text-sm font-normal cursor-pointer">
+                  {label}
+                </Label>
+                <InfoButton title={infoTitle}>
+                  <p>
+                    Replaces the canonical{" "}
+                    {showQuarto ? "Quarto extension bundle" : "class file"} in
+                    your working copy with the version fetched from the
+                    journal's repository. Only the working copy is touched;
+                    your original upload is preserved.
+                  </p>
+                  <p>
+                    Turn this on when your manuscript was prepared against an
+                    older version and the conversion is failing or producing
+                    the wrong output. The{" "}
+                    {showQuarto ? "Quarto extension" : "class file"} is
+                    publishing-toolchain infrastructure, not author content
+                    &mdash; any local customizations belong in your{" "}
+                    <code>{showQuarto ? ".qmd" : ".tex"}</code> source, not in
+                    the {showQuarto ? "extension" : "class file"}.
+                  </p>
+                  <p>
+                    Leave this off if you have intentionally pinned an older
+                    version, or if you have made local changes that you need
+                    to keep.
+                  </p>
+                </InfoButton>
+              </div>
+            );
+          })()}
           {canProcess && (
             <Button onClick={handleStartProcessing}>
               {isReady || isApproved || manuscript.status === "failed"

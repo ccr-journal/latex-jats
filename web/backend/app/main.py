@@ -18,6 +18,8 @@ from datetime import datetime
 
 from sqlmodel import Session, select
 
+from jatsmith import canonical_extension
+
 from . import deps
 from .models import (  # noqa: F401 — registers metadata
     AccessToken,
@@ -25,6 +27,7 @@ from .models import (  # noqa: F401 — registers metadata
     ManuscriptAuthor,
     ManuscriptStatus,
     PIPELINE_STEPS,
+    SiteConfig,
     StepStatus,
 )
 from .routes import auth, download, manuscripts, ojs, output, site_config, status, upload, upstream
@@ -35,6 +38,7 @@ _STORAGE_ROOT = Path(os.environ.get("STORAGE_DIR", _PROJECT_ROOT / "storage"))
 _DATABASE_URL = os.environ.get(
     "DATABASE_URL", f"sqlite:///{_STORAGE_ROOT / 'jatsmith.db'}"
 )
+_CANONICAL_CACHE = _STORAGE_ROOT / "canonical"
 
 
 _BACKEND_DIR = Path(__file__).parents[1]
@@ -135,6 +139,46 @@ def _migrate_legacy_db_filename() -> None:
         )
 
 
+def _refresh_canonical_bundle(engine) -> None:
+    """Fetch the canonical class file & Quarto extension and update the cache.
+
+    Reads the URL fields from the SiteConfig singleton, fetches into
+    ``STORAGE_DIR/canonical/``, and stashes the result in
+    ``canonical_extension._current_bundle`` so /api/version and the worker
+    can read it. No-op when both URLs are empty. Network failures fall back
+    to whatever is already cached on disk.
+    """
+    log = logging.getLogger("jatsmith.web")
+    with Session(engine) as session:
+        row = session.get(SiteConfig, 1)
+        if row is None:
+            log.info("SiteConfig row missing; skipping canonical bundle fetch")
+            return
+        class_file_url = row.class_file_url or ""
+        quarto_extension_repo = row.quarto_extension_repo or ""
+
+    if not class_file_url and not quarto_extension_repo:
+        log.info("No canonical class-file or Quarto-extension URL configured; "
+                 "skipping fetch")
+        # Still load whatever's cached (may be empty) so the bundle pointer
+        # reflects current state, not a stale earlier session.
+        canonical_extension.set_current_bundle(
+            canonical_extension.load_cached_bundle(_CANONICAL_CACHE, "")
+        )
+        return
+
+    try:
+        bundle = canonical_extension.fetch_canonical_bundle(
+            class_file_url, quarto_extension_repo, _CANONICAL_CACHE,
+        )
+    except Exception:
+        log.exception("Canonical bundle fetch raised; falling back to cache")
+        bundle = canonical_extension.load_cached_bundle(
+            _CANONICAL_CACHE, class_file_url,
+        )
+    canonical_extension.set_current_bundle(bundle)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     _STORAGE_ROOT.mkdir(parents=True, exist_ok=True)
@@ -149,6 +193,10 @@ async def lifespan(app: FastAPI):
 
     deps._engine = engine
     deps._storage = Storage(_STORAGE_ROOT)
+    deps._canonical_cache_dir = _CANONICAL_CACHE
+    deps._refresh_canonical_bundle = lambda: _refresh_canonical_bundle(engine)
+
+    _refresh_canonical_bundle(engine)
     yield
 
 
@@ -166,11 +214,22 @@ if _CORS_ORIGINS:
     )
 
 @app.get("/api/version")
-def get_version() -> dict[str, str]:
-    from jatsmith.ccr_cls import EXPECTED_CCR_CLS_VERSION
+def get_version() -> dict[str, str | None]:
+    bundle = canonical_extension.get_current_bundle()
+    # Read the configured Quarto extension spec (e.g. "ccr-journal/ccr-quarto")
+    # for the toggle label. The bundle itself only knows the inner subpaths.
+    quarto_extension_repo: str | None = None
+    if deps._engine is not None:
+        with Session(deps._engine) as session:
+            row = session.get(SiteConfig, 1)
+            if row is not None:
+                quarto_extension_repo = row.quarto_extension_repo or None
     return {
         "version": pkg_version("jatsmith"),
-        "ccr_cls_version": EXPECTED_CCR_CLS_VERSION,
+        "class_filename": bundle.class_filename if bundle else None,
+        "class_file_version": bundle.class_version if bundle else None,
+        "quarto_extension_repo": quarto_extension_repo,
+        "quarto_extension_version": bundle.extension_version if bundle else None,
     }
 
 

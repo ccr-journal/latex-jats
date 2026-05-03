@@ -1,0 +1,6 @@
+title: Example Quarto extension (test fixture)
+author: Example Org
+version: 0.05
+contributes:
+  formats:
+    pdf: {}

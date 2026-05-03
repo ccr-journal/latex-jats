@@ -6,7 +6,8 @@ modules import get_session and get_storage from here.
 """
 
 from datetime import datetime
-from typing import Generator, Literal, Optional
+from pathlib import Path
+from typing import Callable, Generator, Literal, Optional
 
 from fastapi import Depends, Header, HTTPException
 from sqlalchemy import Engine
@@ -28,6 +29,10 @@ from .storage import Storage
 
 _engine: Engine | None = None
 _storage: Storage | None = None
+# Set by main.py's lifespan handler. Routes that change SiteConfig URLs call
+# _refresh_canonical_bundle to re-fetch and update the in-memory pointer.
+_canonical_cache_dir: Path | None = None
+_refresh_canonical_bundle: Callable[[], None] | None = None
 
 
 def get_session() -> Generator[Session, None, None]:
@@ -48,6 +53,7 @@ _SITE_CONFIG_FIELDS = (
     "license_type", "license_url", "license_text",
     "doi_prefix",
     "site_name", "site_description", "header_branding",
+    "class_file_url", "quarto_extension_repo",
 )
 
 
@@ -158,6 +164,25 @@ def load_manuscript_for_user(
     raise HTTPException(404, detail=f"Manuscript '{doi_suffix}' not found")
 
 
+def _detect_is_quarto(source_dir: Path | None, main_file: str | None) -> bool:
+    """Decide whether a manuscript should be treated as a Quarto project.
+
+    Mirrors ``worker._is_quarto_source``: the explicit ``main_file`` extension
+    wins; otherwise treat as Quarto if the source has any ``.qmd`` and no
+    ``main.tex``. Source dir is optional for callers that have no storage
+    (e.g. before the first upload) — extension-only check applies.
+    """
+    if main_file:
+        lower = main_file.lower()
+        if lower.endswith(".qmd"):
+            return True
+        if lower.endswith(".tex"):
+            return False
+    if source_dir is None or not source_dir.is_dir():
+        return False
+    return not (source_dir / "main.tex").exists() and bool(list(source_dir.glob("*.qmd")))
+
+
 def manuscript_to_read(
     ms: Manuscript, session: Session, storage: Storage | None = None
 ) -> ManuscriptRead:
@@ -181,10 +206,12 @@ def manuscript_to_read(
     data.pop("upstream_token_encrypted", None)
     if storage is None:
         storage = _storage
+    source_dir: Path | None = None
     if storage is not None:
         source_dir = storage.source_dir(ms.doi_suffix)
         if source_dir.is_dir():
             data["upload_file_count"] = sum(
                 1 for f in source_dir.rglob("*") if f.is_file()
             )
+    data["is_quarto"] = _detect_is_quarto(source_dir, ms.main_file)
     return ManuscriptRead(**data)

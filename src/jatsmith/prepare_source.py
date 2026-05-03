@@ -21,9 +21,11 @@ import sys
 import unicodedata
 from pathlib import Path
 
-from jatsmith.ccr_cls import (
-    install_canonical_ccr_cls as _install_canonical_ccr_cls,
-    warn_if_outdated as _warn_if_ccr_cls_outdated,
+from jatsmith.canonical_extension import (
+    CanonicalBundle,
+    get_current_bundle,
+    install_canonical_class_file,
+    warn_if_outdated,
 )
 from jatsmith.fix_input import _collect_tex_files, fix_file
 
@@ -165,9 +167,16 @@ def _parse_latex_log_errors(log_path: Path) -> tuple[list[str], list[str]]:
     return fatal_found, errors
 
 
-def _patch_ccr_cls(workspace_dir: Path, engine: str = "pdflatex"):
-    """Patch ccr.cls in the workspace: add \\pdfminorversion=7, drop pstricks."""
-    cls = workspace_dir / "ccr.cls"
+def _patch_class_file(workspace_dir: Path, class_filename: str | None,
+                      engine: str = "pdflatex"):
+    """Patch the class file in the workspace: add \\pdfminorversion=7, drop pstricks.
+
+    No-op when ``class_filename`` is None (no canonical bundle configured) or
+    when no copy of the file is present in the workspace.
+    """
+    if not class_filename:
+        return
+    cls = workspace_dir / class_filename
     if not cls.exists():
         return
     text = cls.read_text()
@@ -186,21 +195,26 @@ def _patch_ccr_cls(workspace_dir: Path, engine: str = "pdflatex"):
         changed = True
     if changed:
         cls.write_text(text)
-        logger.info("Patched ccr.cls (pdfminorversion, pstricks)")
+        logger.info("Patched %s (pdfminorversion, pstricks)", class_filename)
 
 
 def prepare_workspace(source_dir: Path, workspace_dir: Path,
                       fix_problems: bool = False,
-                      use_canonical_ccr_cls: bool = False,
-                      main_file: str | None = None) -> Path:
+                      use_canonical_class_file: bool = False,
+                      main_file: str | None = None,
+                      bundle: CanonicalBundle | None = None) -> Path:
     """Create a workspace copy of the source and apply fixes + warnings.
 
     Copies the source tree into workspace_dir, optionally applies fix_input
     fixes, and runs all source-quality warnings on the result.
 
-    If ``use_canonical_ccr_cls`` is set, the canonical upstream ``ccr.cls`` is
-    installed into the workspace before the version check, so the outdated-class
-    warning is suppressed.
+    If ``use_canonical_class_file`` is set and a canonical bundle is
+    available (URL configured + fetched), the canonical class file is
+    installed into the workspace before the version check, so the
+    outdated-class warning is suppressed.
+
+    ``bundle`` defaults to :func:`get_current_bundle` so callers don't need
+    to thread it through. CLI callers may pass ``None`` explicitly.
 
     If ``main_file`` is provided and is not already ``main.tex``, the named
     file in the workspace is renamed to ``main.tex`` so the rest of the
@@ -228,16 +242,26 @@ def prepare_workspace(source_dir: Path, workspace_dir: Path,
             main_tex.unlink()
         chosen.rename(main_tex)
 
-    if use_canonical_ccr_cls:
-        _install_canonical_ccr_cls(workspace_dir)
+    if bundle is None:
+        bundle = get_current_bundle()
 
-    # Check the author's ccr.cls before we modify it. _patch_ccr_cls rewrites
-    # the file (adding \pdfminorversion, commenting out pstricks), which would
-    # otherwise make warn_if_outdated see an "edited" canonical copy.
-    _warn_if_ccr_cls_outdated(workspace_dir)
+    if use_canonical_class_file and bundle is not None and bundle.has_class_file \
+            and bundle.class_file_path is not None and bundle.class_filename:
+        install_canonical_class_file(
+            workspace_dir, bundle.class_file_path, bundle.class_filename,
+        )
+
+    # Check the author's class file before we modify it. _patch_class_file
+    # rewrites the file (adding \pdfminorversion, commenting out pstricks),
+    # which would otherwise make warn_if_outdated see an "edited" canonical copy.
+    warn_if_outdated(workspace_dir, bundle)
 
     engine = _detect_tex_engine(main_tex)
-    _patch_ccr_cls(workspace_dir, engine)
+    _patch_class_file(
+        workspace_dir,
+        bundle.class_filename if bundle is not None else None,
+        engine,
+    )
 
     # Apply fixes to the workspace copy (if requested)
     if fix_problems:

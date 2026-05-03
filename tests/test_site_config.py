@@ -50,6 +50,8 @@ def _seed_site_config(engine):
             site_name="My Journal JATSmith",
             site_description="My description",
             header_branding="My Journal",
+            class_file_url="",
+            quarto_extension_repo="",
         ))
         session.commit()
 
@@ -215,3 +217,7 @@ def test_default_matches_migration_seeds():
             f"0014 server_default[{field}]={branding_defaults[field]!r} vs "
             f"DEFAULT_SITE_CONFIG.{field}={getattr(DEFAULT_SITE_CONFIG, field)!r}"
         )
+
+    # 0015 adds the canonical-bundle URL fields with empty server defaults.
+    assert DEFAULT_SITE_CONFIG.class_file_url == ""
+    assert DEFAULT_SITE_CONFIG.quarto_extension_repo == ""

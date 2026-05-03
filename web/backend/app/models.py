@@ -58,7 +58,7 @@ class Manuscript(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     fix_source: bool = True
-    use_canonical_ccr_cls: bool = True
+    use_canonical_class_file: bool = True
     uploaded_at: Optional[datetime] = None
     uploaded_by: Optional[str] = None  # "editor" | "author" | "upstream"
     job_log: str = ""
@@ -135,6 +135,12 @@ class SiteConfig(SQLModel, table=True):
     site_name: str
     site_description: str
     header_branding: str
+    # Canonical class-file & Quarto-extension sources (Issue #32). Both
+    # optional; empty disables the "use latest class file" feature for this
+    # journal. The URL is fetched on app start and re-fetched when changed
+    # via PUT /api/site-config; see canonical_extension.fetch_canonical_bundle.
+    class_file_url: str
+    quarto_extension_repo: str
     # Null until the editor confirms via the form; drives the first-login banner.
     configured_at: Optional[datetime] = None
     updated_at: datetime = Field(default_factory=datetime.utcnow)
@@ -198,7 +204,7 @@ class ManuscriptRead(SQLModel):
     date_published: Optional[str] = None
     authors: list[AuthorRead] = []
     fix_source: bool = True
-    use_canonical_ccr_cls: bool = True
+    use_canonical_class_file: bool = True
     created_at: datetime
     updated_at: datetime
     uploaded_at: Optional[datetime]
@@ -215,6 +221,10 @@ class ManuscriptRead(SQLModel):
     upstream_subpath: Optional[str] = None
     upstream_has_token: bool = False
     main_file: Optional[str] = None
+    # Computed (not stored). True when the source is a Quarto project — set
+    # by manuscript_to_read using the same heuristic as the worker. Drives
+    # source-aware UI bits like the "Use latest …" toggle label.
+    is_quarto: bool = False
     last_synced_at: Optional[datetime] = None
     last_synced_sha: Optional[str] = None
     approved_at: Optional[datetime] = None
@@ -237,6 +247,8 @@ class SiteConfigRead(SQLModel):
     site_name: str
     site_description: str
     header_branding: str
+    class_file_url: str
+    quarto_extension_repo: str
     configured_at: Optional[datetime] = None
     updated_at: datetime
 
@@ -257,3 +269,5 @@ class SiteConfigUpdate(SQLModel):
     site_name: Optional[str] = None
     site_description: Optional[str] = None
     header_branding: Optional[str] = None
+    class_file_url: Optional[str] = None
+    quarto_extension_repo: Optional[str] = None

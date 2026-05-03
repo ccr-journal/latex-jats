@@ -47,7 +47,7 @@ export interface Manuscript {
   date_published: string | null;
   authors: OjsAuthor[];
   fix_source: boolean;
-  use_canonical_ccr_cls: boolean;
+  use_canonical_class_file: boolean;
   created_at: string;
   updated_at: string;
   uploaded_at: string | null;
@@ -64,6 +64,7 @@ export interface Manuscript {
   upstream_subpath: string | null;
   upstream_has_token: boolean;
   main_file: string | null;
+  is_quarto: boolean;
   last_synced_at: string | null;
   last_synced_sha: string | null;
   // Approval audit (Issue #9). Set when an author confirms camera-ready;
@@ -122,6 +123,8 @@ export interface SiteConfig {
   site_name: string;
   site_description: string;
   header_branding: string;
+  class_file_url: string;
+  quarto_extension_repo: string;
   configured_at: string | null;
   updated_at: string;
 }

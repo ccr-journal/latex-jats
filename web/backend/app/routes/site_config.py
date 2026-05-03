@@ -7,15 +7,22 @@ the dashboard can hide its first-run banner.
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session
 
+from .. import deps
 from ..deps import get_session, require_editor
 from ..models import SiteConfig, SiteConfigRead, SiteConfigUpdate
 
 router = APIRouter(prefix="/api/site-config", tags=["site-config"])
+
+logger = logging.getLogger("jatsmith.web.site_config")
+
+# URL fields whose change triggers a canonical-bundle re-fetch.
+_BUNDLE_URL_FIELDS = ("class_file_url", "quarto_extension_repo")
 
 
 def _get_singleton(session: Session) -> SiteConfig:
@@ -37,6 +44,7 @@ def update_site_config(
     session: Session = Depends(get_session),
 ):
     row = _get_singleton(session)
+    before = {f: getattr(row, f) for f in _BUNDLE_URL_FIELDS}
     for field, value in body.model_dump(exclude_unset=True).items():
         setattr(row, field, value)
     now = datetime.utcnow()
@@ -46,4 +54,10 @@ def update_site_config(
     session.add(row)
     session.commit()
     session.refresh(row)
+    after = {f: getattr(row, f) for f in _BUNDLE_URL_FIELDS}
+    if before != after and deps._refresh_canonical_bundle is not None:
+        try:
+            deps._refresh_canonical_bundle()
+        except Exception:
+            logger.exception("Failed to refresh canonical bundle after SiteConfig save")
     return row

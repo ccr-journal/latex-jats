@@ -1,7 +1,37 @@
+import shutil
 import unicodedata
 from pathlib import Path
 
-from jatsmith.prepare_source import _normalize_bbl, _parse_latex_log_errors
+import pytest
+
+from jatsmith import canonical_extension as ce
+from jatsmith.prepare_source import _normalize_bbl, _parse_latex_log_errors, prepare_workspace
+from jatsmith.quarto import prepare_quarto_workspace
+
+
+_FIXTURE_DIR = Path(__file__).parent / "fixtures" / "canonical_extension"
+
+
+@pytest.fixture
+def seeded_bundle(tmp_path: Path):
+    """Drop the fixture bundle into a cache dir, expose it via
+    ``set_current_bundle``, and yield it for the test. Restored to None
+    on teardown so other tests aren't polluted.
+    """
+    cache = tmp_path / "_canon_cache"
+    cache.mkdir()
+    shutil.copy2(_FIXTURE_DIR / "example.cls", cache / "example.cls")
+    shutil.copytree(_FIXTURE_DIR / "_extensions", cache / "extensions")
+    bundle = ce.load_cached_bundle(
+        cache,
+        "https://github.com/example-org/example-latex/blob/main/example.cls",
+    )
+    prev = ce.get_current_bundle()
+    ce.set_current_bundle(bundle)
+    try:
+        yield bundle
+    finally:
+        ce.set_current_bundle(prev)
 
 
 class TestNormalizeBbl:
@@ -125,3 +155,151 @@ class TestParseLatexLogErrors:
         fatal, _ = _parse_latex_log_errors(log)
 
         assert "(That makes 100 errors; please try again.)" in fatal
+
+
+# ── Canonical-bundle install path ──────────────────────────────────────────────
+#
+# These tests pin the wiring between the SiteConfig-driven canonical-bundle
+# fetch and what actually lands in the workspace before LaTeX/Quarto runs.
+# Skipping them would let a refactor silently disconnect the toggle from the
+# pipeline (the failure mode that prompted the user to ask "did you actually
+# test this end-to-end?").
+
+
+class TestPrepareWorkspaceUsesCanonicalBundle:
+    def _seed_source_with_stale_class(self, source: Path) -> None:
+        source.mkdir()
+        (source / "main.tex").write_text(
+            "\\documentclass{example}\n\\begin{document}\nhi\n\\end{document}\n",
+            encoding="utf-8",
+        )
+        # Stale class file the toggle should overwrite.
+        (source / "example.cls").write_text(
+            "% stale, hand-edited by author\n"
+            "\\ProvidesClass{example}[2020-01-01 v0.01]\n"
+            "\\LoadClass{article}\n",
+            encoding="utf-8",
+        )
+
+    def test_toggle_on_overwrites_stale_class_with_canonical(
+        self, tmp_path: Path, seeded_bundle,
+    ):
+        source = tmp_path / "src"
+        ws = tmp_path / "ws"
+        self._seed_source_with_stale_class(source)
+
+        prepare_workspace(source, ws, use_canonical_class_file=True)
+
+        installed = (ws / "example.cls").read_text(encoding="utf-8")
+        # Canonical version landed; stale version is gone. The file may have
+        # additional pipeline patches prepended (\pdfminorversion=7, pstricks
+        # comment-out) — those are applied by ``_patch_class_file`` *after*
+        # the canonical install, which is the intended order.
+        assert "2026-05-03 v0.05" in installed
+        assert "2020-01-01 v0.01" not in installed
+        assert "stale, hand-edited" not in installed
+
+    def test_toggle_off_leaves_stale_class_untouched(
+        self, tmp_path: Path, seeded_bundle,
+    ):
+        source = tmp_path / "src"
+        ws = tmp_path / "ws"
+        self._seed_source_with_stale_class(source)
+
+        prepare_workspace(source, ws, use_canonical_class_file=False)
+
+        # The stale version stays — the only edits should come from
+        # _patch_class_file (\pdfminorversion + pstricks comment-out), neither
+        # of which touches \ProvidesClass.
+        installed = (ws / "example.cls").read_text(encoding="utf-8")
+        assert "2020-01-01 v0.01" in installed
+        assert "v0.05" not in installed
+
+    def test_no_bundle_configured_is_safe_noop(self, tmp_path: Path):
+        """When no bundle is set (e.g. CLI without STORAGE_DIR), turning the
+        toggle on must not raise — the install is just skipped."""
+        source = tmp_path / "src"
+        ws = tmp_path / "ws"
+        self._seed_source_with_stale_class(source)
+        ce.set_current_bundle(None)
+
+        # Should not raise.
+        prepare_workspace(source, ws, use_canonical_class_file=True)
+        assert (ws / "example.cls").is_file()  # workspace still copied
+        # Stale content survives — we have nothing canonical to swap in.
+        assert "v0.01" in (ws / "example.cls").read_text(encoding="utf-8")
+
+
+class TestPrepareQuartoWorkspaceUsesCanonicalBundle:
+    def _seed_quarto_source_with_stale_extension(self, source: Path) -> None:
+        source.mkdir()
+        (source / "paper.qmd").write_text(
+            "---\ntitle: t\nformat: example-pdf\n---\n# Body\n",
+            encoding="utf-8",
+        )
+        ext_dir = source / "_extensions" / "example-org" / "example"
+        ext_dir.mkdir(parents=True)
+        # Stale extension — different content, different `version`.
+        (ext_dir / "_extension.yml").write_text(
+            "title: Stale ext\nversion: 0.01\n", encoding="utf-8",
+        )
+        (ext_dir / "example.cls").write_text(
+            "% stale class file\n"
+            "\\ProvidesClass{example}[2020-01-01 v0.01]\n",
+            encoding="utf-8",
+        )
+        # Orphan file the canonical install must wipe (sync, not merge).
+        (ext_dir / "orphan.tex").write_text("leftover\n", encoding="utf-8")
+
+    def test_toggle_on_overwrites_stale_extension_with_canonical(
+        self, tmp_path: Path, seeded_bundle,
+    ):
+        source = tmp_path / "src"
+        ws = tmp_path / "ws"
+        self._seed_quarto_source_with_stale_extension(source)
+
+        prepare_quarto_workspace(source, ws, use_canonical_class_file=True)
+
+        ext_dir = ws / "_extensions" / "example-org" / "example"
+        yml = (ext_dir / "_extension.yml").read_text(encoding="utf-8")
+        assert "version: 0.05" in yml or 'version: "0.05"' in yml, (
+            "workspace _extension.yml not replaced with canonical"
+        )
+        assert "Stale" not in yml
+        # Orphan file must be gone — install replaces, not merges.
+        assert not (ext_dir / "orphan.tex").exists()
+        # Canonical class file is in place.
+        cls_content = (ext_dir / "example.cls").read_text(encoding="utf-8")
+        assert "v0.05" in cls_content
+        assert "v0.01" not in cls_content
+
+    def test_toggle_off_leaves_stale_extension_untouched(
+        self, tmp_path: Path, seeded_bundle,
+    ):
+        source = tmp_path / "src"
+        ws = tmp_path / "ws"
+        self._seed_quarto_source_with_stale_extension(source)
+
+        prepare_quarto_workspace(source, ws, use_canonical_class_file=False)
+
+        ext_dir = ws / "_extensions" / "example-org" / "example"
+        yml = (ext_dir / "_extension.yml").read_text(encoding="utf-8")
+        assert "Stale ext" in yml
+        assert (ext_dir / "orphan.tex").is_file()  # not pruned
+        cls_content = (ext_dir / "example.cls").read_text(encoding="utf-8")
+        assert "v0.01" in cls_content
+        assert "v0.05" not in cls_content
+
+    def test_no_bundle_configured_is_safe_noop(self, tmp_path: Path):
+        source = tmp_path / "src"
+        ws = tmp_path / "ws"
+        self._seed_quarto_source_with_stale_extension(source)
+        ce.set_current_bundle(None)
+
+        prepare_quarto_workspace(source, ws, use_canonical_class_file=True)
+
+        # Workspace was copied; stale extension survives because no canonical
+        # was available to overwrite it.
+        ext_dir = ws / "_extensions" / "example-org" / "example"
+        assert ext_dir.is_dir()
+        assert "Stale" in (ext_dir / "_extension.yml").read_text(encoding="utf-8")

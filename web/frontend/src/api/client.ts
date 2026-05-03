@@ -93,7 +93,15 @@ export async function logout(): Promise<void> {
 
 // ── Meta ──────────────────────────────────────────────────────────────────────
 
-export function getVersion(): Promise<{ version: string; ccr_cls_version: string }> {
+export interface VersionInfo {
+  version: string;
+  class_filename: string | null;
+  class_file_version: string | null;
+  quarto_extension_repo: string | null;
+  quarto_extension_version: string | null;
+}
+
+export function getVersion(): Promise<VersionInfo> {
   return apiFetch("/api/version");
 }
 
@@ -120,7 +128,7 @@ export function updateManuscript(
   doiSuffix: string,
   data: {
     fix_source?: boolean;
-    use_canonical_ccr_cls?: boolean;
+    use_canonical_class_file?: boolean;
     main_file?: string;
   },
 ): Promise<Manuscript> {
@@ -186,11 +194,11 @@ export async function uploadFiles(
 export async function startProcessing(
   doiSuffix: string,
   fix: boolean = false,
-  useCanonicalCcrCls: boolean = false,
+  useCanonicalClassFile: boolean = false,
 ): Promise<Manuscript> {
   const form = new FormData();
   form.append("fix", fix ? "true" : "false");
-  form.append("use_canonical_ccr_cls", useCanonicalCcrCls ? "true" : "false");
+  form.append("use_canonical_class_file", useCanonicalClassFile ? "true" : "false");
   return apiFetch(`/api/manuscripts/${doiSuffix}/process`, {
     method: "POST",
     body: form,

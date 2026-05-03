@@ -186,26 +186,27 @@ git push origin v0.2.0
 
 CI builds and pushes Docker images (`ccsamsterdam/jatsmith-api`, `ccsamsterdam/jatsmith-caddy`) on `v*` tags.
 
-## Syncing the CCR extension bundle
+## Configuring the canonical class file & Quarto extension
 
-The prepare step warns authors when their vendored CCR Quarto extension — `ccr.cls`, `ccrtemplate.tex`, partials, `_extension.yml`, etc. — drifts from the canonical copy. Everything in that directory is publishing-toolchain infrastructure, not author content; customizations belong in the document, not the extension. The canonical bundle lives at `src/jatsmith/ccr_canonical_extension/` and is shipped inside the Python package so the web UI's "Use most recent ccr.cls" toggle can install it into a workspace (via `install_canonical_ccr_extension`).
+The deployer points JATSmith at the journal's class file and Quarto extension via two SiteConfig fields:
 
-`src/jatsmith/ccr_cls.py` derives its pins at import time:
+- `class_file_url` — direct URL to the LaTeX class file (e.g. `https://github.com/ccr-journal/ccr-latex/blob/main/ccr.cls`). GitHub `blob/...` and `raw.githubusercontent.com/...` URLs both work; HTML URLs are normalized to raw automatically.
+- `quarto_extension_repo` — `<owner>/<repo>[@<ref>]` shorthand matching Quarto's own `quarto add` argument (e.g. `ccr-journal/ccr-quarto` or `ccr-journal/ccr-quarto@v0.5`).
 
-- `EXPECTED_CCR_CLS_VERSION` — the `% Version X.XX` comment in `ccr.cls`.
-- `EXPECTED_CCR_CLS_SHA256` — hash of `ccr.cls` alone (after CRLF→LF normalization).
-- `EXPECTED_EXTENSION_SHA256` — hash of the whole bundle (paths + normalized contents).
+Either or both may be empty. Empty disables the "Use latest class file" toggle and any drift warnings for that part. Editors set these via the in-app SiteConfig form.
 
-When upstream releases a new version, refresh the canonical bundle from [ccr-journal/ccr-quarto](https://github.com/ccr-journal/ccr-quarto):
+On startup (and again whenever the URLs change via `PUT /api/site-config`), `src/jatsmith/canonical_extension.py:fetch_canonical_bundle` downloads the class file and the repo's `_extensions/` tarball into `STORAGE_DIR/canonical/`. The cached layout is:
 
-```sh
-rm -rf src/jatsmith/ccr_canonical_extension
-cp -r ~/path/to/ccr-quarto/_extensions/ccr src/jatsmith/ccr_canonical_extension
+```
+STORAGE_DIR/canonical/
+  <class_filename>            # e.g. ccr.cls
+  extensions/
+    <owner>/<repo>/...        # e.g. ccr-journal/ccr/_extension.yml, ...
 ```
 
-The `% Version X.XX` comment and `\ProvidesClass[...vX.XX]` tag inside `ccr.cls` are the source of truth for the class version. Run `uv run pytest tests/test_ccr_cls.py` — `test_canonical_providesclass_matches_version_comment` fails if those two tags disagree, and `test_canonical_bundle_has_expected_files` fails if anyone accidentally drops a partial or the class file from the bundle.
+Network failures fall back to whatever's already cached on disk — restarts on a bad network keep working. Extension roots are discovered by `_extension.yml` markers (same heuristic Quarto uses), so a journal whose extension lives at an unusual subpath still works.
 
-Note: until in-flight changes land upstream, the canonical bundle may be ahead of `ccr-journal/ccr-quarto` on specific files (e.g. a new partial, a newer `ccr.cls`). When resyncing, make sure you don't regress those additions.
+The pipeline reads `canonical_extension.get_current_bundle()` and threads paths into `install_canonical_class_file` / `install_canonical_extensions` (when the per-manuscript `use_canonical_class_file` toggle is on) and into `warn_if_outdated` (always). The CLI doesn't fetch — it reads `STORAGE_DIR/canonical/` if `STORAGE_DIR` is set; otherwise the feature silently disables.
 
 ## Tests
 

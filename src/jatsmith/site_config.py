@@ -42,6 +42,11 @@ class SiteConfigData:
     site_name: str
     site_description: str
     header_branding: str
+    # Sources for the canonical class file & Quarto extension. Both optional;
+    # empty means the "use latest class file" feature is disabled. See
+    # ``src/jatsmith/canonical_extension.py`` for the fetch + drift logic.
+    class_file_url: str
+    quarto_extension_repo: str
 
 
 DEFAULT_SITE_CONFIG = SiteConfigData(
@@ -66,6 +71,8 @@ DEFAULT_SITE_CONFIG = SiteConfigData(
         "JATS-XML, HTML and PDF, and check and approve the results."
     ),
     header_branding="My Journal",
+    class_file_url="",
+    quarto_extension_repo="",
 )
 
 
@@ -85,6 +92,8 @@ _FIELDS = (
     "site_name",
     "site_description",
     "header_branding",
+    "class_file_url",
+    "quarto_extension_repo",
 )
 
 

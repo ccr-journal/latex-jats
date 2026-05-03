@@ -161,7 +161,7 @@ def test_manifest_written_on_success(
     storage.source_dir(doi).mkdir(parents=True, exist_ok=True)
     (storage.source_dir(doi) / "main.tex").write_text("\\documentclass{article}")
 
-    run_pipeline(doi, engine, storage, fix=True, use_canonical_ccr_cls=False)
+    run_pipeline(doi, engine, storage, fix=True, use_canonical_class_file=False)
 
     manifest_path = storage.manifest_path(doi)
     assert manifest_path.is_file()
@@ -170,7 +170,7 @@ def test_manifest_written_on_success(
     assert manifest["doi_suffix"] == doi
     assert manifest["pipeline"] == "latex"
     assert manifest["pipeline_config"] == {
-        "fix": True, "use_canonical_ccr_cls": False,
+        "fix": True, "use_canonical_class_file": False,
     }
     assert manifest["tool_versions"] == _FAKE_TOOL_VERSIONS
     assert manifest["run"]["final_status"] == ManuscriptStatus.ready.value

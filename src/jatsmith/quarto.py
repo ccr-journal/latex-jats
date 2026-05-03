@@ -18,9 +18,11 @@ import subprocess
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-from jatsmith.ccr_cls import (
-    install_canonical_ccr_extension as _install_canonical_ccr_extension,
-    warn_if_outdated as _warn_if_ccr_cls_outdated,
+from jatsmith.canonical_extension import (
+    CanonicalBundle,
+    get_current_bundle,
+    install_canonical_extensions,
+    warn_if_outdated,
 )
 from jatsmith.convert import (
     _build_mixed_citation,
@@ -46,7 +48,8 @@ logger = logging.getLogger(__name__)
 
 
 def prepare_quarto_workspace(example_dir: Path, workspace_dir: Path,
-                             use_canonical_ccr_cls: bool = False) -> bool:
+                             use_canonical_class_file: bool = False,
+                             bundle: CanonicalBundle | None = None) -> bool:
     """Copy a Quarto example into the workspace.
 
     Mirrors prepare_workspace() for LaTeX but without LaTeX-specific validation.
@@ -56,12 +59,11 @@ def prepare_quarto_workspace(example_dir: Path, workspace_dir: Path,
     If the workspace contains an ``renv.lock`` file, R package dependencies are
     restored via ``renv::restore()`` so that code chunks can execute.
 
-    If ``use_canonical_ccr_cls`` is set, the entire canonical CCR Quarto
-    extension bundle (ccr.cls, template, partials, ``_extension.yml``, …) is
-    installed into the workspace before the drift check, so the vendored
-    extension is guaranteed consistent with the canonical copy. The toggle
-    keeps its historical name for API/DB compatibility even though it now
-    syncs the whole bundle, not just ``ccr.cls``.
+    If ``use_canonical_class_file`` is set and a canonical Quarto-extension
+    bundle is available, the entire canonical extension tree (class file,
+    template, partials, ``_extension.yml``, …) is installed into the
+    workspace before the drift check, so the vendored extension matches
+    the canonical copy.
     """
     if workspace_dir.exists():
         shutil.rmtree(workspace_dir)
@@ -69,8 +71,11 @@ def prepare_quarto_workspace(example_dir: Path, workspace_dir: Path,
     shutil.copytree(example_dir, workspace_dir)
     logger.info("Prepared Quarto workspace at %s", workspace_dir)
 
-    if use_canonical_ccr_cls:
-        _install_canonical_ccr_extension(workspace_dir)
+    if bundle is None:
+        bundle = get_current_bundle()
+
+    if use_canonical_class_file and bundle is not None:
+        install_canonical_extensions(workspace_dir, bundle)
 
     # Restore R package dependencies if renv.lock is present
     renv_lock = workspace_dir / "renv.lock"
@@ -87,7 +92,7 @@ def prepare_quarto_workspace(example_dir: Path, workspace_dir: Path,
         else:
             logger.info("R packages restored from renv.lock")
 
-    _warn_if_ccr_cls_outdated(workspace_dir)
+    warn_if_outdated(workspace_dir, bundle)
     return True
 
 

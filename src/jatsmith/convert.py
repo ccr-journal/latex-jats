@@ -3561,7 +3561,16 @@ def main():
     import argparse
     import tempfile
 
+    from jatsmith import canonical_extension
+
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+
+    # Pick up a cached canonical bundle if STORAGE_DIR points at one. Lets
+    # the CLI use the same canonical class file the web service has fetched,
+    # so drift warnings line up between the two entry points.
+    bundle = canonical_extension.load_bundle_from_storage_dir()
+    if bundle is not None:
+        canonical_extension.set_current_bundle(bundle)
 
     parser = argparse.ArgumentParser()
     parser.add_argument("input", help="Input LaTeX file")

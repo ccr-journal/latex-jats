@@ -81,7 +81,7 @@ def create_manuscript(
 
 class ManuscriptUpdate(SQLModel):
     fix_source: bool | None = None
-    use_canonical_ccr_cls: bool | None = None
+    use_canonical_class_file: bool | None = None
     main_file: str | None = None       # None leaves unchanged; "" clears
 
 
@@ -96,8 +96,8 @@ def update_manuscript(
     ms = load_manuscript_for_user(doi_suffix, session, user, role)
     if body.fix_source is not None:
         ms.fix_source = body.fix_source
-    if body.use_canonical_ccr_cls is not None:
-        ms.use_canonical_ccr_cls = body.use_canonical_ccr_cls
+    if body.use_canonical_class_file is not None:
+        ms.use_canonical_class_file = body.use_canonical_class_file
     if body.main_file is not None:
         ms.main_file = body.main_file or None
     session.add(ms)

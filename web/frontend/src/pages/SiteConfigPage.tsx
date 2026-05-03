@@ -81,6 +81,28 @@ const SECTIONS: { title: string; fields: FieldDef[] }[] = [
       },
     ],
   },
+  {
+    title: "Class file & template",
+    fields: [
+      {
+        key: "class_file_url",
+        label: "URL of the canonical class file",
+        placeholder:
+          "https://github.com/ccr-journal/ccr-latex/blob/main/ccr.cls",
+        description:
+          "Direct link to the .cls (LaTeX class) file. GitHub blob/... URLs and raw.githubusercontent.com URLs both work. Leave blank if your journal doesn't ship a class file. The file is fetched on app start and when this URL changes.",
+        fullWidth: true,
+      },
+      {
+        key: "quarto_extension_repo",
+        label: "Quarto extension (owner/repo)",
+        placeholder: "ccr-journal/ccr-quarto",
+        description:
+          "Same shorthand as `quarto add owner/repo`. Append `@tag` to pin a specific tag or commit (e.g. `ccr-journal/ccr-quarto@v0.5`). Leave blank if your journal doesn't have a Quarto extension. The repo's `_extensions/` tree is fetched on app start.",
+        fullWidth: true,
+      },
+    ],
+  },
 ];
 
 export function SiteConfigPage() {

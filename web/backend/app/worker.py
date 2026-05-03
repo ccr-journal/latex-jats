@@ -444,7 +444,7 @@ def _extract_step_log(step: dict) -> str | None:
 
 def _write_manifest(
     engine: Engine, storage: Storage, doi_suffix: str,
-    *, is_quarto: bool, fix: bool, use_canonical_ccr_cls: bool,
+    *, is_quarto: bool, fix: bool, use_canonical_class_file: bool,
 ) -> None:
     """Write manifest.json next to source/ describing the run.
 
@@ -485,7 +485,7 @@ def _write_manifest(
         "pipeline": "quarto" if is_quarto else "latex",
         "pipeline_config": {
             "fix": fix,
-            "use_canonical_ccr_cls": use_canonical_ccr_cls,
+            "use_canonical_class_file": use_canonical_class_file,
         },
         "tool_versions": tool_versions,
         "run": {
@@ -519,7 +519,7 @@ def _write_manifest(
 def _run_latex_pipeline(
     doi_suffix: str, engine: Engine, storage: Storage, collector: _LogCollector,
     step_tracker: list[str], *, fix: bool = False,
-    use_canonical_ccr_cls: bool = False,
+    use_canonical_class_file: bool = False,
     main_file: str | None = None,
 ) -> None:
     """LaTeX-specific pipeline: prepare → compile → convert → check → validate."""
@@ -531,7 +531,7 @@ def _run_latex_pipeline(
     workspace_tex = prepare_workspace(
         source_dir, workspace_dir,
         fix_problems=fix,
-        use_canonical_ccr_cls=use_canonical_ccr_cls,
+        use_canonical_class_file=use_canonical_class_file,
         main_file=main_file,
     )
 
@@ -640,7 +640,7 @@ def _run_latex_pipeline(
 
 def _run_quarto_pipeline(
     doi_suffix: str, engine: Engine, storage: Storage, collector: _LogCollector,
-    step_tracker: list[str], *, use_canonical_ccr_cls: bool = False,
+    step_tracker: list[str], *, use_canonical_class_file: bool = False,
     main_file: str | None = None,
 ) -> None:
     """Quarto-specific pipeline: prepare → compile (PDF) → convert → check → validate."""
@@ -651,7 +651,7 @@ def _run_quarto_pipeline(
     # ── Step 1: prepare workspace ────────────────────────────────────
     prepare_quarto_workspace(
         source_dir, workspace_dir,
-        use_canonical_ccr_cls=use_canonical_ccr_cls,
+        use_canonical_class_file=use_canonical_class_file,
     )
 
     if main_file:
@@ -762,7 +762,7 @@ def _run_quarto_pipeline(
 
 def run_pipeline(
     doi_suffix: str, engine: Engine, storage: Storage, *,
-    fix: bool = False, use_canonical_ccr_cls: bool = False,
+    fix: bool = False, use_canonical_class_file: bool = False,
 ) -> None:
     """Execute the full conversion pipeline for a manuscript.
 
@@ -820,13 +820,13 @@ def run_pipeline(
         if is_quarto:
             _run_quarto_pipeline(
                 doi_suffix, engine, storage, collector, step_tracker,
-                use_canonical_ccr_cls=use_canonical_ccr_cls,
+                use_canonical_class_file=use_canonical_class_file,
                 main_file=main_file,
             )
         else:
             _run_latex_pipeline(
                 doi_suffix, engine, storage, collector, step_tracker,
-                fix=fix, use_canonical_ccr_cls=use_canonical_ccr_cls,
+                fix=fix, use_canonical_class_file=use_canonical_class_file,
                 main_file=main_file,
             )
 
@@ -871,7 +871,7 @@ def run_pipeline(
                     engine, storage, doi_suffix,
                     is_quarto=is_quarto,
                     fix=fix,
-                    use_canonical_ccr_cls=use_canonical_ccr_cls,
+                    use_canonical_class_file=use_canonical_class_file,
                 )
             except Exception:
                 logger.exception("Failed to write manifest for %s", doi_suffix)
