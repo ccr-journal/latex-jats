@@ -84,14 +84,16 @@ def _load() -> AuthConfig:
 
     # In production we deploy behind SITE_ADDRESS (set in .env alongside the
     # docker-compose config); derive FRONTEND_URL from it so prod only needs
-    # the one value.
+    # the one value. SITE_ADDRESS may include an explicit scheme
+    # (``http://localhost`` for the local-trial Caddy config that disables
+    # auto-TLS), in which case it's used verbatim.
     site_address = opt("SITE_ADDRESS", "")
-    # Only upgrade to https:// for real domains; localhost stays on http://
-    # (Caddy serves localhost over HTTP, no TLS cert).
-    if site_address and site_address not in ("localhost", "127.0.0.1"):
-        site_origin = f"https://{site_address}"
-    elif site_address:
+    if site_address.startswith(("http://", "https://")):
+        site_origin = site_address
+    elif site_address and site_address in ("localhost", "127.0.0.1"):
         site_origin = f"http://{site_address}"
+    elif site_address:
+        site_origin = f"https://{site_address}"
     else:
         site_origin = ""
 

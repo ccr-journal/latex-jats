@@ -6,7 +6,10 @@ services:
       - "${HTTP_PORT:-80}:80"
       - "${HTTPS_PORT:-443}:443"
     environment:
-      - SITE_ADDRESS=${SITE_ADDRESS:-localhost}
+      # Default to plain HTTP for the local-trial case so Caddy doesn't try to
+      # mint a local-CA cert. Override in .env with a bare hostname (e.g.
+      # `jats.example.com`) for production — Caddy then handles TLS.
+      - SITE_ADDRESS=${SITE_ADDRESS:-http://localhost}
     volumes:
       - caddy_data:/data
       - caddy_config:/config

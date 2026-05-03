@@ -14,7 +14,7 @@ wget -qO- https://github.com/ccr-journal/jatsmith/releases/latest/download/jatsm
 docker compose up -d
 ```
 
-This starts two containers (Caddy + FastAPI api). The defaults in `.env` run a working local instance at <https://localhost> — log in as `editor / devpass` and complete the **Site Config** form (journal name, ISSN, license, optional canonical class-file URL) to start uploading. Caddy serves a local-CA cert; your browser may prompt to trust it on first visit.
+This starts two containers (Caddy + FastAPI api). The defaults in `.env` run a working local instance at <http://localhost> — log in as `editor / devpass` and complete the **Site Config** form (journal name, ISSN, license, optional canonical class-file URL) to start uploading.
 
 Before deploying publicly, edit `.env` to set `EDITOR_CREDENTIALS` and `SITE_ADDRESS` (TLS is then handled automatically against your domain), then `docker compose up -d --force-recreate`. See [deploy/.env.example](deploy/.env.example) for every option. Data lives in the `app_storage` Docker volume; database migrations run on startup.
 
