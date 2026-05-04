@@ -6,6 +6,8 @@ JATSmith was developed for [Computational Communication Research (CCR)](https://
 
 ## Quick start
 
+To see JATSmith in action, have a look at the screenshots in our [Guided Tour](guided_tour.md)
+
 ### Stand up the web service
 
 ```sh
