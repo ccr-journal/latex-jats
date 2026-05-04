@@ -334,7 +334,9 @@ def test_completion_email_sent_on_success(
 
     mock_send.assert_called_once()
     recipients, subject, body_md, _cfg = mock_send.call_args[0]
-    assert recipients == [("Test", "alice@example.com")]
+    # Bare-email input → empty display name, so the To header is just the
+    # address (avoids Gmail spam-flagging on odd display names).
+    assert recipients == [("", "alice@example.com")]
     assert "finished" in subject.lower()
     assert "Test" in subject
     # Body has per-step bullet lines and the magic link
@@ -345,6 +347,33 @@ def test_completion_email_sent_on_success(
     # notify_email cleared after successful send
     ms = _get_manuscript(engine, doi)
     assert ms.notify_email is None
+
+
+@patch(f"{_WORKER_MODULE}.create_publisher_zip")
+@patch(f"{_WORKER_MODULE}.convert")
+@patch(f"{_WORKER_MODULE}.preprocess_for_latexml")
+@patch(f"{_WORKER_MODULE}.compile_latex", return_value=True)
+@patch(f"{_WORKER_MODULE}.prepare_workspace")
+@patch(f"{_WORKER_MODULE}.get_doi_suffix", return_value="CCR.NOTIFY.NAMED")
+def test_completion_email_parses_name_and_address(
+    mock_doi, mock_prepare, mock_compile, mock_preprocess,
+    mock_convert, mock_zip, engine, storage, reset_config,
+):
+    """A "Name <email>" input is split via email.utils.parseaddr."""
+    set_for_tests(_SMTP_CFG)
+    doi = _create_manuscript(engine, doi_suffix="CCR.NOTIFY.NAMED", init_steps=True)
+    workspace_dir = storage.prepare_output_dir(doi)
+    workspace_dir.mkdir(parents=True, exist_ok=True)
+    (workspace_dir / "main.tex").write_text("x")
+    mock_prepare.return_value = workspace_dir / "main.tex"
+    _set_notify(engine, doi, "Alice Author <alice@example.com>")
+
+    with patch("web.backend.app.email._send") as mock_send:
+        run_pipeline(doi, engine, storage)
+
+    mock_send.assert_called_once()
+    recipients, _subject, _body_md, _cfg = mock_send.call_args[0]
+    assert recipients == [("Alice Author", "alice@example.com")]
 
 
 @patch(f"{_WORKER_MODULE}.compile_latex", return_value=False)

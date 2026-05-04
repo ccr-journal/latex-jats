@@ -367,6 +367,24 @@ def test_process_rejects_invalid_notify_email(mock_pipeline, client, engine):
 
 
 @patch("web.backend.app.routes.upload.run_pipeline")
+def test_process_accepts_named_notify_email(mock_pipeline, client, engine):
+    doi = _create(client)
+    client.post(
+        f"/api/manuscripts/{doi}/upload",
+        files=[("files", ("main.tex", b"x", "text/plain"))],
+    )
+    r = client.post(
+        f"/api/manuscripts/{doi}/process",
+        data={"notify_email": "Alice Author <alice@example.com>"},
+    )
+    assert r.status_code == 200
+    with Session(engine) as session:
+        ms = session.get(Manuscript, doi)
+        # Stored verbatim; the worker re-parses with email.utils.parseaddr.
+        assert ms.notify_email == "Alice Author <alice@example.com>"
+
+
+@patch("web.backend.app.routes.upload.run_pipeline")
 def test_process_treats_blank_notify_email_as_none(mock_pipeline, client, engine):
     doi = _create(client)
     client.post(

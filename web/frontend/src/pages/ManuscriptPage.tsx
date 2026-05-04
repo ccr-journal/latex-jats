@@ -223,10 +223,14 @@ export function ManuscriptPage() {
     setStartDialogOpen(false);
   };
 
-  const defaultNotifyEmail =
-    manuscript.authors.find((a) => a.primary_contact)?.email ??
-    manuscript.authors.find((a) => a.order === 0)?.email ??
-    null;
+  const defaultRecipient = (() => {
+    const author =
+      manuscript.authors.find((a) => a.primary_contact && a.email) ??
+      manuscript.authors.find((a) => a.order === 0 && a.email) ??
+      manuscript.authors.find((a) => a.email);
+    if (!author?.email) return null;
+    return author.name ? `${author.name} <${author.email}>` : author.email;
+  })();
 
   const handleArchive = async () => {
     setArchiving(true);
@@ -694,7 +698,7 @@ export function ManuscriptPage() {
         open={startDialogOpen}
         onOpenChange={setStartDialogOpen}
         onConfirm={handleConfirmStart}
-        defaultEmail={defaultNotifyEmail}
+        defaultEmail={defaultRecipient}
         smtpEnabled={user?.smtp_enabled ?? false}
         isRerun={
           isReady || isApproved || manuscript.status === "failed"

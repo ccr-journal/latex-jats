@@ -9,7 +9,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+// Match either a bare address or an RFC 5322 "Name <addr>" form. We only
+// need to confirm the address part is well-shaped; the backend re-parses
+// with email.utils.parseaddr for the canonical split.
+const EMAIL_RE = /[^@\s<>]+@[^@\s<>]+\.[^@\s<>]+/;
 
 interface Props {
   open: boolean;
@@ -95,10 +98,10 @@ export function StartConversionDialog({
                   <Label htmlFor="notify_email">Send to</Label>
                   <Input
                     id="notify_email"
-                    type="email"
+                    type="text"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
+                    placeholder="Your Name <you@example.com>"
                     autoFocus
                   />
                 </div>

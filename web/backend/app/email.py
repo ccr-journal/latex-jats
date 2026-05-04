@@ -13,6 +13,7 @@ import logging
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.utils import formataddr
 
 import markdown as md
 
@@ -102,7 +103,10 @@ def _send(
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
     msg["From"] = cfg.smtp_from
-    msg["To"] = ", ".join(f"{name} <{email}>" for name, email in recipients)
+    # formataddr properly quotes display names with special chars and emits
+    # just the bare address when the name is empty — important for Gmail's
+    # spam heuristics (a long, odd-looking display name flags as suspicious).
+    msg["To"] = ", ".join(formataddr((name, email)) for name, email in recipients)
     msg["Reply-To"] = cfg.smtp_from
 
     msg.attach(MIMEText(plain, "plain"))

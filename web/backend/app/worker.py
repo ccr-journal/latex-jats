@@ -891,6 +891,8 @@ def _send_completion_notification(engine: Engine, doi_suffix: str) -> None:
     warning and leaves notify_email set so a later run can retry; a successful
     send clears notify_email so it's idempotent across re-runs.
     """
+    from email.utils import parseaddr
+
     from . import email as email_module
     from .config import get_config
     from .routes.manuscripts import _build_author_url, _get_or_create_token
@@ -908,7 +910,10 @@ def _send_completion_notification(engine: Engine, doi_suffix: str) -> None:
             )
             return
 
-        recipient = ms.notify_email
+        # notify_email may be either a bare address or "Name <addr>"; the
+        # display name (if any) belongs in the To header, NOT the manuscript
+        # title (which Gmail's spam heuristics dislike).
+        recipient_name, recipient_addr = parseaddr(ms.notify_email)
         title = ms.title or doi_suffix
         succeeded = ms.status == ManuscriptStatus.ready
 
@@ -926,7 +931,7 @@ def _send_completion_notification(engine: Engine, doi_suffix: str) -> None:
         # without a running loop.
         asyncio.run(
             email_module.send_invite_email(
-                subject, body_md, [(title, recipient)], cfg,
+                subject, body_md, [(recipient_name, recipient_addr)], cfg,
             )
         )
 

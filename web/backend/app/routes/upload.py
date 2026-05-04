@@ -5,6 +5,7 @@ import re
 import shutil
 import zipfile
 from datetime import datetime
+from email.utils import parseaddr
 from pathlib import Path
 
 _EMAIL_RE = re.compile(r"[^@\s]+@[^@\s]+\.[^@\s]+")
@@ -176,8 +177,14 @@ async def start_processing(
 
     if notify_email is not None:
         notify_email = notify_email.strip() or None
-    if notify_email is not None and not _EMAIL_RE.fullmatch(notify_email):
-        raise HTTPException(422, detail="notify_email is not a valid email address")
+    if notify_email is not None:
+        # Accept either a bare email or an RFC 5322 "Name <email>" form so
+        # the editor can keep the prefilled "Author Name <email>" string.
+        _name, addr = parseaddr(notify_email)
+        if not addr or not _EMAIL_RE.fullmatch(addr):
+            raise HTTPException(
+                422, detail="notify_email is not a valid email address"
+            )
 
     ms.fix_source = fix
     ms.use_canonical_class_file = use_canonical_class_file
