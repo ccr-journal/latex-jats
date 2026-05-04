@@ -1,10 +1,13 @@
 """Source file upload route."""
 
 import io
+import re
 import shutil
 import zipfile
 from datetime import datetime
 from pathlib import Path
+
+_EMAIL_RE = re.compile(r"[^@\s]+@[^@\s]+\.[^@\s]+")
 
 from typing import Literal
 
@@ -152,6 +155,7 @@ async def start_processing(
     background_tasks: BackgroundTasks,
     fix: bool = Form(False),
     use_canonical_class_file: bool = Form(False),
+    notify_email: str | None = Form(None),
     user: CurrentUser = Depends(get_current_user),
     role: Literal["editor", "author"] = Depends(get_current_role),
     session: Session = Depends(get_session),
@@ -170,8 +174,14 @@ async def start_processing(
             400, detail="No source files uploaded yet — upload before starting processing"
         )
 
+    if notify_email is not None:
+        notify_email = notify_email.strip() or None
+    if notify_email is not None and not _EMAIL_RE.fullmatch(notify_email):
+        raise HTTPException(422, detail="notify_email is not a valid email address")
+
     ms.fix_source = fix
     ms.use_canonical_class_file = use_canonical_class_file
+    ms.notify_email = notify_email
     ms.status = ManuscriptStatus.queued
     ms.job_log = ""
     ms.job_started_at = None

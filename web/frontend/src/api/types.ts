@@ -83,6 +83,7 @@ export interface CurrentUser {
   name: string | null;
   role: "editor" | "author";
   manuscript_token_scope: string | null;
+  smtp_enabled: boolean;
 }
 
 export interface OjsAuthor {

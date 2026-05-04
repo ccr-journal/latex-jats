@@ -78,6 +78,10 @@ class Manuscript(SQLModel, table=True):
     # cleared on withdraw-approval.
     approved_at: Optional[datetime] = None
     approved_by: Optional[str] = None
+    # Per-conversion email notification opt-in (Issue #37). Set by POST
+    # /process when the user opts in; cleared by the worker after a
+    # successful send. Not surfaced on ManuscriptRead — internal only.
+    notify_email: Optional[str] = None
 
 
 class ManuscriptAuthor(SQLModel, table=True):
@@ -165,6 +169,7 @@ class CurrentUserWithRole(SQLModel):
     name: Optional[str] = None
     role: str  # "editor" | "author"
     manuscript_token_scope: Optional[str] = None
+    smtp_enabled: bool = False
 
 
 class AuthorRead(SQLModel):

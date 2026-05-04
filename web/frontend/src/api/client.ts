@@ -195,10 +195,12 @@ export async function startProcessing(
   doiSuffix: string,
   fix: boolean = false,
   useCanonicalClassFile: boolean = false,
+  notifyEmail: string | null = null,
 ): Promise<Manuscript> {
   const form = new FormData();
   form.append("fix", fix ? "true" : "false");
   form.append("use_canonical_class_file", useCanonicalClassFile ? "true" : "false");
+  if (notifyEmail) form.append("notify_email", notifyEmail);
   return apiFetch(`/api/manuscripts/${doiSuffix}/process`, {
     method: "POST",
     body: form,

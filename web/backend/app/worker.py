@@ -5,6 +5,7 @@ prepare → compile → convert → validate pipeline and updates the Manuscript
 with status transitions and captured log output.
 """
 
+import asyncio
 import json
 import logging
 import shutil
@@ -875,3 +876,60 @@ def run_pipeline(
                 )
             except Exception:
                 logger.exception("Failed to write manifest for %s", doi_suffix)
+
+        try:
+            _send_completion_notification(engine, doi_suffix)
+        except Exception:
+            logger.exception("notification email failed for %s", doi_suffix)
+
+
+def _send_completion_notification(engine: Engine, doi_suffix: str) -> None:
+    """Send the opt-in completion email if one is queued for this manuscript.
+
+    Called at the end of the pipeline finally block so it fires for both
+    successful and failed runs. Best-effort: SMTP misconfiguration logs a
+    warning and leaves notify_email set so a later run can retry; a successful
+    send clears notify_email so it's idempotent across re-runs.
+    """
+    from . import email as email_module
+    from .config import get_config
+    from .routes.manuscripts import _build_author_url, _get_or_create_token
+
+    cfg = get_config()
+    with Session(engine) as session:
+        ms = session.get(Manuscript, doi_suffix)
+        if ms is None or not ms.notify_email:
+            return
+
+        if not cfg.smtp_configured:
+            logger.warning(
+                "notify_email set for %s but SMTP is not configured; skipping",
+                doi_suffix,
+            )
+            return
+
+        recipient = ms.notify_email
+        title = ms.title or doi_suffix
+        succeeded = ms.status == ManuscriptStatus.ready
+
+        token = _get_or_create_token(doi_suffix, session)
+        author_url = _build_author_url(doi_suffix, token.token)
+
+        subject, body_md = email_module.completion_template(
+            title=title,
+            succeeded=succeeded,
+            pipeline_steps=ms.pipeline_steps,
+            author_url=author_url,
+        )
+
+        # asyncio.run is safe here: BackgroundTasks run on a worker thread
+        # without a running loop.
+        asyncio.run(
+            email_module.send_invite_email(
+                subject, body_md, [(title, recipient)], cfg,
+            )
+        )
+
+        ms.notify_email = None
+        session.add(ms)
+        session.commit()

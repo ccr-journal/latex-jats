@@ -16,6 +16,7 @@ import { PipelineProgress } from "@/components/PipelineProgress";
 import { MetadataCard, MetadataDiscrepanciesInfo } from "@/components/MetadataCard";
 import { UploadZone } from "@/components/UploadZone";
 import { LinkUpstreamDialog } from "@/components/LinkUpstreamDialog";
+import { StartConversionDialog } from "@/components/StartConversionDialog";
 import { InfoButton } from "@/components/InfoButton";
 import { useAuth } from "@/auth/AuthContext";
 import { getManuscript, getStatus, getVersion, uploadFiles, startProcessing, updateManuscript, reimportOjsMetadata, approveManuscript, withdrawApproval, deleteManuscript, archiveManuscript, unarchiveManuscript, downloadUrl, downloadSourceUrl, presign, getAuthorToken, regenerateAuthorToken, getInviteTemplate, inviteAuthors, syncUpstream, unlinkUpstream, type Recipient } from "@/api/client";
@@ -206,14 +207,27 @@ export function ManuscriptPage() {
     }
   };
 
-  const handleStartProcessing = async () => {
+  const [startDialogOpen, setStartDialogOpen] = useState(false);
+
+  const handleStartProcessing = () => {
+    setStartDialogOpen(true);
+  };
+
+  const handleConfirmStart = async (notifyEmail: string | null) => {
     const updated = await startProcessing(
       doiSuffix,
       manuscript.fix_source,
       manuscript.use_canonical_class_file,
+      notifyEmail,
     );
     setManuscript(updated);
+    setStartDialogOpen(false);
   };
+
+  const defaultNotifyEmail =
+    manuscript.authors.find((a) => a.primary_contact)?.email ??
+    manuscript.authors.find((a) => a.order === 0)?.email ??
+    null;
 
   const handleArchive = async () => {
     setArchiving(true);
@@ -676,6 +690,18 @@ export function ManuscriptPage() {
           <UploadZone onUpload={handleUpload} />
         </DialogContent>
       </Dialog>
+
+      <StartConversionDialog
+        open={startDialogOpen}
+        onOpenChange={setStartDialogOpen}
+        onConfirm={handleConfirmStart}
+        defaultEmail={defaultNotifyEmail}
+        smtpEnabled={user?.smtp_enabled ?? false}
+        isRerun={
+          isReady || isApproved || manuscript.status === "failed"
+        }
+      />
+
 
       <LinkUpstreamDialog
         doiSuffix={doiSuffix}

@@ -11,7 +11,8 @@ import pytest
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine
 
-from web.backend.app.models import Manuscript, ManuscriptStatus
+from web.backend.app.config import AuthConfig, set_for_tests
+from web.backend.app.models import Manuscript, ManuscriptStatus, ManuscriptToken
 from web.backend.app.storage import Storage
 from web.backend.app.worker import init_pipeline_steps, run_pipeline
 
@@ -279,3 +280,121 @@ def test_log_capture(
 
     ms = _get_manuscript(engine, doi)
     assert "Preparing workspace" in ms.job_log
+
+
+# ── Completion-email notification hook ──────────────────────────────────────
+
+_BASE_TEST_CFG = AuthConfig(
+    editor_credentials={"editor": "x"},
+    frontend_url="http://testserver",
+    ojs_admin_token="t",
+    ojs_base_url="https://o",
+    ojs_journal_path="ccr",
+    session_token_ttl_days=30,
+)
+_SMTP_CFG = AuthConfig(
+    **{**_BASE_TEST_CFG.__dict__, "smtp_host": "smtp.test", "smtp_from": "from@test"}
+)
+
+
+@pytest.fixture
+def reset_config():
+    yield
+    set_for_tests(_BASE_TEST_CFG)
+
+
+def _set_notify(engine, doi, email):
+    with Session(engine) as session:
+        ms = session.get(Manuscript, doi)
+        ms.notify_email = email
+        session.add(ms)
+        session.commit()
+
+
+@patch(f"{_WORKER_MODULE}.create_publisher_zip")
+@patch(f"{_WORKER_MODULE}.convert")
+@patch(f"{_WORKER_MODULE}.preprocess_for_latexml")
+@patch(f"{_WORKER_MODULE}.compile_latex", return_value=True)
+@patch(f"{_WORKER_MODULE}.prepare_workspace")
+@patch(f"{_WORKER_MODULE}.get_doi_suffix", return_value="CCR.NOTIFY.OK")
+def test_completion_email_sent_on_success(
+    mock_doi, mock_prepare, mock_compile, mock_preprocess,
+    mock_convert, mock_zip, engine, storage, reset_config,
+):
+    set_for_tests(_SMTP_CFG)
+    doi = _create_manuscript(engine, doi_suffix="CCR.NOTIFY.OK", init_steps=True)
+    workspace_dir = storage.prepare_output_dir(doi)
+    workspace_dir.mkdir(parents=True, exist_ok=True)
+    (workspace_dir / "main.tex").write_text("x")
+    mock_prepare.return_value = workspace_dir / "main.tex"
+    _set_notify(engine, doi, "alice@example.com")
+
+    with patch("web.backend.app.email._send") as mock_send:
+        run_pipeline(doi, engine, storage)
+
+    mock_send.assert_called_once()
+    recipients, subject, body_md, _cfg = mock_send.call_args[0]
+    assert recipients == [("Test", "alice@example.com")]
+    assert "finished" in subject.lower()
+    assert "Test" in subject
+    # Body has per-step bullet lines and the magic link
+    assert "**prepare**" in body_md
+    assert "**convert**" in body_md
+    assert "?token=" in body_md
+
+    # notify_email cleared after successful send
+    ms = _get_manuscript(engine, doi)
+    assert ms.notify_email is None
+
+
+@patch(f"{_WORKER_MODULE}.compile_latex", return_value=False)
+@patch(f"{_WORKER_MODULE}.prepare_workspace")
+def test_completion_email_sent_on_failure(
+    mock_prepare, mock_compile, engine, storage, reset_config,
+):
+    set_for_tests(_SMTP_CFG)
+    doi = _create_manuscript(engine, doi_suffix="CCR.NOTIFY.FAIL", init_steps=True)
+    workspace_dir = storage.prepare_output_dir(doi)
+    workspace_dir.mkdir(parents=True, exist_ok=True)
+    (workspace_dir / "main.tex").write_text("x")
+    mock_prepare.return_value = workspace_dir / "main.tex"
+    _set_notify(engine, doi, "alice@example.com")
+
+    with patch("web.backend.app.email._send") as mock_send:
+        run_pipeline(doi, engine, storage)
+
+    mock_send.assert_called_once()
+    _recipients, subject, body_md, _cfg = mock_send.call_args[0]
+    assert "failed" in subject.lower()
+    # Failure body should still list the steps; at least one is failed/skipped
+    assert any(s in body_md for s in ("failed", "skipped"))
+
+    ms = _get_manuscript(engine, doi)
+    assert ms.notify_email is None
+
+
+@patch(f"{_WORKER_MODULE}.create_publisher_zip")
+@patch(f"{_WORKER_MODULE}.convert")
+@patch(f"{_WORKER_MODULE}.preprocess_for_latexml")
+@patch(f"{_WORKER_MODULE}.compile_latex", return_value=True)
+@patch(f"{_WORKER_MODULE}.prepare_workspace")
+@patch(f"{_WORKER_MODULE}.get_doi_suffix", return_value="CCR.NOTIFY.NOSMTP")
+def test_completion_email_skipped_when_smtp_not_configured(
+    mock_doi, mock_prepare, mock_compile, mock_preprocess,
+    mock_convert, mock_zip, engine, storage, reset_config,
+):
+    set_for_tests(_BASE_TEST_CFG)  # no SMTP
+    doi = _create_manuscript(engine, doi_suffix="CCR.NOTIFY.NOSMTP", init_steps=True)
+    workspace_dir = storage.prepare_output_dir(doi)
+    workspace_dir.mkdir(parents=True, exist_ok=True)
+    (workspace_dir / "main.tex").write_text("x")
+    mock_prepare.return_value = workspace_dir / "main.tex"
+    _set_notify(engine, doi, "alice@example.com")
+
+    with patch("web.backend.app.email._send") as mock_send:
+        run_pipeline(doi, engine, storage)
+
+    mock_send.assert_not_called()
+    # notify_email preserved so a future run with SMTP configured can retry
+    ms = _get_manuscript(engine, doi)
+    assert ms.notify_email == "alice@example.com"

@@ -50,6 +50,45 @@ def default_template(title: str, author_url: str, author_name: str) -> str:
     )
 
 
+def completion_template(
+    *,
+    title: str,
+    succeeded: bool,
+    pipeline_steps: list[dict] | None,
+    author_url: str,
+) -> tuple[str, str]:
+    """Build the (subject, body_md) for a conversion-completion notification."""
+    verb = "finished" if succeeded else "failed"
+    subject = f"Conversion {verb}: {title}"
+
+    if pipeline_steps:
+        steps_md = "\n".join(
+            f"- **{s.get('name', '?')}**: {s.get('status', 'unknown')}"
+            for s in pipeline_steps
+        )
+    else:
+        steps_md = "_(no step information available)_"
+
+    headline = (
+        "Your manuscript has finished conversion."
+        if succeeded
+        else "Conversion did not complete successfully."
+    )
+
+    body_md = (
+        f"{headline}\n\n"
+        f"**Manuscript:** {title}\n\n"
+        f"**Pipeline results:**\n\n"
+        f"{steps_md}\n\n"
+        f"Open the manuscript here:\n\n"
+        f"{author_url}\n\n"
+        f"Please review the proofs and any warnings or errors, then either "
+        f"approve the manuscript or upload a corrected source.\n\n"
+        f"— Computational Communication Research"
+    )
+    return subject, body_md
+
+
 def _send(
     recipients: list[tuple[str, str]],  # (name, email) pairs
     subject: str,

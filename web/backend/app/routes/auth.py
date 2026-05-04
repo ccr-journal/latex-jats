@@ -55,7 +55,12 @@ def login(body: LoginRequest, session: Session = Depends(get_session)):
     session.commit()
     return LoginResponse(
         token=token,
-        user=CurrentUserWithRole(username=body.username, name=None, role="editor"),
+        user=CurrentUserWithRole(
+            username=body.username,
+            name=None,
+            role="editor",
+            smtp_enabled=cfg.smtp_configured,
+        ),
     )
 
 
@@ -83,4 +88,5 @@ async def me(
         name=user.name,
         role=role,
         manuscript_token_scope=user.manuscript_token_scope,
+        smtp_enabled=get_config().smtp_configured,
     )

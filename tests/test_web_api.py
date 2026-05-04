@@ -332,6 +332,73 @@ def test_process_without_upload_rejected(client):
 
 
 @patch("web.backend.app.routes.upload.run_pipeline")
+def test_process_persists_notify_email(mock_pipeline, client, engine):
+    doi = _create(client)
+    client.post(
+        f"/api/manuscripts/{doi}/upload",
+        files=[("files", ("main.tex", b"x", "text/plain"))],
+    )
+    r = client.post(
+        f"/api/manuscripts/{doi}/process",
+        data={"notify_email": "  alice@example.com  "},
+    )
+    assert r.status_code == 200
+    with Session(engine) as session:
+        ms = session.get(Manuscript, doi)
+        assert ms.notify_email == "alice@example.com"
+
+
+@patch("web.backend.app.routes.upload.run_pipeline")
+def test_process_rejects_invalid_notify_email(mock_pipeline, client, engine):
+    doi = _create(client)
+    client.post(
+        f"/api/manuscripts/{doi}/upload",
+        files=[("files", ("main.tex", b"x", "text/plain"))],
+    )
+    r = client.post(
+        f"/api/manuscripts/{doi}/process",
+        data={"notify_email": "not-an-email"},
+    )
+    assert r.status_code == 422
+    with Session(engine) as session:
+        ms = session.get(Manuscript, doi)
+        assert ms.notify_email is None
+        assert ms.status == ManuscriptStatus.uploaded
+
+
+@patch("web.backend.app.routes.upload.run_pipeline")
+def test_process_treats_blank_notify_email_as_none(mock_pipeline, client, engine):
+    doi = _create(client)
+    client.post(
+        f"/api/manuscripts/{doi}/upload",
+        files=[("files", ("main.tex", b"x", "text/plain"))],
+    )
+    r = client.post(
+        f"/api/manuscripts/{doi}/process",
+        data={"notify_email": "   "},
+    )
+    assert r.status_code == 200
+    with Session(engine) as session:
+        ms = session.get(Manuscript, doi)
+        assert ms.notify_email is None
+
+
+def test_me_includes_smtp_enabled(client):
+    r = client.get("/api/auth/me")
+    assert r.status_code == 200
+    body = r.json()
+    assert "smtp_enabled" in body
+    assert body["smtp_enabled"] is False  # TEST_CFG has no SMTP
+
+    cfg_with_smtp = AuthConfig(
+        **{**TEST_CFG.__dict__, "smtp_host": "smtp.test", "smtp_from": "test@test.com"}
+    )
+    set_for_tests(cfg_with_smtp)
+    r = client.get("/api/auth/me")
+    assert r.json()["smtp_enabled"] is True
+
+
+@patch("web.backend.app.routes.upload.run_pipeline")
 def test_upload_zip(mock_pipeline, client, test_storage):
     doi = _create(client)
     buf = io.BytesIO()
