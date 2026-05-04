@@ -24,7 +24,7 @@ router = APIRouter(prefix="/api/manuscripts", tags=["download"])
 # Files the worker writes back into source_dir that aren't part of the
 # author's upload. Excluded from the source archive so the zip stays a
 # faithful copy of "what came in".
-_WORKER_INJECTED_FILES = frozenset({"main.pdf"})
+_WORKER_INJECTED_FILES = frozenset({"main.pdf", "manifest.json"})
 
 
 @router.get("/{doi_suffix}/download")

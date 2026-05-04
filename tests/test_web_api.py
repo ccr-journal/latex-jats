@@ -559,6 +559,35 @@ def test_download_source_zips_author_upload(client, test_storage):
     assert "main.pdf" not in names
 
 
+def test_download_source_dedupes_stale_manifest_from_reupload(client, test_storage):
+    """Re-uploading a previously-downloaded source archive leaves a stale
+    manifest.json in source_dir/. The download must still emit exactly one
+    manifest.json — the current run's — not the stale one."""
+    doi = _create(client)
+    source = test_storage.source_dir(doi)
+    source.mkdir(parents=True, exist_ok=True)
+    (source / "main.tex").write_text("\\documentclass{ccr}\n", encoding="utf-8")
+    # Stale manifest from a prior run, smuggled in via re-upload
+    (source / "manifest.json").write_text(
+        json.dumps({"jatsmith_version": "0.0.0-stale", "doi_suffix": doi}),
+        encoding="utf-8",
+    )
+    # Current run's manifest
+    test_storage.manifest_path(doi).write_text(
+        json.dumps({"jatsmith_version": "0.0.0-current", "doi_suffix": doi}),
+        encoding="utf-8",
+    )
+
+    r = client.get(f"/api/manuscripts/{doi}/download/source")
+    assert r.status_code == 200
+
+    with zipfile.ZipFile(io.BytesIO(r.content)) as zf:
+        names = zf.namelist()
+        manifest = json.loads(zf.read("manifest.json"))
+    assert names.count("manifest.json") == 1
+    assert manifest["jatsmith_version"] == "0.0.0-current"
+
+
 def test_download_source_works_without_manifest(client, test_storage):
     """Older manuscripts that pre-date the manifest writer should still download."""
     doi = _create(client)
