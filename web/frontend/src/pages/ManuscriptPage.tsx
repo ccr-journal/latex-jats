@@ -122,6 +122,7 @@ export function ManuscriptPage() {
         setManuscript(updated);
         if (updated.status !== "queued" && updated.status !== "processing") {
           clearInterval(id);
+          setMetadataRefreshKey((k) => k + 1);
         }
       } catch {
         // Ignore transient errors during polling
