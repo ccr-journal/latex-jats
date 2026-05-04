@@ -93,6 +93,7 @@ export function ManuscriptPage() {
   const [linkUpstreamOpen, setLinkUpstreamOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [upstreamError, setUpstreamError] = useState<string | null>(null);
+  const [startDialogOpen, setStartDialogOpen] = useState(false);
 
   // Initial fetch
   useEffect(() => {
@@ -206,8 +207,6 @@ export function ManuscriptPage() {
       setWithdrawing(false);
     }
   };
-
-  const [startDialogOpen, setStartDialogOpen] = useState(false);
 
   const handleStartProcessing = () => {
     setStartDialogOpen(true);
