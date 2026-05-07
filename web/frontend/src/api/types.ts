@@ -102,6 +102,7 @@ export interface DiagnosisChat {
   messages: DiagnosisMessage[];
   created_at: string;
   updated_at: string;
+  is_stale: boolean;
 }
 
 export interface OjsAuthor {

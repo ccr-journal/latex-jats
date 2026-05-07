@@ -96,6 +96,8 @@ export function DiagnosisCard({ manuscript }: DiagnosisCardProps) {
 
   const messages = chat?.messages ?? [];
   const hasMessages = messages.length > 0;
+  const isStale = chat?.is_stale ?? false;
+  const hasEverConverted = manuscript.job_completed_at != null;
 
   return (
     <Card>
@@ -120,7 +122,20 @@ export function DiagnosisCard({ manuscript }: DiagnosisCardProps) {
           </p>
         )}
 
-        {enabled && hasMessages && (
+        {enabled && !hasEverConverted && (
+          <p className="text-sm text-muted-foreground">
+            Ask Claude will be available once the conversion completes.
+          </p>
+        )}
+
+        {enabled && hasEverConverted && isStale && (
+          <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200">
+            This conversation is based on a previous conversion. If you want to
+            diagnose the new conversion, clear the conversation and start over.
+          </div>
+        )}
+
+        {enabled && hasEverConverted && hasMessages && (
           <div className="flex max-h-[480px] flex-col gap-3 overflow-y-auto rounded-md border bg-muted/30 p-3">
             {messages.map((m, i) => (
               <div
@@ -143,7 +158,21 @@ export function DiagnosisCard({ manuscript }: DiagnosisCardProps) {
           </div>
         )}
 
-        {enabled && (
+        {enabled && hasEverConverted && isStale && (
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setClearDialogOpen(true)}
+              disabled={busy}
+            >
+              Clear conversation
+            </Button>
+          </div>
+        )}
+
+        {enabled && hasEverConverted && !isStale && (
           <div className="flex flex-col gap-2">
             <Textarea
               value={draft}

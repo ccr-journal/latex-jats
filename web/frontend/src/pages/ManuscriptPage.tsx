@@ -972,13 +972,10 @@ export function ManuscriptPage() {
       </Card>
       )}
 
-      {/* Ask Claude — visible whenever the pipeline has produced output to
-          discuss (failed, ready, or approved). Hidden while queued/processing
-          so we don't ask Claude about a half-finished run, and hidden when
-          the user has nothing uploaded yet. */}
-      {hasBeenUploaded && !isProcessing && (
-        <DiagnosisCard manuscript={manuscript} />
-      )}
+      {/* Ask Claude — always visible (matches View proofs). Internally
+          renders a stub until the first conversion completes; see
+          DiagnosisCard. */}
+      <DiagnosisCard manuscript={manuscript} />
     </div>
   );
 }

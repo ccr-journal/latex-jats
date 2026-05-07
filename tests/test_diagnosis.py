@@ -298,6 +298,59 @@ def test_author_can_reset_their_own_chat(
     assert r.json() is None
 
 
+def test_chat_marked_stale_after_reconversion(
+    client, engine, test_storage, claude_enabled, fake_claude
+):
+    doi = "CCR2025.1.1.STALE"
+    _make_failed_manuscript(engine, test_storage, doi)
+    client.post(f"/api/manuscripts/{doi}/diagnosis/messages", json={"content": ""})
+
+    # Simulate a re-conversion completing after the chat was created.
+    with Session(engine) as session:
+        ms = session.get(Manuscript, doi)
+        assert ms is not None
+        ms.job_completed_at = datetime.utcnow() + timedelta(minutes=1)
+        session.add(ms)
+        session.commit()
+
+    r = client.get(f"/api/manuscripts/{doi}/diagnosis")
+    assert r.status_code == 200
+    assert r.json()["is_stale"] is True
+
+
+def test_post_409_on_stale_chat(
+    client, engine, test_storage, claude_enabled, fake_claude
+):
+    doi = "CCR2025.1.1.STALE2"
+    _make_failed_manuscript(engine, test_storage, doi)
+    client.post(f"/api/manuscripts/{doi}/diagnosis/messages", json={"content": ""})
+
+    with Session(engine) as session:
+        ms = session.get(Manuscript, doi)
+        assert ms is not None
+        ms.job_completed_at = datetime.utcnow() + timedelta(minutes=1)
+        session.add(ms)
+        session.commit()
+
+    # Author follow-up after re-conversion is rejected.
+    r = client.post(
+        f"/api/manuscripts/{doi}/diagnosis/messages",
+        json={"content": "what about the figures?"},
+    )
+    assert r.status_code == 409
+    # Clearing then starting fresh works.
+    assert client.delete(f"/api/manuscripts/{doi}/diagnosis").status_code == 204
+    r = client.post(
+        f"/api/manuscripts/{doi}/diagnosis/messages", json={"content": ""}
+    )
+    # The new chat is created "now", but in this test job_completed_at was
+    # set to a future timestamp to force the stale state — so the new chat
+    # also reads as stale. In real use, new chats are created after the
+    # conversion completes, so created_at > job_completed_at and is_stale
+    # is False.
+    assert r.status_code == 200
+
+
 def test_include_source_false_omits_source_files(
     client, engine, test_storage, claude_enabled, fake_claude
 ):

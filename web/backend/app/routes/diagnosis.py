@@ -23,6 +23,7 @@ from ..models import (
     DiagnosisChatRead,
     DiagnosisMessageCreate,
     DiagnosisMessageRead,
+    Manuscript,
 )
 from ..storage import Storage
 
@@ -36,13 +37,22 @@ router = APIRouter(prefix="/api/manuscripts", tags=["diagnosis"])
 RATE_LIMIT_PER_DAY = 5
 
 
-def _to_read(chat: DiagnosisChat) -> DiagnosisChatRead:
+def _is_stale(chat: DiagnosisChat, ms: Manuscript) -> bool:
+    """Has the pipeline run after this chat was created?"""
+    return (
+        ms.job_completed_at is not None
+        and ms.job_completed_at > chat.created_at
+    )
+
+
+def _to_read(chat: DiagnosisChat, ms: Manuscript) -> DiagnosisChatRead:
     return DiagnosisChatRead(
         id=chat.id,
         manuscript_id=chat.manuscript_id,
         messages=[DiagnosisMessageRead(**m) for m in (chat.messages or [])],
         created_at=chat.created_at,
         updated_at=chat.updated_at,
+        is_stale=_is_stale(chat, ms),
     )
 
 
@@ -68,11 +78,11 @@ def get_diagnosis(
     role: Literal["editor", "author"] = Depends(get_current_role),
     session: Session = Depends(get_session),
 ):
-    load_manuscript_for_user(doi_suffix, session, user, role)
+    ms = load_manuscript_for_user(doi_suffix, session, user, role)
     chat = session.exec(
         select(DiagnosisChat).where(DiagnosisChat.manuscript_id == doi_suffix)
     ).first()
-    return _to_read(chat) if chat is not None else None
+    return _to_read(chat, ms) if chat is not None else None
 
 
 @router.post("/{doi_suffix}/diagnosis/messages", response_model=DiagnosisChatRead)
@@ -94,6 +104,14 @@ def post_diagnosis_message(
     chat = session.exec(
         select(DiagnosisChat).where(DiagnosisChat.manuscript_id == doi_suffix)
     ).first()
+    if chat is not None and _is_stale(chat, ms):
+        raise HTTPException(
+            http_status.HTTP_409_CONFLICT,
+            detail=(
+                "This conversation predates the latest conversion. "
+                "Clear it and start a new chat to diagnose the new run."
+            ),
+        )
     if chat is None:
         chat = DiagnosisChat(manuscript_id=doi_suffix, messages=[])
         session.add(chat)
@@ -154,7 +172,7 @@ def post_diagnosis_message(
     session.add(chat)
     session.commit()
     session.refresh(chat)
-    return _to_read(chat)
+    return _to_read(chat, ms)
 
 
 @router.delete("/{doi_suffix}/diagnosis", status_code=http_status.HTTP_204_NO_CONTENT)

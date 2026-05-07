@@ -292,6 +292,12 @@ class DiagnosisChatRead(SQLModel):
     messages: list[DiagnosisMessageRead] = []
     created_at: datetime
     updated_at: datetime
+    # True when the manuscript has been re-converted since this chat was
+    # created. The chat's first turn captures source + logs at that moment;
+    # if the pipeline has run again the chat is reasoning about an old
+    # state, so the UI shows a warning and disables follow-ups (the user
+    # can still read the prior advice; clearing starts a fresh chat).
+    is_stale: bool = False
 
 
 class DiagnosisMessageCreate(SQLModel):
