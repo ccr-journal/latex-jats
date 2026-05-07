@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
+from .. import diagnosis
 from ..config import get_config
 from ..deps import get_current_role, get_current_user, get_session
 from ..models import AccessToken, CurrentUser, CurrentUserWithRole
@@ -60,6 +61,7 @@ def login(body: LoginRequest, session: Session = Depends(get_session)):
             name=None,
             role="editor",
             smtp_enabled=cfg.smtp_configured,
+            claude_api_enabled=diagnosis.is_enabled(),
         ),
     )
 
@@ -89,4 +91,5 @@ async def me(
         role=role,
         manuscript_token_scope=user.manuscript_token_scope,
         smtp_enabled=get_config().smtp_configured,
+        claude_api_enabled=diagnosis.is_enabled(),
     )

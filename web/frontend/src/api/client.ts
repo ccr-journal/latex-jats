@@ -1,5 +1,6 @@
 import type {
   CurrentUser,
+  DiagnosisChat,
   Manuscript,
   ManuscriptCreate,
   MetadataComparison,
@@ -174,6 +175,30 @@ export function unarchiveManuscript(doiSuffix: string): Promise<Manuscript> {
 
 export function getStatus(doiSuffix: string): Promise<Manuscript> {
   return apiFetch(`/api/manuscripts/${doiSuffix}/status`);
+}
+
+export function getDiagnosis(
+  doiSuffix: string,
+): Promise<DiagnosisChat | null> {
+  return apiFetch(`/api/manuscripts/${doiSuffix}/diagnosis`);
+}
+
+export function postDiagnosisMessage(
+  doiSuffix: string,
+  content: string,
+  includeSource: boolean = true,
+): Promise<DiagnosisChat> {
+  return apiFetch(`/api/manuscripts/${doiSuffix}/diagnosis/messages`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ content, include_source: includeSource }),
+  });
+}
+
+export function resetDiagnosis(doiSuffix: string): Promise<void> {
+  return apiFetch(`/api/manuscripts/${doiSuffix}/diagnosis`, {
+    method: "DELETE",
+  });
 }
 
 export async function uploadFiles(

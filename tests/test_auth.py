@@ -71,6 +71,7 @@ def test_login_success(client, engine):
         "role": "editor",
         "manuscript_token_scope": None,
         "smtp_enabled": False,
+        "claude_api_enabled": False,
     }
     assert body["token"]
     with Session(engine) as session:
@@ -122,6 +123,7 @@ def test_me_returns_editor_for_logged_in_user(client, engine):
         "role": "editor",
         "manuscript_token_scope": None,
         "smtp_enabled": False,
+        "claude_api_enabled": False,
     }
 
 

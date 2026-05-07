@@ -161,6 +161,10 @@ storage/                    runtime file storage (gitignored)
       output/               pipeline outputs: prepare logs, JATS XML, HTML, PDF, images, zip
 ```
 
+## "Ask Claude" diagnosis chat
+
+Editors and authors can ask Claude to diagnose conversion failures (or merely puzzling output) from the manuscript page. The card lives at the bottom of `ManuscriptPage` and appears whenever the manuscript has been uploaded and is not currently queued/processing. The chat is persisted as one row per manuscript in `diagnosischat` (single chat per manuscript; editors see the same transcript as the author and can reset it). All routes live in [web/backend/app/routes/diagnosis.py](web/backend/app/routes/diagnosis.py); prompt assembly and the Anthropic call live in [web/backend/app/diagnosis.py](web/backend/app/diagnosis.py). Sonnet 4.6, prompt caching on the system block, max 5 user messages per manuscript per day. Gated by the `ANTHROPIC_API_KEY` env var: when unset, `/api/auth/me` reports `claude_api_enabled: false` and the frontend hides the card's input.
+
 ## Authentication and access control
 
 - **Editor login** — editors sign in with username + password via `POST /api/auth/login`. Credentials come from the `EDITOR_CREDENTIALS` env var: a plain string creates a single `editor` user with that password, or use `user1:pw1,user2:pw2` for multiple accounts. A successful login mints an `AccessToken` row; the role is trivially "editor" whenever an `AccessToken` is presented.

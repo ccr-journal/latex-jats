@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { StatusBadge } from "@/components/StatusBadge";
 import { PipelineProgress } from "@/components/PipelineProgress";
+import { DiagnosisCard } from "@/components/DiagnosisCard";
 import { MetadataCard, MetadataDiscrepanciesInfo } from "@/components/MetadataCard";
 import { UploadZone } from "@/components/UploadZone";
 import { LinkUpstreamDialog } from "@/components/LinkUpstreamDialog";
@@ -969,6 +970,14 @@ export function ManuscriptPage() {
           )}
         </CardContent>
       </Card>
+      )}
+
+      {/* Ask Claude — visible whenever the pipeline has produced output to
+          discuss (failed, ready, or approved). Hidden while queued/processing
+          so we don't ask Claude about a half-finished run, and hidden when
+          the user has nothing uploaded yet. */}
+      {hasBeenUploaded && !isProcessing && (
+        <DiagnosisCard manuscript={manuscript} />
       )}
     </div>
   );

@@ -84,6 +84,24 @@ export interface CurrentUser {
   role: "editor" | "author";
   manuscript_token_scope: string | null;
   smtp_enabled: boolean;
+  claude_api_enabled: boolean;
+}
+
+export interface DiagnosisMessage {
+  role: "user" | "assistant";
+  content: string;
+  created_at: string;
+  input_tokens?: number;
+  output_tokens?: number;
+  cache_read_tokens?: number;
+}
+
+export interface DiagnosisChat {
+  id: string;
+  manuscript_id: string;
+  messages: DiagnosisMessage[];
+  created_at: string;
+  updated_at: string;
 }
 
 export interface OjsAuthor {

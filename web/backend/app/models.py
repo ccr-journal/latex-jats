@@ -109,6 +109,24 @@ class ManuscriptToken(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
+class DiagnosisChat(SQLModel, table=True):
+    """One Claude diagnosis chat per manuscript (Issue #36).
+
+    Stores the full transcript so editors can audit what Claude told the
+    author. ``messages`` is a JSON list of dicts with shape
+    ``{role, content, created_at, input_tokens?, output_tokens?, cache_read_tokens?}``.
+    Usage counters are populated on assistant turns for cost monitoring;
+    they're absent on user turns.
+    """
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    manuscript_id: str = Field(
+        foreign_key="manuscript.doi_suffix", unique=True, index=True
+    )
+    messages: list = Field(default_factory=list, sa_column=Column(JSON, nullable=False))
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
 class SiteConfig(SQLModel, table=True):
     """Singleton row (id=1) holding journal-identity config that used to live in
     convert.py constants and OJS_* env vars. Edited via /api/site-config; seeded
@@ -170,6 +188,7 @@ class CurrentUserWithRole(SQLModel):
     role: str  # "editor" | "author"
     manuscript_token_scope: Optional[str] = None
     smtp_enabled: bool = False
+    claude_api_enabled: bool = False
 
 
 class AuthorRead(SQLModel):
@@ -256,6 +275,32 @@ class SiteConfigRead(SQLModel):
     quarto_extension_repo: str
     configured_at: Optional[datetime] = None
     updated_at: datetime
+
+
+class DiagnosisMessageRead(SQLModel):
+    role: str  # "user" | "assistant"
+    content: str
+    created_at: str  # iso8601
+    input_tokens: Optional[int] = None
+    output_tokens: Optional[int] = None
+    cache_read_tokens: Optional[int] = None
+
+
+class DiagnosisChatRead(SQLModel):
+    id: str
+    manuscript_id: str
+    messages: list[DiagnosisMessageRead] = []
+    created_at: datetime
+    updated_at: datetime
+
+
+class DiagnosisMessageCreate(SQLModel):
+    content: str = ""
+    # Only consulted on the first turn — controls whether the failure
+    # context attached as the seed message includes the source-file
+    # bundle, or just the pipeline logs. Ignored on follow-ups (the
+    # source is already in the conversation history).
+    include_source: bool = True
 
 
 class SiteConfigUpdate(SQLModel):
