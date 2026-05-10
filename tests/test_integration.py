@@ -177,6 +177,55 @@ def test_authors_names_and_affiliations(tmp_path):
 
 
 @pytest.mark.integration
+def test_authors_multiple_affiliations_via_double_backslash(tmp_path):
+    """An author with multiple affiliations separated by \\\\ inside a single
+    \\authorsaffiliations entry produces multiple <aff> children on that
+    author's <contrib>."""
+    output = tmp_path / "output.xml"
+    tex = _prepare_fixture(FIXTURES / "authors_multi_affil.tex", tmp_path)
+    run_latexmlc(str(tex), str(output), log_dir=tmp_path)
+
+    root = ET.parse(output).getroot()
+    contribs = root.findall(".//contrib[@contrib-type='author']")
+    assert len(contribs) == 2
+
+    affs1 = [(a.text or "").strip() for a in contribs[0].findall(".//aff")]
+    assert affs1 == ["University of Amsterdam", "Vrije Universiteit Amsterdam"]
+
+    affs2 = [(a.text or "").strip() for a in contribs[1].findall(".//aff")]
+    assert affs2 == ["Radboud University"]
+
+
+@pytest.mark.integration
+def test_collapse_affiliations_multi_aff_per_author(tmp_path):
+    """collapse_affiliations handles authors with multiple <aff> children
+    (from \\\\-split affiliations), emitting multiple <xref ref-type='aff'>
+    on the contrib and one <aff> sibling per unique affiliation."""
+    output = tmp_path / "output.xml"
+    tex = _prepare_fixture(FIXTURES / "authors_multi_affil.tex", tmp_path)
+    run_latexmlc(str(tex), str(output), log_dir=tmp_path)
+    collapse_affiliations(str(output))
+
+    cg = ET.parse(output).getroot().find(".//contrib-group")
+    assert cg is not None
+    contribs = cg.findall("contrib")
+    assert len(contribs) == 2
+
+    # First author has two aff xrefs, second has one.
+    rids1 = [x.get("rid") for x in contribs[0].findall("xref[@ref-type='aff']")]
+    rids2 = [x.get("rid") for x in contribs[1].findall("xref[@ref-type='aff']")]
+    assert len(rids1) == 2
+    assert len(rids2) == 1
+
+    aff_by_id = {a.get("id"): (a.text or "").strip() for a in cg.findall("aff")}
+    assert [aff_by_id[r] for r in rids1] == [
+        "University of Amsterdam",
+        "Vrije Universiteit Amsterdam",
+    ]
+    assert [aff_by_id[r] for r in rids2] == ["Radboud University"]
+
+
+@pytest.mark.integration
 def test_collapse_affiliations_post_pipeline(tmp_path):
     """After collapse_affiliations runs, shared affiliations collapse to a
     single <aff> sibling of <contrib> inside <contrib-group>, linked by

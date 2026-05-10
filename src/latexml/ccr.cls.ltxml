@@ -84,6 +84,12 @@ DefConstructor('\ccr@oneaffil{}',
 DefMacro('\ccr@authoraffil{}{}',
     '\ccr@oneauthor{#1}\@add@to@frontmatter{ltx:creator}{\ccr@oneaffil{#2}}');
 
+# Append an additional affiliation to the most recently added \ltx:creator.
+# Used when a single affiliation entry contains \\ to indicate multiple affs
+# for the same author.
+DefMacro('\ccr@addaffil{}',
+    '\@add@to@frontmatter{ltx:creator}{\ccr@oneaffil{#1}}');
+
 # Brace-aware comma splitter for affiliation list like "{A, B}, {C}"
 sub _ccr_split_brace_comma {
     my ($s) = @_;
@@ -129,8 +135,17 @@ DefMacro('\authorsaffiliations{}', sub {
         $aff =~ s/^\s*\{|\}\s*$//g;  # strip outer {}
         $aff =~ s/,\s*$//;            # strip trailing comma
         $aff =~ s/^\s+|\s+$//g;       # trim
+        # Split on \\ so authors can list multiple affiliations for one author
+        # as e.g. \authorsaffiliations{{Aff A \\ Aff B}, {Aff C}}.
+        my @sub_affs = map { s/^\s+|\s+$//gr } split(/\\\\/, $aff);
+        @sub_affs = ('') unless @sub_affs;
         push @tokens, Invocation(T_CS('\ccr@authoraffil'),
-            Tokenize($name), Tokenize($aff));
+            Tokenize($name), Tokenize($sub_affs[0]));
+        for my $j (1 .. $#sub_affs) {
+            next if $sub_affs[$j] eq '';
+            push @tokens, Invocation(T_CS('\ccr@addaffil'),
+                Tokenize($sub_affs[$j]));
+        }
     }
     return @tokens; });
 
