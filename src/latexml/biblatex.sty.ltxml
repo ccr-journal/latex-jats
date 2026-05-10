@@ -316,6 +316,12 @@ DefMacro('\unspace',                '\relax');     # ?
 DefMacro('\blx@imc@resetpunctfont', '\relax');     # ?
 DefMacro('\blx@postpunct',          '\@empty');    # ?
 DefRegister('\c@highnamepenalty' => Number(0));
+# URL line-break penalty counters; xurl.sty calls \setcounter on these when
+# biblatex is loaded. They control PDF typesetting only and are irrelevant to
+# JATS output, but must be real registers so \setcounter doesn't warn.
+DefRegister('\c@biburllcpenalty'  => Number(0));
+DefRegister('\c@biburlucpenalty'  => Number(0));
+DefRegister('\c@biburlnumpenalty' => Number(0));
 
 DefMacro('\addslash',  '/\hskip\z@skip');
 DefMacro('\adddot',    '.');
