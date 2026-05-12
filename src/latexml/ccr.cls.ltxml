@@ -150,6 +150,68 @@ DefMacro('\authorsaffiliations{}', sub {
     return @tokens; });
 
 DefMacro('\show@authorsaffiliations', '\textbf{Authors Affiliations Placeholder}');
+
+# Label-based author/affiliation API introduced in ccr.cls v0.09:
+#   \addauthor[label1,label2]{Name}
+#   \addaffiliation{label}[Department]{Organization}{ISO country code}
+# Both forms may appear in any order in the preamble. We queue the data here
+# and flush it at \begin{document}, synthesizing \ccr@authoraffil / \ccr@addaffil
+# invocations so the rest of the pipeline (collapse_affiliations, JATS XSLT)
+# stays unchanged. The affiliation text is composed as "Dept, Org, CC", with
+# Dept omitted when blank, matching what the printed PDF shows.
+DefMacro('\addaffiliation{}[]{}{}', sub {
+    my ($gullet, $label, $dept, $org, $cc) = @_;
+    my $key = ToString($label);
+    my $affs = LookupValue('CCR_new_affs') || {};
+    $$affs{$key} = {
+        dept => ToString($dept),
+        org  => ToString($org),
+        cc   => uc(ToString($cc)),
+    };
+    AssignValue('CCR_new_affs' => $affs, 'global');
+    (); });
+
+DefMacro('\addauthor[]{}', sub {
+    my ($gullet, $labels, $name) = @_;
+    my $queue = LookupValue('CCR_new_authors') || [];
+    push @$queue, [ ToString($name), ToString($labels) ];
+    AssignValue('CCR_new_authors' => $queue, 'global');
+    (); });
+
+DefMacro('\ccr@flush@newauthors', sub {
+    my $queue = LookupValue('CCR_new_authors') || [];
+    my $affs  = LookupValue('CCR_new_affs')   || {};
+    return () unless @$queue;
+    my @tokens = ();
+    for my $entry (@$queue) {
+        my ($name, $labels_str) = @$entry;
+        my @labels = grep { length } map { s/^\s+|\s+$//gr } split(/,/, $labels_str);
+        my @aff_texts;
+        for my $lbl (@labels) {
+            unless (exists $$affs{$lbl}) {
+                Info('ccr', 'addauthor',
+                     "Unknown affiliation label '$lbl' on \\addauthor — "
+                   . "no matching \\addaffiliation declaration");
+                next;
+            }
+            my $a = $$affs{$lbl};
+            my $text = join(', ',
+                grep { length } ($$a{dept}, $$a{org}, $$a{cc}));
+            push @aff_texts, $text;
+        }
+        @aff_texts = ('') unless @aff_texts;
+        push @tokens, Invocation(T_CS('\ccr@authoraffil'),
+            Tokenize($name), Tokenize($aff_texts[0]));
+        for my $i (1 .. $#aff_texts) {
+            push @tokens, Invocation(T_CS('\ccr@addaffil'),
+                Tokenize($aff_texts[$i]));
+        }
+    }
+    return @tokens; });
+
+# Flush at \begin{document}, after all preamble \addauthor / \addaffiliation
+# calls have been seen. A no-op when only the legacy API is used.
+AtBeginDocument('\ccr@flush@newauthors');
 DefMacro('\volume', '');
 DefMacro('\show@volume', 'X');
 DefMacro('\pubnumber', '');

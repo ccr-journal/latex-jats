@@ -177,6 +177,34 @@ def test_authors_names_and_affiliations(tmp_path):
 
 
 @pytest.mark.integration
+def test_addauthor_label_api(tmp_path):
+    """\\addauthor / \\addaffiliation produce the same contrib/aff shape as the legacy API.
+
+    Affiliation text is composed as "Dept, Org, CC" (dept omitted when blank).
+    """
+    output = tmp_path / "output.xml"
+    tex = _prepare_fixture(FIXTURES / "authors_label_api.tex", tmp_path)
+    run_latexmlc(str(tex), str(output), log_dir=tmp_path)
+    collapse_affiliations(str(output))
+
+    cg = ET.parse(output).getroot().find(".//contrib-group")
+    assert cg is not None
+    contribs = cg.findall("contrib")
+    assert len(contribs) == 2
+
+    # Jane Doe → uva, vu (two xrefs); John van der Berg → uva (one xref).
+    rids1 = [x.get("rid") for x in contribs[0].findall("xref[@ref-type='aff']")]
+    rids2 = [x.get("rid") for x in contribs[1].findall("xref[@ref-type='aff']")]
+    assert len(rids1) == 2
+    assert len(rids2) == 1
+    assert rids1[0] == rids2[0]  # Jane's first aff (uva) is the same as John's.
+
+    aff_texts = {a.get("id"): " ".join(a.itertext()).strip() for a in cg.findall("aff")}
+    assert "Communication Science, University of Amsterdam, NL" in aff_texts.values()
+    assert "Vrije Universiteit Amsterdam, NL" in aff_texts.values()
+
+
+@pytest.mark.integration
 def test_authors_multiple_affiliations_via_double_backslash(tmp_path):
     """An author with multiple affiliations separated by \\\\ inside a single
     \\authorsaffiliations entry produces multiple <aff> children on that
