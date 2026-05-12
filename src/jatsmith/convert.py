@@ -900,6 +900,60 @@ def fix_table_in_p(jats_file):
     tree.write(jats_file, encoding="unicode")
 
 
+def fix_fig_group_structure(jats_file):
+    """Wrap bare <graphic> children of <fig-group> in <fig>.
+
+    Ingenta/AUP only renders a <fig-group> whose children are full <fig>
+    elements (the RIGH shape). A <fig-group> with bare <graphic> children
+    (the YAO shape) silently fails to render. LaTeXML's stock JATS XSLT can
+    emit the bare shape from \\subfloat with no caption, so we rewrite it
+    here.
+
+    For each <fig-group>, any child that is a bare <graphic> (or a stray
+    <p> wrapping a single <graphic>) is wrapped in a synthetic
+    <fig id="{group_id}.sf{n}"> with the <graphic> moved inside. No
+    synthetic <label>/<caption> is added: the inner <fig> will then trip
+    fix_fig_structure's deviation warning, which is the author-facing
+    signal to add a proper \\subfloat[caption]{...\\label{...}}.
+    """
+    tree = ET.parse(jats_file)
+    root = tree.getroot()
+    changed = False
+    for fig_group in root.findall(".//fig-group"):
+        group_id = fig_group.get("id") or "figgroup"
+        sf_index = 0
+        for child in list(fig_group):
+            graphic = None
+            if child.tag == "graphic":
+                graphic = child
+            elif (
+                child.tag == "p"
+                and not (child.text and child.text.strip())
+                and len(list(child)) == 1
+                and child[0].tag == "graphic"
+                and not (child[0].tail and child[0].tail.strip())
+            ):
+                graphic = child[0]
+            if graphic is None:
+                continue
+            sf_index += 1
+            inner_id = f"{group_id}.sf{sf_index}"
+            new_fig = ET.Element("fig", {"id": inner_id})
+            new_fig.append(graphic)
+            idx = list(fig_group).index(child)
+            fig_group.remove(child)
+            fig_group.insert(idx, new_fig)
+            changed = True
+            logging.info(
+                f"<fig-group> {group_id!r}: wrapped bare <graphic> in synthetic "
+                f"<fig id={inner_id!r}> (subfigure panels need a full <fig> with "
+                "<label>/<caption> — add \\subfloat[caption]{...\\label{...}} "
+                "in the LaTeX source)."
+            )
+    if changed:
+        tree.write(jats_file, encoding="unicode")
+
+
 def fix_fig_structure(jats_file):
     """Enforce the known-good <fig> shape and warn on deviations.
 
@@ -2245,15 +2299,23 @@ def fix_xref_ref_types(jats_file):
     tree = ET.parse(jats_file)
     root = tree.getroot()
 
-    fig_ids   = {e.get("id") for e in root.findall(".//fig")        if e.get("id")}
-    table_ids = {e.get("id") for e in root.findall(".//table-wrap") if e.get("id")}
-    sec_ids   = {e.get("id") for e in root.findall(".//sec")        if e.get("id")}
-    app_ids   = {e.get("id") for e in root.findall(".//app")        if e.get("id")}
+    fig_ids       = {e.get("id") for e in root.findall(".//fig")        if e.get("id")}
+    fig_group_ids = {e.get("id") for e in root.findall(".//fig-group")  if e.get("id")}
+    table_ids     = {e.get("id") for e in root.findall(".//table-wrap") if e.get("id")}
+    sec_ids       = {e.get("id") for e in root.findall(".//sec")        if e.get("id")}
+    app_ids       = {e.get("id") for e in root.findall(".//app")        if e.get("id")}
 
     for xref in root.findall(".//xref"):
+        rid = xref.get("rid")
+        if rid and rid in fig_group_ids:
+            logging.warning(
+                f"<xref rid={rid!r}> targets a <fig-group>; this won't resolve "
+                "on the rendered page. Move \\label{} from the outer "
+                "\\begin{figure} onto one of the inner \\subfloat{} panels "
+                "so the cross-reference points at a specific subfigure."
+            )
         if xref.get("ref-type"):
             continue
-        rid = xref.get("rid")
         if not rid:
             continue
         if rid in fig_ids:
@@ -3503,6 +3565,7 @@ def convert(input_path: Path, output_path: Path, html: bool = False, lastpage=No
     else:
         logger.warning(f'no .bbl file at {bbl_file}; references will be plain text')
     fix_lstlisting_labels(str(output_path), str(input_path))
+    fix_fig_group_structure(str(output_path))
     fix_fig_structure(str(output_path))
     fix_ext_links(str(output_path))
     fix_supplementary_material(str(output_path))

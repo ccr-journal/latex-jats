@@ -61,6 +61,7 @@ Three sequential steps in `src/jatsmith/convert.py`:
    - `fix_xref_ref_types` — sets correct `ref-type` on cross-reference xrefs
    - `fix_references` — repairs bibliography entries using the `.bbl` file (if available)
    - `fix_lstlisting_labels` — fixes labels/captions on code listings
+   - `fix_fig_group_structure` — wraps bare `<graphic>` children of `<fig-group>` in synthetic `<fig id="{group_id}.sfN">`. Ingenta/AUP only renders the RIGH shape (`<fig-group>` with full `<fig>` children); the YAO shape (bare `<graphic>` children) silently fails. No `<label>`/`<caption>` is synthesized, so the wrapped inner `<fig>` then trips `fix_fig_structure`'s deviation warning and prompts the author to add a proper `\subfloat[caption]{...\label{...}}`. `fix_xref_ref_types` separately warns when an `<xref>` rid targets a `<fig-group>` id (which won't resolve)
    - `fix_ext_links` — normalizes `<ext-link>` URLs
    - `fix_supplementary_material` — lifts ccr-suppmat markers into `<supplementary-material>` elements in `<article-meta>` using the first inner `<ext-link>`'s URL for `xlink:href`; the marker is unwrapped in place so its text still renders in the body paragraph or footnote. Two marker shapes are recognized, one per authoring path: `<styled-content style-type="ccr-suppmat">` from the LaTeX pipeline (`\supplementarymaterial{…}` via `ccr.cls.ltxml` + wrapper XSLT) and `<named-content content-type="ccr-suppmat">` from the Quarto pipeline (`[…]{.ccr-suppmat}` spans emitted by Pandoc's JATS writer). IDs are `suppmat1`, `suppmat2`, … to avoid colliding with body section IDs (`S1`, `S2`, …). Shared between both pipelines.
    - `strip_mathml_alttext` — drops `@alttext` from `<mml:math>` (Ingenta re-serializes it unescaped)
@@ -120,6 +121,7 @@ tests/
   test_fix_disp_formula.py     unit tests for fix_disp_formula_in_list_item
   test_fix_references.py       unit tests for fix_references
   test_fix_xref_ref_types.py   unit tests for fix_xref_ref_types
+  test_fix_fig_group_structure.py  unit tests for fix_fig_group_structure
   test_fix_ext_links.py        unit tests for fix_ext_links
   test_fix_listing_data.py     unit tests for fix_listing_data
   test_fix_input.py            unit tests for fix_input
