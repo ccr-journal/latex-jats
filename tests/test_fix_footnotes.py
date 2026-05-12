@@ -76,6 +76,26 @@ def test_fn_group_placed_before_ref_list(xml_file):
     assert fn_group_idx < ref_list_idx
 
 
+def test_inner_p_id_stripped(xml_file):
+    # Crius feedback: drop the redundant id on <p> inside <fn>.
+    xml = _make_doc(
+        """\
+<sec>
+  <p>Text<fn id="fn1"><p id="footnote1">Note.</p></fn>.</p>
+</sec>"""
+    )
+    path = xml_file(xml)
+    fix_footnotes(path)
+
+    root = ET.parse(path).getroot()
+    fn = root.find(".//back/fn-group/fn")
+    inner_p = fn.find("p")
+    assert inner_p is not None
+    assert "id" not in inner_p.attrib
+    # number extraction (which depends on the original id) must still work
+    assert fn.get("symbol") == "1"
+
+
 def test_no_footnotes_no_xrefs(xml_file):
     xml = _make_doc("<sec><p>Simple paragraph.</p></sec>")
     path = xml_file(xml)

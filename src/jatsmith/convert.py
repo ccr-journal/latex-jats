@@ -1474,6 +1474,9 @@ def fix_footnotes(jats_file):
                 m = re.search(r"footnote(\d+)", inner_id, re.IGNORECASE)
                 if m:
                     num = m.group(1)
+                # Crius feedback: the id on <p> inside <fn> is redundant.
+                if "id" in inner_p.attrib:
+                    del inner_p.attrib["id"]
             # create <xref> and attributes
             xref = ET.Element("xref", {"rid": fn_id, "ref-type": "fn", "specific-use": "fn"})
             sup = ET.SubElement(xref, "sup")
@@ -1522,6 +1525,30 @@ def fix_footnotes(jats_file):
     for fn in removed_fns:
         fn_group.append(fn)
 
+    tree.write(jats_file, encoding="unicode")
+
+
+def move_ack_to_body(jats_file):
+    r"""Move <ack> elements from <back> to the end of <body>.
+
+    LaTeXML's JATS XSLT routes \acknowledgements{...} into <back><ack>, which
+    is valid JATS but breaks footnote-number rendering on Ingenta/AUP when the
+    <ack> sits immediately before <fn-group>. Crius typesets <ack> as the last
+    block of <body> instead (see xml_findings.md / crius_response.md §1), so we
+    relocate it here to match.
+    """
+    tree = ET.parse(jats_file)
+    root = tree.getroot()
+    body = root.find(".//body")
+    back = root.find(".//back")
+    if body is None or back is None:
+        return
+    acks = back.findall("ack")
+    if not acks:
+        return
+    for ack in acks:
+        back.remove(ack)
+        body.append(ack)
     tree.write(jats_file, encoding="unicode")
 
 
@@ -3468,6 +3495,7 @@ def convert(input_path: Path, output_path: Path, html: bool = False, lastpage=No
     fix_disp_formula_in_list_item(str(output_path))
     fix_appendix_labels(str(output_path))
     fix_footnotes(str(output_path))
+    move_ack_to_body(str(output_path))
     fix_xref_ref_types(str(output_path))
     bbl_file = input_path.with_suffix('.bbl')
     if bbl_file.exists():

@@ -56,7 +56,8 @@ Three sequential steps in `src/jatsmith/convert.py`:
    - `fix_nested_p` — unwraps illegal `<p>` nested inside `<p>`
    - `fix_disp_formula_in_list_item` — fixes display formulas inside list items
    - `fix_appendix_labels` — relabels tables/figures in appendices (Table A1, Figure B1, etc.)
-   - `fix_footnotes` — moves inline footnotes into an `<fn-group>` in back matter
+   - `fix_footnotes` — moves inline footnotes into an `<fn-group>` in back matter; also strips the redundant `id` from the `<p>` inside each `<fn>` (Crius feedback)
+   - `move_ack_to_body` — moves `<ack>` from `<back>` to the end of `<body>`. Ingenta/AUP fails to render `<fn-group>` footnote numbers when `<ack>` precedes `<fn-group>` in `<back>` (observed in MULL); Crius typesets `<ack>` as the last block of `<body>` instead
    - `fix_xref_ref_types` — sets correct `ref-type` on cross-reference xrefs
    - `fix_references` — repairs bibliography entries using the `.bbl` file (if available)
    - `fix_lstlisting_labels` — fixes labels/captions on code listings
