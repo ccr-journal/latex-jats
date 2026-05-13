@@ -423,6 +423,13 @@ def group_affiliations(jats_file: str) -> None:
         aff.tail = None
         contrib_group.append(aff)
 
+    # Pandoc emits <institution content-type="dept">; normalize to the JATS
+    # canonical "department" so both pipelines emit identical aff shapes for
+    # the ccr-quarto v0.09+ structured schema (issue #47).
+    for inst in root.iter("institution"):
+        if inst.get("content-type") == "dept":
+            inst.set("content-type", "department")
+
     tree.write(jats_file, encoding="unicode")
 
 

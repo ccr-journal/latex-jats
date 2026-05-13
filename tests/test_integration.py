@@ -11,6 +11,7 @@ from jatsmith.convert import (
     fix_supplementary_material,
     preprocess_for_latexml,
     run_latexmlc,
+    structure_affiliations,
     validate_jats,
 )
 
@@ -178,13 +179,13 @@ def test_authors_names_and_affiliations(tmp_path):
 
 @pytest.mark.integration
 def test_addauthor_label_api(tmp_path):
-    """\\addauthor / \\addaffiliation produce the same contrib/aff shape as the legacy API.
-
-    Affiliation text is composed as "Dept, Org, CC" (dept omitted when blank).
+    r"""\addauthor / \addaffiliation produce structured <aff> blocks matching
+    the shape Pandoc emits for ccr-quarto v0.09+ structured YAML (issue #47).
     """
     output = tmp_path / "output.xml"
     tex = _prepare_fixture(FIXTURES / "authors_label_api.tex", tmp_path)
     run_latexmlc(str(tex), str(output), log_dir=tmp_path)
+    structure_affiliations(str(output), str(tex))
     collapse_affiliations(str(output))
 
     cg = ET.parse(output).getroot().find(".//contrib-group")
@@ -199,9 +200,23 @@ def test_addauthor_label_api(tmp_path):
     assert len(rids2) == 1
     assert rids1[0] == rids2[0]  # Jane's first aff (uva) is the same as John's.
 
-    aff_texts = {a.get("id"): " ".join(a.itertext()).strip() for a in cg.findall("aff")}
-    assert "Communication Science, University of Amsterdam, NL" in aff_texts.values()
-    assert "Vrije Universiteit Amsterdam, NL" in aff_texts.values()
+    affs = {a.get("id"): a for a in cg.findall("aff")}
+    uva = affs[rids1[0]]
+    dept = uva.find("institution[@content-type='department']")
+    assert dept is not None and dept.text == "Communication Science"
+    org = uva.find("institution-wrap/institution")
+    assert org is not None and org.text == "University of Amsterdam"
+    country = uva.find("country")
+    assert country is not None
+    assert country.text == "NL"
+    assert country.get("country") == "NL"
+
+    # The vu affiliation has no department.
+    vu_id = next(r for r in rids1 if r != rids1[0])
+    vu = affs[vu_id]
+    assert vu.find("institution[@content-type='department']") is None
+    assert vu.find("institution-wrap/institution").text == "Vrije Universiteit Amsterdam"
+    assert vu.find("country").text == "NL"
 
 
 @pytest.mark.integration

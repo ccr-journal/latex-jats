@@ -131,6 +131,21 @@ Detailed rules live in a separate "Content Licensing XML Guidelines" doc we have
 
 The guide itself flags a caveat at the same effect: Style 2 has historically rendered inconsistently on Ingenta, and the guide author recommends Style 1 until confirmed otherwise. We've found Style 2 works as long as the `<aff>` siblings are inside `<contrib-group>`.
 
+### Structured `<aff>` shape
+
+Both pipelines emit structured affiliations rather than free-form text inside `<aff>`. The target shape (issue #47, ccr.cls v0.09+ / ccr-quarto structured YAML) is:
+
+```xml
+<aff id="affN">
+  <institution content-type="department">Department of X</institution>   <!-- optional -->
+  <institution-wrap><institution>Organisation Name</institution></institution-wrap>
+  <country country="NL">NL</country>                                       <!-- optional -->
+</aff>
+```
+
+- `content-type="department"` is the JATS canonical value. Pandoc's JATS writer emits `"dept"`; we normalize it to `"department"` in `group_affiliations` so both paths converge.
+- `<country>` text is the ISO 3166-1 alpha-2 code (matching what Pandoc emits). The `country=` attribute carries the same code in canonical JATS form — this lets us later change the text to a full country name (e.g. "Netherlands") without losing the machine-readable code. **Open:** confirm against the Ingenta XML guide whether the bare ISO code as text renders correctly in Edify or whether the full country name should be substituted.
+
 ### ORCID
 
 `<contrib-id contrib-id-type="orcid" authenticated="true|false">` containing the ORCID URL as text. `authenticated="true"` is what unlocks Crossref auto-update.

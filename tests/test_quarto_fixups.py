@@ -171,6 +171,32 @@ def test_group_affiliations_orphan_warns_but_moves(xml_file, caplog):
     assert any("aff-2" in r.message for r in caplog.records)
 
 
+def test_group_affiliations_normalizes_dept_to_department(xml_file):
+    """Pandoc's <institution content-type="dept"> is rewritten to the
+    canonical JATS "department" value so both pipelines emit the same
+    aff shape (issue #47)."""
+    p = xml_file(
+        '<article><front><article-meta>'
+        '<contrib-group>'
+        '<contrib contrib-type="author"><name><surname>Doe</surname></name>'
+        '<xref ref-type="aff" rid="aff-1">a</xref></contrib>'
+        '</contrib-group>'
+        '<aff id="aff-1">'
+        '<institution content-type="dept">Department of X</institution>'
+        '<institution-wrap><institution>Uni A</institution></institution-wrap>'
+        '<country>NL</country>'
+        '</aff>'
+        '</article-meta></front></article>'
+    )
+    group_affiliations(p)
+    aff = _parse(p).find(".//aff")
+    dept = aff.find("institution[@content-type='department']")
+    assert dept is not None
+    assert dept.text == "Department of X"
+    # Old "dept" value no longer present anywhere on the tree.
+    assert aff.find("institution[@content-type='dept']") is None
+
+
 def test_group_affiliations_noop_when_already_grouped(xml_file):
     original = (
         '<article><front><article-meta>'

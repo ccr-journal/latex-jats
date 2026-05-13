@@ -177,6 +177,213 @@ def _warn_bare_ampersand_in_metadata(tex_path):
                 )
 
 
+# ISO 3166-1 alpha-2 country codes, kept in sync with the list registered by
+# ccr.cls (v0.09+). Used to pre-flight \addaffiliation calls before pdflatex
+# fires its (cryptic) class error.
+_ISO_3166_ALPHA2 = frozenset("""
+    AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ
+    BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ
+    CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ
+    DE DJ DK DM DO DZ
+    EC EE EG EH ER ES ET
+    FI FJ FK FM FO FR
+    GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY
+    HK HM HN HR HT HU
+    ID IE IL IM IN IO IQ IR IS IT
+    JE JM JO JP
+    KE KG KH KI KM KN KP KR KW KY KZ
+    LA LB LC LI LK LR LS LT LU LV LY
+    MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ
+    NA NC NE NF NG NI NL NO NP NR NU NZ
+    OM
+    PA PE PF PG PH PK PL PM PN PR PS PT PW PY
+    QA
+    RE RO RS RU RW
+    SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ
+    TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ
+    UA UG UM US UY UZ
+    VA VC VE VG VI VN VU
+    WF WS
+    YE YT
+    ZA ZM ZW
+""".split())
+
+
+def _read_balanced(text, pos, open_ch, close_ch):
+    """Read a balanced {...} or [...] starting at text[pos] == open_ch.
+
+    Returns (inner_content, end_pos) where end_pos is just past the close
+    delimiter. Backslash-escaped braces inside are skipped. Returns (None, pos)
+    if text[pos] is not the expected opener or the group is unterminated.
+    """
+    if pos >= len(text) or text[pos] != open_ch:
+        return None, pos
+    depth = 1
+    start = pos + 1
+    p = start
+    while p < len(text):
+        c = text[p]
+        if c == '\\' and p + 1 < len(text):
+            p += 2
+            continue
+        if c == open_ch:
+            depth += 1
+        elif c == close_ch:
+            depth -= 1
+            if depth == 0:
+                return text[start:p], p + 1
+        p += 1
+    return None, pos
+
+
+def _skip_ws(text, pos):
+    while pos < len(text) and text[pos] in ' \t\n\r':
+        pos += 1
+    return pos
+
+
+# LaTeX character escapes that LaTeXML renders to their bare form in JATS
+# text content.  When we compare the parsed \addaffiliation text against the
+# flat <aff>"…"</aff> blob LaTeXML emits, we have to apply the same
+# normalisation or strings with \& / \% etc. won't match.
+_LATEX_ESCAPES = {
+    r'\&': '&', r'\%': '%', r'\$': '$', r'\#': '#',
+    r'\_': '_', r'\{': '{', r'\}': '}',
+}
+
+
+def _strip_latex_escapes(s):
+    for esc, repl in _LATEX_ESCAPES.items():
+        s = s.replace(esc, repl)
+    return s
+
+
+def _parse_addaffiliations(tex_path):
+    r"""Return ``{label: {"dept": str, "org": str, "cc": str}}`` for every
+    ``\addaffiliation`` call found in ``tex_path`` and its ``\input``-ed
+    children.
+
+    Used by both :func:`_warn_missing_affiliation_country` (for source-quality
+    warnings) and :func:`structure_affiliations` (for the post-processor that
+    rebuilds structured ``<aff>`` blocks).  Malformed calls are silently
+    skipped here; the warning function reports those.
+    """
+    tex_dir = tex_path.parent
+    files = [tex_path]
+    try:
+        main_text = tex_path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        main_text = tex_path.read_text(encoding="latin-1")
+    for m in re.finditer(r'\\(?:input|include)\{([^}]+)\}', main_text):
+        child = tex_dir / m.group(1)
+        if not child.suffix:
+            child = child.with_suffix('.tex')
+        if child.exists() and child not in files:
+            files.append(child)
+
+    result = {}
+    for fpath in files:
+        try:
+            text = fpath.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            text = fpath.read_text(encoding="latin-1")
+        for m in re.finditer(r'\\addaffiliation\b', text):
+            pos = _skip_ws(text, m.end())
+            label, pos = _read_balanced(text, pos, '{', '}')
+            if label is None:
+                continue
+            label = label.strip()
+            pos = _skip_ws(text, pos)
+            dept = ""
+            if pos < len(text) and text[pos] == '[':
+                d, pos = _read_balanced(text, pos, '[', ']')
+                dept = " ".join((d or "").split())
+                pos = _skip_ws(text, pos)
+            org, pos = _read_balanced(text, pos, '{', '}')
+            if org is None:
+                continue
+            pos = _skip_ws(text, pos)
+            cc, _ = _read_balanced(text, pos, '{', '}')
+            result[label] = {
+                "dept": _strip_latex_escapes(dept),
+                "org":  _strip_latex_escapes(" ".join((org or "").split())),
+                "cc":   (cc or "").strip().upper(),
+            }
+    return result
+
+
+def _warn_missing_affiliation_country(tex_path):
+    r"""Warn when \addaffiliation is missing or has an invalid ISO country code.
+
+    ccr.cls v0.09 changed the signature to
+    ``\addaffiliation{label}[Dept]{Organisation}{CC}`` and validates the final
+    argument against the ISO 3166-1 alpha-2 list. When authors leave the
+    country code empty (or use a country *name* like ``Switzerland``), the
+    class error is cryptic — ``! Class ccr Error: Unknown ISO 3166-1 alpha-2
+    country code '' in affiliation 'aff-1'.`` — and the ``l.<N>`` hint points
+    at the closing ``}{}`` rather than the macro itself.
+    """
+    tex_dir = tex_path.parent
+    files = [tex_path]
+    try:
+        main_text = tex_path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        main_text = tex_path.read_text(encoding="latin-1")
+    for m in re.finditer(r'\\(?:input|include)\{([^}]+)\}', main_text):
+        child = tex_dir / m.group(1)
+        if not child.suffix:
+            child = child.with_suffix('.tex')
+        if child.exists() and child not in files:
+            files.append(child)
+
+    for fpath in files:
+        try:
+            text = fpath.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            text = fpath.read_text(encoding="latin-1")
+        for m in re.finditer(r'\\addaffiliation\b', text):
+            macro_start = m.start()
+            lineno = text[:macro_start].count('\n') + 1
+            pos = _skip_ws(text, m.end())
+            label, pos = _read_balanced(text, pos, '{', '}')
+            if label is None:
+                continue  # malformed; let LaTeX report it
+            label = label.strip()
+            pos = _skip_ws(text, pos)
+            # Optional [Department]
+            if pos < len(text) and text[pos] == '[':
+                _, pos = _read_balanced(text, pos, '[', ']')
+                pos = _skip_ws(text, pos)
+            # {Organisation}
+            _, pos = _read_balanced(text, pos, '{', '}')
+            pos = _skip_ws(text, pos)
+            # {Country code}
+            country, _ = _read_balanced(text, pos, '{', '}')
+            if country is None:
+                logger.warning(
+                    r"\addaffiliation '%s' (%s:%d) is missing the ISO country code argument. "
+                    r"ccr.cls v0.09 requires a 2-letter ISO 3166-1 alpha-2 country code as "
+                    r"the last argument, e.g. \addaffiliation{%s}{Organisation}{NL}.",
+                    label, fpath.name, lineno, label or "label",
+                )
+                continue
+            code = country.strip().upper()
+            if not code:
+                logger.warning(
+                    r"\addaffiliation '%s' (%s:%d) has an empty country code. "
+                    r"ccr.cls v0.09 requires a 2-letter ISO 3166-1 alpha-2 code "
+                    r"(e.g. NL, US, DE, GB) as the last argument.",
+                    label, fpath.name, lineno,
+                )
+            elif code not in _ISO_3166_ALPHA2:
+                logger.warning(
+                    r"\addaffiliation '%s' (%s:%d) has an invalid country code '%s'. "
+                    r"ccr.cls v0.09 requires a 2-letter ISO 3166-1 alpha-2 code "
+                    r"(e.g. NL, US, DE, GB), not a country name.",
+                    label, fpath.name, lineno, country.strip(),
+                )
+
+
 def _warn_input_in_tabular(tex_path):
     r"""Warn about \input inside \begin{tabular}...\end{tabular}.
 
@@ -360,6 +567,7 @@ def warn_source_issues(tex_path):
     _warn_text_in_figure(tex_path)
     _warn_transliteration_packages(tex_path)
     _warn_bare_ampersand_in_metadata(tex_path)
+    _warn_missing_affiliation_country(tex_path)
     _warn_input_in_tabular(tex_path)
     _warn_linebreak_in_multirow(tex_path)
 
@@ -2594,6 +2802,66 @@ def fix_metadata(jats_file, tex_file, lastpage=None, *, site_config: SiteConfigD
     tree.write(jats_file, encoding="unicode")
 
 
+def structure_affiliations(jats_file, tex_file):
+    r"""Rewrite flat ``<aff>"Dept, Org, CC"</aff>`` blobs from the LaTeX path
+    into the structured Pandoc/Quarto shape:
+
+    .. code-block:: xml
+
+        <aff>
+          <institution content-type="department">Dept</institution>
+          <institution-wrap><institution>Org</institution></institution-wrap>
+          <country country="NL">NL</country>
+        </aff>
+
+    Each part is keyed back to its source ``\addaffiliation{label}[Dept]{Org}{CC}``
+    by re-parsing ``tex_file`` and matching on the joined ``"Dept, Org, CC"``
+    text that the ``\ccr@flush@newauthors`` macro composes.  Affiliations
+    declared via the legacy ``\authorsaffiliations`` macro never match (no
+    structured info is available) and are left as-is.
+
+    Runs before :func:`collapse_affiliations` so each inline ``<aff>`` is
+    structured before dedupe; identical structured affs still flatten to the
+    same ``itertext()`` key, so dedupe continues to work.
+    """
+    affs_by_label = _parse_addaffiliations(Path(tex_file))
+    if not affs_by_label:
+        return
+
+    by_text = {}
+    for info in affs_by_label.values():
+        parts = [s for s in (info["dept"], info["org"], info["cc"]) if s]
+        key = " ".join(", ".join(parts).split())
+        if key:
+            by_text[key] = info
+
+    tree = ET.parse(jats_file)
+    root = tree.getroot()
+    changed = False
+    for aff in root.iter("aff"):
+        text = " ".join("".join(aff.itertext()).split())
+        info = by_text.get(text)
+        if info is None:
+            continue
+        for child in list(aff):
+            aff.remove(child)
+        aff.text = None
+        if info["dept"]:
+            dept_el = ET.SubElement(aff, "institution")
+            dept_el.set("content-type", "department")
+            dept_el.text = info["dept"]
+        wrap = ET.SubElement(aff, "institution-wrap")
+        inst = ET.SubElement(wrap, "institution")
+        inst.text = info["org"]
+        if info["cc"]:
+            country = ET.SubElement(aff, "country")
+            country.set("country", info["cc"])
+            country.text = info["cc"]
+        changed = True
+    if changed:
+        tree.write(jats_file, encoding="unicode")
+
+
 def collapse_affiliations(jats_file):
     """Collapse duplicate <aff> elements and move them to sibling position.
 
@@ -3545,6 +3813,7 @@ def convert(input_path: Path, output_path: Path, html: bool = False, lastpage=No
     dedupe_ref_lists(str(output_path))
     fix_citation_ref_types(str(output_path))
     fix_metadata(str(output_path), str(input_path), lastpage=lastpage, site_config=site_config)
+    structure_affiliations(str(output_path), str(input_path))
     collapse_affiliations(str(output_path))
     fix_table_in_p(str(output_path))
     fix_table_notes(str(output_path))
