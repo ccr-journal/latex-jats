@@ -165,58 +165,6 @@ def fix_unicode_text_chars(lines: list[str], filename: str) -> list[str]:
     return out
 
 
-# Map minted language names to listings language names where they differ.
-# Languages not listed here are passed through as-is (listings handles many
-# language names identically to Pygments/minted).
-_MINTED_TO_LISTINGS_LANG: dict[str, str] = {
-    "pycon": "Python",
-    "python3": "Python",
-    "js": "Java",  # listings has no JS — Java is a rough fallback
-}
-
-
-def fix_minted_to_listings(lines: list[str], filename: str) -> list[str]:
-    r"""Replace minted environments and package with listings equivalents.
-
-    Converts \usepackage{minted} → \usepackage{listings}, removes
-    \usemintedstyle{...}, and converts \begin{minted}[opts]{lang} →
-    \begin{lstlisting}[language=Lang].
-    """
-    out = []
-    for lineno, line in enumerate(lines, 1):
-        # \usepackage{minted} → \usepackage{listings}
-        if re.match(r'\s*\\usepackage\{minted\}', line):
-            new_line = re.sub(r'\\usepackage\{minted\}', r'\\usepackage{listings}', line)
-            logger.info("FIXED minted→listings (usepackage): %s:%d", filename, lineno)
-            out.append(new_line)
-            continue
-
-        # Remove \usemintedstyle{...} lines entirely
-        if re.match(r'\s*\\usemintedstyle\{', line):
-            logger.info("FIXED minted→listings (remove usemintedstyle): %s:%d", filename, lineno)
-            continue
-
-        # \begin{minted}[opts]{lang} → \begin{lstlisting}[language=Lang]
-        m = re.match(r'(\s*)\\begin\{minted\}(?:\[[^\]]*\])?\{(\w+)\}(.*)', line)
-        if m:
-            indent, lang, rest = m.groups()
-            lang_listings = _MINTED_TO_LISTINGS_LANG.get(lang, lang.capitalize() if lang.islower() else lang)
-            new_line = f"{indent}\\begin{{lstlisting}}[language={lang_listings}]{rest}\n"
-            logger.info("FIXED minted→listings (begin): %s:%d", filename, lineno)
-            out.append(new_line)
-            continue
-
-        # \end{minted} → \end{lstlisting}
-        if re.match(r'\s*\\end\{minted\}', line):
-            new_line = re.sub(r'\\end\{minted\}', r'\\end{lstlisting}', line)
-            logger.info("FIXED minted→listings (end): %s:%d", filename, lineno)
-            out.append(new_line)
-            continue
-
-        out.append(line)
-    return out
-
-
 def fix_title_in_table(lines: list[str], filename: str) -> list[str]:
     r"""Replace \title{} with \caption{} inside table environments."""
     out = []
@@ -268,7 +216,6 @@ def fix_ampersand_in_metadata(lines: list[str], filename: str) -> list[str]:
 
 
 ALL_FIXES = [
-    fix_minted_to_listings,
     fix_bare_angle_brackets,
     fix_stray_after_includegraphics,
     fix_unicode_text_chars,

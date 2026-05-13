@@ -80,6 +80,16 @@ Ingenta sent us their authoritative JATS XML specification for Edify in April 20
 
 The guide is the source of truth when deciding what JATS shapes to emit. Our own running collection of empirical findings, rendering quirks, and clarifications on top of the guide lives in [xml_findings.md](xml_findings.md) — add to that file whenever a new "what works / what doesn't" lesson appears, and read it alongside `xml_guide.md`.
 
+## minted support
+
+`pdflatex` runs **without `-shell-escape`** in our pipeline, because enabling unrestricted shell-escape on uploaded LaTeX sources is a real security risk (authors are authenticated but the surface is large: `\write18{...}` would have access to the storage volume, `.env`, and outbound network). minted's default behaviour requires shell-escape and is therefore not supported as-is.
+
+Authors who want minted must build the Pygments cache locally and ship it: `\usepackage[frozencache,cachedir=_minted-cache]{minted}` plus a populated `_minted-cache/` directory in the upload. minted v2.6 skips its `\pdf@shellescape=1` check when `frozencache` is set and reads `.pygtex` files from the cache directory instead. Build steps are documented in the [author guide](https://github.com/ccr-journal/ccr-latex/blob/main/author_guide.md#using-minted).
+
+`_warn_minted_without_frozencache` in `prepare_source.py`'s warning pass detects the three common failure modes (no options / `finalizecache` / `frozencache` without cache directory) and points authors at the guide.
+
+LaTeXML still needs to convert `\begin{minted}…\end{minted}` to `<code>` blocks regardless of the PDF path. `src/latexml/minted.sty.ltxml` is our local binding (based on the ar5iv community binding) that delegates minted to LaTeXML's listings engine. The community version had a bug where blank lines inside minted blocks were tokenized into `\par` and concatenated with following identifiers (e.g. `\pargraph` from a blank line + `graph <- …`); we replaced its `readUntil` loop with `listingsReadRawLines` so blank lines survive verbatim.
+
 ## Design principles
 
 - **Fix issues at the source, not post-hoc.** Prefer fixing conversion problems in the LaTeXML bindings (`ccr.cls.ltxml`, `biblatex.sty.ltxml`) or the XSLT wrapper over adding Python post-processing fixups. Post-processing should be reserved for things that genuinely cannot be handled earlier in the pipeline.
@@ -104,6 +114,10 @@ src/
                         table package bindings
     adjustbox.sty.ltxml, luainputenc.sty.ltxml  miscellaneous package bindings
     arabtex.sty.ltxml, cjhebrew.sty.ltxml  stubs that warn about unsupported transliteration
+    minted.sty.ltxml    delegates minted environments to LaTeXML's listings engine
+                        (patched ar5iv binding: uses listingsReadRawLines so blank
+                        lines inside minted blocks survive instead of being folded
+                        into \par tokens). See "minted support" below.
   xslt/
     main/jats-html.xsl  NLM JATS-to-HTML preview stylesheet
     citations-prep/     citation formatting stylesheets

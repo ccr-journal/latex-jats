@@ -570,6 +570,65 @@ def warn_source_issues(tex_path):
     _warn_missing_affiliation_country(tex_path)
     _warn_input_in_tabular(tex_path)
     _warn_linebreak_in_multirow(tex_path)
+    _warn_minted_without_frozencache(tex_path)
+
+
+_AUTHOR_GUIDE_MINTED_URL = (
+    "https://github.com/ccr-journal/ccr-latex/blob/main/author_guide.md#using-minted"
+)
+
+
+def _warn_minted_without_frozencache(tex_path):
+    r"""Warn when \usepackage{minted} won't compile on the proofing server.
+
+    The server runs pdflatex without -shell-escape, so minted only works in
+    frozencache mode with a pre-built _minted-cache/ directory shipped in the
+    upload (see author guide).
+
+    Three failure modes detected:
+      - no options at all (``\usepackage{minted}``)
+      - ``finalizecache`` set (author still in cache-build mode)
+      - ``frozencache`` set but the cache directory is missing
+    """
+    try:
+        text = tex_path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        text = tex_path.read_text(encoding="latin-1")
+
+    m = re.search(r'(?m)^[^%]*\\usepackage(?:\[([^\]]*)\])?\{minted\}', text)
+    if not m:
+        return
+
+    opts = m.group(1) or ""
+    opt_set = {o.strip().split('=', 1)[0] for o in opts.split(',') if o.strip()}
+    guide = f"see {_AUTHOR_GUIDE_MINTED_URL}"
+
+    if 'frozencache' not in opt_set:
+        mode = 'finalizecache' if 'finalizecache' in opt_set else 'no options'
+        logger.warning(
+            r"\usepackage{minted} loaded with %s. The proofing server runs "
+            "pdflatex in restricted mode and will fail with 'You must invoke "
+            "LaTeX with the -shell-escape flag'. Build the Pygments cache "
+            "locally and switch to "
+            r"\usepackage[frozencache,cachedir=_minted-cache]{minted}; %s.",
+            mode, guide,
+        )
+        return
+
+    cachedir = "_minted-" + tex_path.stem
+    for opt in opts.split(','):
+        if '=' in opt and opt.strip().split('=', 1)[0].strip() == 'cachedir':
+            cachedir = opt.split('=', 1)[1].strip()
+            break
+    cache_path = tex_path.parent / cachedir
+    if not cache_path.is_dir():
+        logger.warning(
+            r"\usepackage[frozencache,...]{minted} is set but %s/ is not "
+            "present in the upload — pdflatex will fail to find the cached "
+            "Pygments output. Rebuild the cache locally with -shell-escape "
+            "and include the directory in your submission; %s.",
+            cachedir, guide,
+        )
 
 
 LATEXML_DIR = Path(__file__).parent.parent / "latexml"
@@ -3903,10 +3962,12 @@ def create_publisher_zip(xml_path: Path, pdf_path: Path | None, zip_path: Path) 
             logger.warning("No PDF found for publisher zip")
 
         n_images = 0
-        for el in root.iter("graphic"):
+        seen: set[str] = set()
+        for el in _iter_graphics(root):
             href = el.get(f"{{{XLINK}}}href", "")
-            if not href or href.startswith("http"):
+            if not href or href.startswith("http") or href in seen:
                 continue
+            seen.add(href)
             src = output_dir / href
             if src.exists():
                 zf.write(src, f"{article_id}/{href}")
