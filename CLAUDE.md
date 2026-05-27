@@ -58,7 +58,7 @@ Three sequential steps in `src/jatsmith/convert.py`:
    - `fix_disp_formula_in_list_item` — fixes display formulas inside list items
    - `fix_appendix_labels` — relabels tables/figures in appendices (Table A1, Figure B1, etc.)
    - `fix_footnotes` — moves inline footnotes into an `<fn-group>` in back matter; also strips the redundant `id` from the `<p>` inside each `<fn>` (Crius feedback)
-   - `move_ack_to_body` — moves `<ack>` from `<back>` to the end of `<body>`. Ingenta/AUP fails to render `<fn-group>` footnote numbers when `<ack>` precedes `<fn-group>` in `<back>` (observed in MULL); Crius typesets `<ack>` as the last block of `<body>` instead
+   - `convert_ack_to_sec` — converts any `<ack>` (wherever it sits) into a trailing `<sec id="ack"><title>Acknowledgements</title>…</sec>` inside `<body>`, before any `<sig-block>`. `<ack>` is not allowed as a child of `<body>` by the JATS DTD (AUP/Ingenta rejected MULL on this), and leaving it in `<back>` before `<fn-group>` breaks Ingenta's footnote-number rendering; Crius' own typeset output uses a plain `<sec>` in `<body>` and we mirror that. An existing `<title>` on the `<ack>` is preserved; otherwise "Acknowledgements" is synthesized
    - `fix_xref_ref_types` — sets correct `ref-type` on cross-reference xrefs
    - `fix_references` — repairs bibliography entries using the `.bbl` file (if available)
    - `fix_lstlisting_labels` — fixes labels/captions on code listings

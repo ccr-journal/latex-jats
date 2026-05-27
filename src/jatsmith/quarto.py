@@ -29,13 +29,13 @@ from jatsmith.convert import (
     _convert_pdf_figures,
     apply_article_meta,
     apply_journal_meta,
+    convert_ack_to_sec,
     convert_to_html,
     finalize_xml,
     fix_ext_links,
     fix_pdf_graphic_refs,
     fix_supplementary_material,
     rename_graphics,
-    warn_section_acknowledgements,
 )
 from jatsmith.site_config import SiteConfigData, load_site_config
 
@@ -888,7 +888,6 @@ def convert_quarto(input_qmd: Path, output_xml: Path, html: bool = False,
     out_str = str(output_xml)
     inject_metadata_from_yaml(out_str, str(input_qmd), lastpage=lastpage, site_config=site_config)
     inject_acknowledgements_from_yaml(out_str, str(input_qmd))
-    warn_section_acknowledgements(out_str)
     fix_empty_history(out_str)
     fix_corresp_xref(out_str)
     group_affiliations(out_str)
@@ -901,6 +900,7 @@ def convert_quarto(input_qmd: Path, output_xml: Path, html: bool = False,
     set_ref_list_title(out_str)
     move_appendix_to_back(out_str)
     reorder_back_matter(out_str)
+    convert_ack_to_sec(out_str)
     fix_ext_links(out_str)
     fix_supplementary_material(out_str)
     fix_pdf_graphic_refs(out_str)

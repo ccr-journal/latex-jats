@@ -1386,31 +1386,6 @@ def warn_tfoot_notes(jats_file):
                 )
 
 
-def warn_section_acknowledgements(jats_file):
-    r"""Warn when \section{Acknowledgements} appears in the body.
-
-    JATS convention is <back><ack>, which ccr.cls provides via the
-    \acknowledgements{...} macro. Authors using \section{Acknowledgements}
-    end up with a regular body <sec> that the publisher won't recognize as
-    acknowledgements.
-    """
-    tree = ET.parse(jats_file)
-    body = tree.getroot().find(".//body")
-    if body is None:
-        return
-    for sec in body.findall(".//sec"):
-        title = sec.find("title")
-        if title is None or not title.text:
-            continue
-        normalized = title.text.strip().lower().rstrip("s")
-        if normalized in ("acknowledgement", "acknowledgment"):
-            logger.warning(
-                "Found '\\section{%s}' in body. Use '\\acknowledgements{...}' "
-                "instead so the content lands in JATS <back><ack>.",
-                title.text.strip(),
-            )
-
-
 def _warn_stray_text_after_includegraphics(tex_path):
     r"""Warn about trailing punctuation after \includegraphics in figure environments.
 
@@ -1849,27 +1824,41 @@ def fix_footnotes(jats_file):
     tree.write(jats_file, encoding="unicode")
 
 
-def move_ack_to_body(jats_file):
-    r"""Move <ack> elements from <back> to the end of <body>.
+def convert_ack_to_sec(jats_file):
+    r"""Convert <ack> elements into a trailing <sec> inside <body>.
 
-    LaTeXML's JATS XSLT routes \acknowledgements{...} into <back><ack>, which
-    is valid JATS but breaks footnote-number rendering on Ingenta/AUP when the
-    <ack> sits immediately before <fn-group>. Crius typesets <ack> as the last
-    block of <body> instead (see xml_findings.md / crius_response.md §1), so we
-    relocate it here to match.
+    The JATS DTD does not allow <ack> as a child of <body> (body's content
+    model ends with sec*, sig-block?), and AUP/Ingenta rejects such files at
+    intake — MULL (CCR2025.1.14.MULL) bounced with exactly this error.
+    Leaving <ack> in <back> before <fn-group> works for validation but breaks
+    Ingenta's footnote-number rendering. Crius' own typeset output sidesteps
+    both by emitting acknowledgements as a regular trailing <sec> in <body>;
+    we do the same.
     """
     tree = ET.parse(jats_file)
     root = tree.getroot()
     body = root.find(".//body")
-    back = root.find(".//back")
-    if body is None or back is None:
+    if body is None:
         return
-    acks = back.findall("ack")
-    if not acks:
+    targets = []
+    for parent in root.iter():
+        for ack in parent.findall("ack"):
+            targets.append((parent, ack))
+    if not targets:
         return
-    for ack in acks:
-        back.remove(ack)
-        body.append(ack)
+    sig_block = body.find("sig-block")
+    insert_index = list(body).index(sig_block) if sig_block is not None else len(body)
+    for parent, ack in targets:
+        parent.remove(ack)
+        sec = ET.Element("sec")
+        sec.set("id", ack.get("id") or "ack")
+        if ack.find("title") is None:
+            title = ET.SubElement(sec, "title")
+            title.text = "Acknowledgements"
+        for child in list(ack):
+            sec.append(child)
+        body.insert(insert_index, sec)
+        insert_index += 1
     tree.write(jats_file, encoding="unicode")
 
 
@@ -3879,13 +3868,12 @@ def convert(input_path: Path, output_path: Path, html: bool = False, lastpage=No
     fix_graphic_in_td(str(output_path))
     warn_tfoot_notes(str(output_path))
 
-    warn_section_acknowledgements(str(output_path))
     clean_body(str(output_path))
     fix_nested_p(str(output_path))
     fix_disp_formula_in_list_item(str(output_path))
     fix_appendix_labels(str(output_path))
     fix_footnotes(str(output_path))
-    move_ack_to_body(str(output_path))
+    convert_ack_to_sec(str(output_path))
     fix_xref_ref_types(str(output_path))
     bbl_file = input_path.with_suffix('.bbl')
     if bbl_file.exists():

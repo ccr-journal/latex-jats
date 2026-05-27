@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jatsmith"
-version = "1.2.3"
+version = "1.2.4"
 description = "Convert LaTeX and Quarto journal manuscripts to JATS XML"
 requires-python = ">=3.10"
 dependencies = ["lxml", "pyyaml", "Pillow"]
